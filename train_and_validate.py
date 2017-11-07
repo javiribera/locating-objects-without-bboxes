@@ -21,7 +21,7 @@ from torchvision import datasets
 from torchvision import transforms
 import torchvision as tv
 from torchvision.models import inception_v3
-import unet
+import unet_pix2pix
 import losses
 import unet_model
 
@@ -34,7 +34,7 @@ parser.add_argument('--val-dir', required=True,
 parser.add_argument('--batch-size', type=int, default=1, metavar='N',
                     help='input batch size for training')
 parser.add_argument('--eval-batch-size', type=int, default=1, metavar='N',
-                    help='input batch size for validation and testing')
+                    help='input batch size for validation')
 parser.add_argument('--epochs', type=int, default=np.inf, metavar='N',
                     help='number of epochs to train')
 parser.add_argument('--nThreads', '-j', default=4, type=int, metavar='N',
@@ -55,8 +55,8 @@ parser.add_argument('--max-trainset-size', type=int, default=np.inf, metavar='N'
                     help='only use the first N images of the training dataset')
 parser.add_argument('--max-valset-size', type=int, default=np.inf, metavar='N',
                     help='only use the first N images of the validation dataset')
-parser.add_argument('--out-test-csv', type=str,
-                    help='path where to store the results of analyzing the test set')
+parser.add_argument('--env-name', default='Pure U-Net', type=str, metavar='NAME',
+                    help='Name of the environment in Visdom')
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
@@ -78,7 +78,7 @@ if args.cuda:
     torch.cuda.manual_seed_all(args.seed)
 
 # Visdom setup
-viz = visdom.Visdom(env='Pure U-Net')
+viz = visdom.Visdom(env=args.env_name)
 viz_train_input_win, viz_val_input_win = None, None
 viz_train_loss_win, viz_val_loss_win = None, None
 viz_train_gt_win, viz_val_gt_win = None, None

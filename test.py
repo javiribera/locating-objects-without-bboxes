@@ -22,7 +22,7 @@ from torchvision import datasets
 from torchvision import transforms
 import torchvision as tv
 from torchvision.models import inception_v3
-import unet
+import unet_pix2pix
 import losses
 import unet_model
 

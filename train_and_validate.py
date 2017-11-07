@@ -31,11 +31,9 @@ parser.add_argument('--train-dir', required=True,
                     help='Directory with training images')
 parser.add_argument('--val-dir', required=True,
                     help='Directory with validation images')
-parser.add_argument('--test-dir', required=True,
-                    help='Directory with testing images')
-parser.add_argument('--batch-size', type=int, default=300, metavar='N',
+parser.add_argument('--batch-size', type=int, default=1, metavar='N',
                     help='input batch size for training')
-parser.add_argument('--eval-batch-size', type=int, default=120, metavar='N',
+parser.add_argument('--eval-batch-size', type=int, default=1, metavar='N',
                     help='input batch size for validation and testing')
 parser.add_argument('--epochs', type=int, default=np.inf, metavar='N',
                     help='number of epochs to train')
@@ -57,8 +55,6 @@ parser.add_argument('--max-trainset-size', type=int, default=np.inf, metavar='N'
                     help='only use the first N images of the training dataset')
 parser.add_argument('--max-valset-size', type=int, default=np.inf, metavar='N',
                     help='only use the first N images of the validation dataset')
-parser.add_argument('--max-testset-size', type=int, default=np.inf, metavar='N',
-                    help='only use the first N images of the testing dataset')
 parser.add_argument('--out-test-csv', type=str,
                     help='path where to store the results of analyzing the test set')
 args = parser.parse_args()
@@ -148,13 +144,6 @@ valset = PlantDataset(args.val_dir,
                                                (0.5, 0.5, 0.5)),
                       ]),
                       max_dataset_size=args.max_valset_size)
-testset = PlantDataset(args.test_dir,
-                       transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.5, 0.5, 0.5),
-                                                (0.5, 0.5, 0.5)),
-                       ]),
-                       max_dataset_size=args.max_testset_size)
 trainset_loader = data.DataLoader(trainset,
                                   batch_size=args.batch_size,
                                   shuffle=True,
@@ -163,9 +152,6 @@ valset_loader = data.DataLoader(valset,
                                 batch_size=args.eval_batch_size,
                                 shuffle=True,
                                 num_workers=args.nThreads)
-testset_loader = data.DataLoader(testset,
-                                 batch_size=args.eval_batch_size,
-                                 num_workers=args.nThreads)
 
 # Model
 print('Building network... ', end='')
@@ -298,7 +284,7 @@ while epoch < args.epochs:
 
         it_num += 1
 
-    # At the end of each epoch, validate + test + save checkpoint if validation error decreased
+    # At the end of each epoch, validate + save checkpoint if validation error decreased
     if len(valset_loader) == 0:
         continue
 
@@ -404,106 +390,3 @@ while epoch < args.epochs:
 
     epoch += 1
 
-    # # === TESTING ===
-    # print("\nTesting... ")
-
-    # # Set the module in evaluation mode
-    # model.eval()
-
-    # sum_loss = 0
-    # for data, dictionary in testset_loader:
-
-    #     # Pull info from this sample image
-    #     gt_plant_locations = [eval(el) for el in dictionary['plant_locations']]
-    #     # We cannot deal with images with 0 plants (CD is not defined)
-    #     if any(len(target_one_img) == 0 for target_one_img in gt_plant_locations):
-    #         continue
-
-    #     # Prepare data and target
-    #     data, gt_plant_locations = data.type(
-    #         torch.FloatTensor), torch.FloatTensor(gt_plant_locations)
-    #     if args.cuda:
-    #         data, gt_plant_locations = data.cuda(), gt_plant_locations.cuda()
-    #     data, gt_plant_locations = Variable(data, volatile=True), Variable(gt_plant_locations, volatile=True)
-
-    #     # Inference
-    #     est_map = model.forward(data)
-    #     est_map = est_map.squeeze()
-    #     loss = criterion_training.forward(est_map, gt_plant_locations)
-    #     sum_loss += loss
-
-    # avg_loss_test = sum_loss / len(testset_loader)
-    # avg_loss_val_float = avg_loss_val.data.cpu().numpy()[0]
-
-    # print('╰─ Chamfer: {:.4f}'.format(avg_loss_val_float))
-    # cc_test.add_scalar_value("Chamfer", avg_loss_val.cpu().data[0], step=epoch)
-
-    # # === TEST ===
-    # OLD CODEEEEEEEEEEEEEE
-    # print("Testing... ")
-
-    # df_out = testset.csv_df.copy()
-
-    # sum_ape = 0
-    # sum_ae = 0
-    # for data, dictionary in testset_loader:
-
-    #     # Pull info from this sample image
-    #     theres_gt = True if (dictionary['plant_count'][0] > 0) else False
-    #     if theres_gt:
-    #         target = dictionary['plant_locations']
-
-    #     # Prepare data and target
-    #     data = data.type(torch.FloatTensor)
-    #     if theres_gt:
-    #         target = target.type(torch.FloatTensor)
-    #     if args.cuda:
-    #         data = data.cuda()
-    #         if theres_gt:
-    #             target = target.cuda()
-    #     data = Variable(data, volatile=True)
-    #     if theres_gt:
-    #         target = Variable(target, volatile=True)
-
-    #     # Compute Absolute Error of each image
-    #     logits = model(data)
-    #     logits = torch.squeeze(logits)
-    #     if theres_gt:
-    #         print('(Estimate, GT): \n %s' % torch.stack((logits.round(),
-    #                                                      target.round()), dim=1))
-    #         ae = torch.abs(logits - target)
-
-    #         # Compute Absolute Percent Error of each image
-    #         ape = 100. * ae / target
-
-    #         # Make APE 0 when target is 0
-    #         inf_indices = Variable(torch.nonzero(
-    #             ape.data == np.infty).squeeze())
-    #         if len(inf_indices) > 0:
-    #             ape.index_fill_(dim=0,
-    #                             index=inf_indices,
-    #                             value=0)
-    #         sum_ape += ape.sum()
-    #         sum_ae += ae.sum()
-    #     else:
-    #         print('(Filename, Estimate): \n %s' % np.stack([np.array(dictionary['filename']),
-    #                                                         logits.cpu().data.numpy().astype(str)]).T)
-
-    #         if args.out_test_csv:
-    #             # Put estimated plant counts into the data frame
-    #             for filename, plant_count in zip(dictionary['filename'], logits.cpu().data.numpy().tolist()):
-    #                 df_out.ix[df_out['filename'] == filename,
-    #                           df_out.columns.get_loc('plant_locations')] = plant_count
-
-    # if theres_gt:
-    #     # MAPE (Mean Absolute Percent Error), and MAE (Mean Absolute Error)
-    #     mape = sum_ape.data[0] / (len(valset_loader) * args.eval_batch_size)
-    #     mae = sum_ae.data[0] / (len(valset_loader) * args.eval_batch_size)
-
-    #     print('╰─ MAE: {:.4f} plants'.format(mae))
-    #     print('╰─ MAPE: {:.4f} %'.format(mape))
-    #     cc_test.add_scalar_value("MAPE", mape, step=epoch)
-
-    # if not theres_gt and args.out_test_csv:
-    #     # Store estimated plant count to CSV file
-    #     df_out.to_csv(args.out_test_csv)

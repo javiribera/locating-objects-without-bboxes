@@ -26,11 +26,11 @@ import unet
 import losses
 import unet_model
 
-# Training settings
+# Testing settings
 parser = argparse.ArgumentParser(description='Plant Location with PyTorch')
 parser.add_argument('--test-dir', required=True,
                     help='Directory with testing images')
-parser.add_argument('--eval-batch-size', type=int, default=120, metavar='N',
+parser.add_argument('--eval-batch-size', type=int, default=1, metavar='N',
                     help='input batch size for validation and testing')
 parser.add_argument('--nThreads', '-j', default=4, type=int, metavar='N',
                     help='number of data loading threads (default: 4)')

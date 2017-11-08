@@ -104,4 +104,3 @@ class ModifiedChamferLoss(nn.Module):
             res = term_1 + term_2
 
         return res
-

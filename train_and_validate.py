@@ -5,6 +5,7 @@ import os
 import sys
 import time
 import shutil
+from itertools import chain
 
 import numpy as np
 import pandas as pd
@@ -24,6 +25,7 @@ from torchvision.models import inception_v3
 import unet_pix2pix
 import losses
 import unet_model
+
 
 # Training settings
 parser = argparse.ArgumentParser(description='Plant Location with PyTorch')
@@ -169,7 +171,8 @@ chamfer_loss = losses.ModifiedChamferLoss(256, 256, return_2_terms=True)
 criterion_training = chamfer_loss
 
 # Optimization strategy
-optimizer = optim.SGD(model.parameters(),
+alpha = Variable(torch.FloatTensor([1]).cuda(), requires_grad=True)
+optimizer = optim.SGD(chain([alpha], model.parameters()),
                       lr=args.lr)
 
 start_epoch = 0
@@ -213,7 +216,7 @@ while epoch < args.epochs:
 
         # Read image with GT dots from disk
         gt_img_numpy = skimage.io.imread(
-            os.path.join('/home/jprat/projects/phenosorg/data/plant_counts_dots/20160613_F54_training_256x256_white_bigdots',
+            os.path.join('/home/dgueraco/cvpr/plant-data/plant_counts_dots/20160613_F54_training_256x256_white_bigdots',
                          dictionary['filename'][0]))
         dots_img_tensor = torch.from_numpy(gt_img_numpy).permute(
             2, 0, 1)[0, :, :].type(torch.FloatTensor) / 255
@@ -233,10 +236,13 @@ while epoch < args.epochs:
 
         # One training step
         optimizer.zero_grad()
-        est_map, est_n_plants = model.forward(data)
+        est_map, _ = model.forward(data)
         est_map = est_map.squeeze()
         term1, term2 = criterion_training.forward(est_map, target)
-        term3 = l1_loss.forward(est_n_plants, target_n_plants) / \
+        sum_est_map = torch.sum(est_map)
+        # print(alpha)
+        # print(sum_est_map)
+        term3 = l1_loss.forward(alpha*sum_est_map, target_n_plants) / \
             target_n_plants.type(torch.cuda.FloatTensor)
         loss = term1 + term2 + term3
         loss.backward()
@@ -306,7 +312,7 @@ while epoch < args.epochs:
 
         # Read image with GT dots from disk
         gt_img_numpy = skimage.io.imread(
-            os.path.join('/home/jprat/projects/phenosorg/data/plant_counts_dots/20160613_F54_validation_256x256_white_bigdots',
+            os.path.join('/home/dgueraco/cvpr/plant-data/plant_counts_dots/20160613_F54_validation_256x256_white_bigdots',
                          dictionary['filename'][0]))
         dots_img_tensor = torch.from_numpy(gt_img_numpy).permute(
             2, 0, 1)[0, :, :].type(torch.FloatTensor) / 255
@@ -389,4 +395,3 @@ while epoch < args.epochs:
             print("Saved best checkpoint so far in %s " % best_ckpt_path)
 
     epoch += 1
-

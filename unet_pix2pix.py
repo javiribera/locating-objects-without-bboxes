@@ -92,6 +92,10 @@ class UnetSkipConnectionBlock(nn.Module):
 
     def forward(self, x):
         if self.outermost:
-            return (self.model(x), self.regressor(x))
+            out = self.model(x)
+            summ = torch.sum(out)
+            count = self.lin(summ)
+            count = torch.abs(count)
+            return out, count
         else:
             return torch.cat([x, self.model(x)], 1)

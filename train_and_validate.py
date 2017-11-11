@@ -1,11 +1,13 @@
 from __future__ import print_function
 
+import cv2
 import argparse
 import os
 import sys
 import time
 import shutil
 from itertools import chain
+from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
@@ -22,6 +24,7 @@ from torchvision import datasets
 from torchvision import transforms
 import torchvision as tv
 from torchvision.models import inception_v3
+from sklearn import mixture
 import unet_pix2pix
 import losses
 import unet_model
@@ -31,8 +34,8 @@ import unet_model
 parser = argparse.ArgumentParser(description='Plant Location with PyTorch')
 parser.add_argument('--train-dir', required=True,
                     help='Directory with training images')
-parser.add_argument('--val-dir', required=True,
-                    help='Directory with validation images')
+parser.add_argument('--val-dir', 
+                    help='Directory with validation images. If left blank no validation will be done.')
 parser.add_argument('--batch-size', type=int, default=1, metavar='N',
                     help='input batch size for training')
 parser.add_argument('--eval-batch-size', type=int, default=1, metavar='N',
@@ -59,6 +62,9 @@ parser.add_argument('--max-valset-size', type=int, default=np.inf, metavar='N',
                     help='only use the first N images of the validation dataset')
 parser.add_argument('--env-name', default='Pure U-Net', type=str, metavar='NAME',
                     help='Name of the environment in Visdom')
+parser.add_argument('--paint', default=False, action="store_true",
+                    help='Paint red circles at estimated locations in Validation? '\
+                            'It takes an enormous amount of time!')
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
@@ -139,21 +145,22 @@ trainset = PlantDataset(args.train_dir,
                                                  (0.5, 0.5, 0.5)),
                         ]),
                         max_dataset_size=args.max_trainset_size)
-valset = PlantDataset(args.val_dir,
-                      transform=transforms.Compose([
-                          transforms.ToTensor(),
-                          transforms.Normalize((0.5, 0.5, 0.5),
-                                               (0.5, 0.5, 0.5)),
-                      ]),
-                      max_dataset_size=args.max_valset_size)
 trainset_loader = data.DataLoader(trainset,
                                   batch_size=args.batch_size,
                                   shuffle=True,
                                   num_workers=args.nThreads)
-valset_loader = data.DataLoader(valset,
-                                batch_size=args.eval_batch_size,
-                                shuffle=True,
-                                num_workers=args.nThreads)
+if args.val_dir:
+    valset = PlantDataset(args.val_dir,
+                          transform=transforms.Compose([
+                              transforms.ToTensor(),
+                              transforms.Normalize((0.5, 0.5, 0.5),
+                                                   (0.5, 0.5, 0.5)),
+                          ]),
+                          max_dataset_size=args.max_valset_size)
+    valset_loader = data.DataLoader(valset,
+                                    batch_size=args.eval_batch_size,
+                                    shuffle=True,
+                                    num_workers=args.nThreads)
 
 # Model
 print('Building network... ', end='')
@@ -171,12 +178,11 @@ chamfer_loss = losses.ModifiedChamferLoss(256, 256, return_2_terms=True)
 criterion_training = chamfer_loss
 
 # Optimization strategy
-alpha = Variable(torch.FloatTensor([1]).cuda(), requires_grad=True)
-optimizer = optim.SGD(chain([alpha], model.parameters()),
+optimizer = optim.SGD(model.parameters(),
                       lr=args.lr)
 
 start_epoch = 0
-lowest_avg_loss_val = np.infty
+lowest_avg_ahd_val = np.infty
 
 # Restore saved checkpoint (model weights + epoch + optimizer state)
 if args.resume:
@@ -184,7 +190,7 @@ if args.resume:
     if os.path.isfile(args.resume):
         checkpoint = torch.load(args.resume)
         start_epoch = checkpoint['epoch']
-        lowest_avg_loss_val = checkpoint['lowest_avg_loss_val']
+        lowest_avg_ahd_val = checkpoint['lowest_avg_ahd_val']
         model.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
         print("╰─ loaded checkpoint '{}' (now on epoch {})"
@@ -214,12 +220,6 @@ while epoch < args.epochs:
         if any(len(target_one_img) == 0 for target_one_img in gt_plant_locations):
             continue
 
-        # Read image with GT dots from disk
-        gt_img_numpy = skimage.io.imread(
-            os.path.join('/home/dgueraco/cvpr/plant-data/plant_counts_dots/20160613_F54_training_256x256_white_bigdots',
-                         dictionary['filename'][0]))
-        dots_img_tensor = torch.from_numpy(gt_img_numpy).permute(
-            2, 0, 1)[0, :, :].type(torch.FloatTensor) / 255
 
         if criterion_training is chamfer_loss:
             target = gt_plant_locations
@@ -236,13 +236,10 @@ while epoch < args.epochs:
 
         # One training step
         optimizer.zero_grad()
-        est_map, _ = model.forward(data)
+        est_map, est_n_plants = model.forward(data)
         est_map = est_map.squeeze()
         term1, term2 = criterion_training.forward(est_map, target)
-        sum_est_map = torch.sum(est_map)
-        # print(alpha)
-        # print(sum_est_map)
-        term3 = l1_loss.forward(alpha*sum_est_map, target_n_plants) / \
+        term3 = l1_loss.forward(est_n_plants, target_n_plants) / \
             target_n_plants.type(torch.cuda.FloatTensor)
         loss = term1 + term2 + term3
         loss.backward()
@@ -283,15 +280,21 @@ while epoch < args.epochs:
             viz.image(est_map.data.unsqueeze(0).cpu().numpy(),
                       opts=dict(title='(Training) U-Net output'),
                       win=2)
-            # Send GT image to Visdom
-            viz.image(np.moveaxis(gt_img_numpy, 2, 0),
-                      opts=dict(title='(Training) Ground Truth'),
-                      win=3)
+            # # Read image with GT dots from disk
+            # gt_img_numpy = skimage.io.imread(
+            #     os.path.join('/home/jprat/projects/phenosorg/data/plant_counts_dots/20160613_F54_training_256x256_white_bigdots',
+            #                  dictionary['filename'][0]))
+            # # dots_img_tensor = torch.from_numpy(gt_img_numpy).permute(
+            # # 2, 0, 1)[0, :, :].type(torch.FloatTensor) / 255
+            # # Send GT image to Visdom
+            # viz.image(np.moveaxis(gt_img_numpy, 2, 0),
+            #           opts=dict(title='(Training) Ground Truth'),
+            #           win=3)
 
         it_num += 1
 
     # At the end of each epoch, validate + save checkpoint if validation error decreased
-    if len(valset_loader) == 0:
+    if not args.val_dir or not valset_loader or len(valset_loader) == 0:
         continue
 
     # === VALIDATION ===
@@ -300,8 +303,12 @@ while epoch < args.epochs:
     # Set the module in evaluation mode
     model.eval()
 
+    sum_term1 = 0
+    sum_term2 = 0
+    sum_term3 = 0
     sum_loss = 0
-    for batch_idx, (data, dictionary) in enumerate(valset_loader):
+    sum_ahd = 0
+    for batch_idx, (data, dictionary) in tqdm(enumerate(valset_loader), total=len(valset_loader)):
 
         # Pull info from this sample image
         gt_plant_locations = [eval(el) for el in dictionary['plant_locations']]
@@ -309,13 +316,6 @@ while epoch < args.epochs:
         # We cannot deal with images with 0 plants (CD is not defined)
         if any(len(target_one_img) == 0 for target_one_img in gt_plant_locations):
             continue
-
-        # Read image with GT dots from disk
-        gt_img_numpy = skimage.io.imread(
-            os.path.join('/home/dgueraco/cvpr/plant-data/plant_counts_dots/20160613_F54_validation_256x256_white_bigdots',
-                         dictionary['filename'][0]))
-        dots_img_tensor = torch.from_numpy(gt_img_numpy).permute(
-            2, 0, 1)[0, :, :].type(torch.FloatTensor) / 255
 
         if criterion_training is chamfer_loss:
             target = gt_plant_locations
@@ -330,68 +330,112 @@ while epoch < args.epochs:
         data, target, target_n_plants = Variable(data, volatile=True), Variable(
             target, volatile=True), Variable(target_n_plants, volatile=True)
 
-        # One training step
+        # Feed-forward
         est_map, est_n_plants = model.forward(data)
         est_map = est_map.squeeze()
+        est_n_plants = est_n_plants.squeeze()
+        target = target.squeeze()
+
+        # The 3 terms
         term1, term2 = criterion_training.forward(est_map, target)
         term3 = l1_loss.forward(est_n_plants, target_n_plants) / \
             target_n_plants.type(torch.cuda.FloatTensor)
-        loss = term1 + term2 + term3
+        sum_term1 += term1
+        sum_term2 += term2
+        sum_term3 += term3
+        sum_loss += term1 + term2 + term3
 
-        sum_loss += loss
+        # Validation using the Averaged Hausdorff Distance
+        # The estimated map must be thresholded to obtain estimated points
+        est_map_numpy = est_map.data.cpu().numpy()
+        mask = cv2.inRange(est_map_numpy, 2 / 255, 1)
+        coord = np.where(mask > 0)
+        y = coord[0].reshape((-1, 1))
+        x = coord[1].reshape((-1, 1))
+        c = np.concatenate((y, x), axis=1)
+        n_components = int(torch.round(est_n_plants).data.cpu().numpy()[0])
+        # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples
+        n_components = max(min(n_components, x.size), 1)
+        centroids = mixture.GaussianMixture(n_components=n_components,
+                                            n_init=1,
+                                            covariance_type='full').\
+            fit(c).means_.astype(np.int)
 
+        target = target.data.cpu().numpy()
+        ahd = losses.averaged_hausdorff_distance(centroids, target)
+        ahd = torch.cuda.FloatTensor([ahd])
+
+        sum_ahd += ahd
+
+        if time.time() > tic_val + args.log_interval:
+            tic_val = time.time()
+
+            # Send input image to Visdom
+            viz.image(((data.data + 1) / 2.0 * 255.0).squeeze().cpu().numpy(),
+                      opts=dict(title='(Validation) Input'),
+                      win=5)
+            # Send estimated image to Visdom
+            viz.image(est_map.data.unsqueeze(0).cpu().numpy(),
+                      opts=dict(title='(Validation) UNet output'),
+                      win=6)
+            # # Read image with GT dots from disk
+            # gt_img_numpy = skimage.io.imread(
+            #     os.path.join('/home/jprat/projects/phenosorg/data/plant_counts_dots/20160613_F54_validation_256x256_white_bigdots',
+            #                  dictionary['filename'][0]))
+            # # dots_img_tensor = torch.from_numpy(gt_img_numpy).permute(
+            #     # 2, 0, 1)[0, :, :].type(torch.FloatTensor) / 255
+            # # Send GT image to Visdom
+            # viz.image(np.moveaxis(gt_img_numpy, 2, 0),
+            #           opts=dict(title='(Validation) Ground Truth'),
+            #           win=7)
+            if args.paint:
+                # Send original image with a cross at the estimated centroids to Visdom
+                image_with_x = torch.cuda.FloatTensor(data.data.squeeze().size()).\
+                        copy_(data.data.squeeze())
+                image_with_x = ((image_with_x + 1) / 2.0 * 255.0)
+                image_with_x = image_with_x.cpu().numpy()
+                image_with_x = np.moveaxis(image_with_x, 0, 2).copy()
+                for y, x in centroids:
+                    image_with_x = cv2.circle(image_with_x, (x, y), 3, [255, 0, 0], -1)
+                viz.image(np.moveaxis(image_with_x, 2, 0),
+                          opts=dict(title='(Validation) Estimated centers @ crossings'),
+                          win=8)
+
+    avg_term1_val = sum_term1 / len(valset_loader)
+    avg_term2_val = sum_term2 / len(valset_loader)
+    avg_term3_val = sum_term3 / len(valset_loader)
     avg_loss_val = sum_loss / len(valset_loader)
-    avg_loss_val_float = avg_loss_val.data.cpu().numpy()[0]
+    avg_ahd_val = sum_ahd / len(valset_loader)
 
-    print('╰─ Loss: {:.4f}'.format(avg_loss_val_float))
-
-    # Send stuff to Visdom every X seconds
-    if time.time() > tic_val + args.log_interval:
-        tic_val = time.time()
-
-        # Send validation loss to Visdom
-        win_val_loss = viz.updateTrace(Y=torch.cat([term1, term2, term3, loss / 3]).view(1, -1).data.cpu(),
-                                       X=torch.Tensor([epoch]).repeat(1, 4),
-                                       opts=dict(title='(Validation) Chamfer',
-                                                 legend=[
-                                                     'Term 1', 'Term 2', 'Term 3', 'Sum/2'],
-                                                 ylabel='Loss', xlabel='Epoch'),
-                                       append=True,
-                                       win='4')
-        if win_val_loss == 'win does not exist':
-            win_val_loss = viz.line(Y=torch.cat([term1, term2, term3, loss / 3]).view(1, -1).data.cpu(),
-                                    X=torch.Tensor([epoch]).repeat(1, 4),
-                                    opts=dict(title='(Validation) Chamfer',
-                                              legend=['Term 1', 'Term 2',
-                                                      'Term 3', 'Sum/2'],
-                                              ylabel='Loss', xlabel='Iteration'),
-                                    win='4')
-
-        # Send input image to Visdom
-        viz.image(((data.data + 1) / 2.0 * 255.0).squeeze().cpu().numpy(),
-                  opts=dict(title='(Validation) Input'),
-                  win=5)
-        # Send estimated image to Visdom
-        viz.image(est_map.data.unsqueeze(0).cpu().numpy(),
-                  opts=dict(title='(Validation) UNet output'),
-                  win=6)
-        # Send GT image to Visdom
-        viz.image(np.moveaxis(gt_img_numpy, 2, 0),
-                  opts=dict(title='(Validation) Ground Truth'),
-                  win=7)
+    # Send validation loss to Visdom
+    win_val_loss = viz.updateTrace(Y=torch.stack((avg_term1_val, avg_term2_val, avg_term3_val, avg_loss_val/3, avg_ahd_val)).view(1, -1).data.cpu(),
+                                   X=torch.Tensor([epoch]).repeat(1, 5),
+                                   opts=dict(title='Validation',
+                                             legend=['Term 1', 'Term 2',
+                                                     'Term 3', 'Sum/3', 'AHD'],
+                                             ylabel='Loss', xlabel='Epoch'),
+                                   append=True,
+                                   win='4')
+    if win_val_loss == 'win does not exist':
+        win_val_loss = viz.line(Y=torch.stack((avg_term1_val, avg_term2_val, avg_term3_val, avg_loss_val/3, avg_ahd_val)).view(1, -1).data.cpu(),
+                                X=torch.Tensor([epoch]).repeat(1, 5),
+                                opts=dict(title='(Validation) Chamfer',
+                                          legend=['Term 1', 'Term 2',
+                                                  'Term 3', 'Sum/3', 'AHD'],
+                                          ylabel='Loss', xlabel='Iteration'),
+                                win='4')
 
     # If this is the best epoch (in terms of validation error)
-    if avg_loss_val_float < lowest_avg_loss_val:
+    avg_ahd_val_float = avg_ahd_val.cpu().numpy()[0]
+    if avg_ahd_val_float < lowest_avg_ahd_val:
         # Keep the best model
-        lowest_avg_loss_val = avg_loss_val_float
+        lowest_avg_ahd_val = avg_ahd_val_float 
         if args.save:
-            name, ext = os.path.splitext(args.save)
-            best_ckpt_path = name + '-best' + ext
             torch.save({'epoch': epoch + 1,  # when resuming, we will start at the next epoch
                         'model': model.state_dict(),
-                        'lowest_avg_loss_val': lowest_avg_loss_val,
+                        'lowest_avg_ahd_val': avg_ahd_val_float,
                         'optimizer': optimizer.state_dict(),
-                        }, best_ckpt_path)
-            print("Saved best checkpoint so far in %s " % best_ckpt_path)
+                        }, args.save)
+            print("Saved best checkpoint so far in %s " % args.save)
 
     epoch += 1

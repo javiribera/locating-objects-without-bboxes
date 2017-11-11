@@ -6,14 +6,12 @@ import sys
 import time
 import shutil
 
+import cv2
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
 import skimage.io
 import torch
-import torch.optim as optim
-import visdom
-import skimage.draw
 import utils
 from torch import nn
 from torch.autograd import Variable
@@ -22,6 +20,7 @@ from torchvision import datasets
 from torchvision import transforms
 import torchvision as tv
 from torchvision.models import inception_v3
+from sklearn import mixture
 import unet_pix2pix
 import losses
 import unet_model
@@ -45,6 +44,9 @@ parser.add_argument('--max-testset-size', type=int, default=np.inf, metavar='N',
 parser.add_argument('--out-dir', type=str,
                     help='path where to store the results of analyzing the test set \
                             (images and CSV file)')
+parser.add_argument('--paint', default=False, action="store_true",
+                    help='Paint red circles at estimated locations? '
+                            'It takes an enormous amount of time!')
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
@@ -54,7 +56,10 @@ torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed_all(args.seed)
 
-os.makedirs(args.out_dir, exist_ok=True)
+os.makedirs(os.path.join(args.out_dir, 'painted'), exist_ok=True)
+os.makedirs(os.path.join(args.out_dir, 'est_map'), exist_ok=True)
+os.makedirs(os.path.join(args.out_dir, 'est_map_thresholded'), exist_ok=True)
+
 
 class PlantDataset(data.Dataset):
     def __init__(self, root_dir, transform=None, max_dataset_size=np.inf):
@@ -114,7 +119,7 @@ testset_loader = data.DataLoader(testset,
 
 # Model
 print('Building network... ', end='')
-#model = unet.UnetGenerator(input_nc=3, output_nc=1, num_downs=8)
+# model = unet.UnetGenerator(input_nc=3, output_nc=1, num_downs=8)
 model = unet_model.UNet(3, 1)
 print('DONE')
 print(model)
@@ -126,12 +131,11 @@ if args.cuda:
 l1_loss = nn.L1Loss()
 criterion_training = losses.ModifiedChamferLoss(256, 256, return_2_terms=True)
 
-# Restore saved checkpoint (model weights + epoch + optimizer state)
+# Restore saved checkpoint (model weights + epoch)
 print("Loading checkpoint '{}' ...".format(args.checkpoint))
 if os.path.isfile(args.checkpoint):
     checkpoint = torch.load(args.checkpoint)
     start_epoch = checkpoint['epoch']
-    lowest_avg_loss_val = checkpoint['lowest_avg_loss_val']
     model.load_state_dict(checkpoint['model'])
     print("╰─ loaded checkpoint '{}' (now on epoch {})"
           .format(args.checkpoint, checkpoint['epoch']))
@@ -151,8 +155,9 @@ df_out = pd.DataFrame(columns=['plant_count'])
 # Set the module in evaluation mode
 model.eval()
 
-sum_loss = 0
-for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader), total=len(testset_loader)):
+sum_ahd = 0
+for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader),
+                                          total=len(testset_loader)):
 
     # Pull info from this sample image
     gt_plant_locations = [eval(el) for el in dictionary['plant_locations']]
@@ -174,26 +179,61 @@ for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader), total=len(t
     # One forward
     est_map, est_n_plants = model.forward(data)
     est_map = est_map.squeeze()
-    term1, term2 = criterion_training.forward(est_map, target)
-    term3 = l1_loss.forward(est_n_plants,
-                            target_n_plants.type(torch.cuda.FloatTensor))/ \
-        target_n_plants.type(torch.cuda.FloatTensor)
-    loss = term1 + term2 + term3
+    target = target.squeeze()
 
-    sum_loss += loss
+    # Save estimated map to disk
+    tv.utils.save_image(est_map.data,
+                        os.path.join(args.out_dir, 'est_map', dictionary['filename'][0]))
 
-    # Save estimation to disk and append to CSV
-    tv.utils.save_image(est_map.data, os.path.join(args.out_dir, dictionary['filename'][0]))
-    df = pd.DataFrame(data=[est_n_plants.data.cpu().numpy()[0]],
+    # Evaluation using the Averaged Hausdorff Distance
+    # The estimated map must be thresholded to obtain estimated points
+    est_map_numpy = est_map.data.cpu().numpy()
+    mask = cv2.inRange(est_map_numpy, 2 / 255, 1)
+    coord = np.where(mask > 0)
+    y = coord[0].reshape((-1, 1))
+    x = coord[1].reshape((-1, 1))
+    c = np.concatenate((y, x), axis=1)
+    n_components = int(torch.round(est_n_plants).data.cpu().numpy()[0])
+    # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples
+    n_components = max(min(n_components, x.size), 1)
+    centroids = mixture.GaussianMixture(n_components=n_components,
+                                        n_init=1,
+                                        covariance_type='full').\
+        fit(c).means_.astype(np.int)
+
+    target = target.data.cpu().numpy()
+    ahd = losses.averaged_hausdorff_distance(centroids, target)
+
+    sum_ahd += ahd
+
+    # Save thresholded map to disk
+    cv2.imwrite(os.path.join(args.out_dir, 'est_map_thresholded', dictionary['filename'][0]),
+                mask)
+
+    if args.paint:
+        # Paint a circle in the original image at the estimated location
+        image_with_x = torch.cuda.FloatTensor(data.data.squeeze().size()).\
+                copy_(data.data.squeeze())
+        image_with_x = ((image_with_x + 1) / 2.0 * 255.0)
+        image_with_x = image_with_x.cpu().numpy()
+        image_with_x = np.moveaxis(image_with_x, 0, 2).copy()
+        for y, x in centroids:
+            image_with_x = cv2.circle(image_with_x, (x, y), 3, [255, 0, 0], -1)
+        # Save original image with circle to disk
+        image_with_x = image_with_x[:,:,::-1]
+        cv2.imwrite(os.path.join(args.out_dir, 'painted', dictionary['filename'][0]),
+                    image_with_x)
+
+    df=pd.DataFrame(data=[est_n_plants.data.cpu().numpy()[0]],
                       index=[dictionary['filename'][0]],
                       columns=['plant_count'])
-    df_out = df_out.append(df)
-    
-avg_loss_test = sum_loss / len(testset_loader)
-avg_loss_test_float = avg_loss_test.data.cpu().numpy()[0]
+    df_out=df_out.append(df)
+
+avg_ahd = sum_ahd/len(testset_loader)
 
 # Write CSV to disk
 df_out.to_csv(os.path.join(args.out_dir, 'estimations.csv'))
 
-print('╰─ Average Loss for all the testing set: {:.4f}'.format(avg_loss_test_float))
-print('It took %s seconds to evaluate all the testing set.' % int(time.time() - tic))
+print('╰─ Average AHD for all the testing set: {:.4f}'.format(avg_ahd))
+print('It took %s seconds to evaluate all the testing set.' %
+      int(time.time() - tic))

@@ -35,6 +35,63 @@ def cdist(x, y):
     distances = torch.sum(differences**2, -1).sqrt()
     return distances
 
+def averaged_hausdorff_distance(set1, set2):
+    """
+    Compute the Averaged Hausdorff Distance function
+     between two unordered sets of points (the function is symmetric).
+     Batches are not supported, so squeeze your inputs first!
+    :param set1: Array/list where each row/element is an N-dimensional point.
+    :param set2: Array/list where each row/element is an N-dimensional point.
+    :return: The Averaged Hausdorff Distance between set1 and set2.
+    """
+
+    set1 = np.array(set1)
+    set2 = np.array(set2)
+
+    assert set1.ndim == 2, 'got %s' % set1.ndim
+    assert set2.ndim == 2, 'got %s' % set2.ndim
+
+    assert set1.shape[1] == set2.shape[1], \
+        'The points in both sets must have the same number of dimensions, got %s and %s.'\
+        % (set2.shape[1], set2.shape[1])
+    
+    d2_matrix = pairwise_distances(set1, set2, metric='euclidean')
+
+    res = np.average(np.min(d2_matrix, axis=0)) + \
+          np.average(np.min(d2_matrix, axis=1))
+
+    return res
+
+class AveragedHausdorffLoss(nn.Module):
+    def __init__(self):
+        super(nn.Module, self).__init__()
+
+    def forward(self, set1, set2):
+        """
+        Compute the Averaged Hausdorff Distance function
+         between two unordered sets of points (the function is symmetric).
+         Batches are not supported, so squeeze your inputs first!
+        :param set1: Tensor where each row is an N-dimensional point.
+        :param set2: Tensor where each row is an N-dimensional point.
+        :return: The Averaged Hausdorff Distance between set1 and set2.
+        """
+
+        assert set1.ndimension() == 2, 'got %s' % set1.ndimension()
+        assert set2.ndimension() == 2, 'got %s' % set2.ndimension()
+
+        assert set1.size()[1] == set2.size()[1], \
+            'The points in both sets must have the same number of dimensions, got %s and %s.'\
+            % (set2.size()[1], set2.size()[1])
+ 
+        d2_matrix = cdist(set1, set2)
+
+        # Modified Chamfer Loss
+        term_1 = torch.mean(torch.min(d2_matrix, 1)[0])
+        term_2 = torch.mean(torch.min(d2_matrix, 0)[0])
+
+        res = term_1 + term_2
+
+        return res
 
 class ModifiedChamferLoss(nn.Module):
     def __init__(self, height, width, return_2_terms=False):

@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.autograd import Variable
 
 from unet_parts import *
 
@@ -28,8 +29,10 @@ class UNet(nn.Module):
         self.outc = outconv(64, n_classes)
         self.out_nonlin = nn.Sigmoid()
 
-        self.regressor = nn.Linear(256*256, 1)
-        self.regressor_nonlin = nn.Softplus()
+        # self.regressor = nn.Linear(256*256, 1)
+        # self.regressor_nonlin = nn.Softplus()
+
+        self.lin = nn.Linear(1, 1, bias=False)
 
     def forward(self, x):
         x1 = self.inc(x)
@@ -52,9 +55,15 @@ class UNet(nn.Module):
         x = self.outc(x)
         x = self.out_nonlin(x)
 
-        x_flat = x.view(1, -1)
+        # x_flat = x.view(1, -1)
 
-        regression = self.regressor(x_flat)
-        regression = self.regressor_nonlin(regression)
+        # regression = self.regressor(x_flat)
+        # regression = self.regressor_nonlin(regression)
 
-        return x, regression
+        # return x, regression
+        summ = torch.sum(x)
+        count = self.lin(summ)
+
+        count = torch.abs(count)
+
+        return x, count

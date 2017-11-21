@@ -22,8 +22,10 @@ if not os.path.exists('validate'):
     os.makedirs('validate')
 
 dirs = [i for i in range(1, 18)]
+dirs.pop(11)
 
-for dirnum in tqdm(dirs):
+filecounter = 0
+for dirnum in dirs:
     dirname = 'dataset' + str(dirnum).zfill(2)
     
     fd = open(os.path.join(dirname,'gt.txt'))
@@ -87,5 +89,4 @@ test_df.to_csv('test.csv')
 shutil.move('test.csv', 'test')
 validate_df.to_csv('validate.csv')
 shutil.move('validate.csv', 'validate')
-
 

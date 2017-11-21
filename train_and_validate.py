@@ -28,6 +28,7 @@ from sklearn import mixture
 import unet_pix2pix
 import losses
 import unet_model
+from eval_precision_recall import Judge
 
 
 # Training settings
@@ -65,6 +66,14 @@ parser.add_argument('--env-name', default='Pure U-Net', type=str, metavar='NAME'
 parser.add_argument('--paint', default=False, action="store_true",
                     help='Paint red circles at estimated locations in Validation? '\
                             'It takes an enormous amount of time!')
+parser.add_argument('--radius', type=int, default=5, metavar='R',
+                    help='Default radius to consider a object detection as "match".')
+parser.add_argument('--n-points', type=int, default=None, metavar='N',
+                    help='If you know the number of points (e.g, just one pupil), set it.' \
+                          'Otherwise it will be estimated by adding a L1 cost term.')
+parser.add_argument('--lambdaa', type=float, default=1, metavar='L',
+                    help='Weight that will multiply the MAPE term in the loss function.')
+
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
@@ -165,7 +174,7 @@ if args.val_dir:
 # Model
 print('Building network... ', end='')
 #model = unet.UnetGenerator(input_nc=3, output_nc=1, num_downs=8)
-model = unet_model.UNet(3, 1)
+model = unet_model.UNet(3, 1, known_n_points=args.n_points)
 print('DONE')
 print(model)
 model = nn.DataParallel(model)
@@ -241,6 +250,7 @@ while epoch < args.epochs:
         term1, term2 = criterion_training.forward(est_map, target)
         term3 = l1_loss.forward(est_n_plants, target_n_plants) / \
             target_n_plants.type(torch.cuda.FloatTensor)
+        term3 *= args.lambdaa
         loss = term1 + term2 + term3
         loss.backward()
         optimizer.step()
@@ -256,7 +266,7 @@ while epoch < args.epochs:
             win_train_loss = viz.updateTrace(Y=torch.cat([term1, term2, term3, loss / 3]).view(1, -1).data.cpu(),
                                              X=torch.Tensor(
                                                  [it_num]).repeat(1, 4),
-                                             opts=dict(title='(Training) Chamfer',
+                                             opts=dict(title='Training',
                                                        legend=[
                                                            'Term 1', 'Term 2', 'Term3', 'Sum/3'],
                                                        ylabel='Loss', xlabel='Iteration'),
@@ -266,7 +276,7 @@ while epoch < args.epochs:
                 win_train_loss = viz.line(Y=torch.cat([term1, term2, term3, loss / 3]).view(1, -1).data.cpu(),
                                           X=torch.Tensor(
                                               [it_num]).repeat(1, 4),
-                                          opts=dict(title='(Training) Chamfer',
+                                          opts=dict(title='Training',
                                                     legend=[
                                                         'Term 1', 'Term 2', 'Term3', 'Sum/3'],
                                                     ylabel='Loss', xlabel='Iteration'),
@@ -303,6 +313,7 @@ while epoch < args.epochs:
     # Set the module in evaluation mode
     model.eval()
 
+    judge = Judge(r=args.radius)
     sum_term1 = 0
     sum_term2 = 0
     sum_term3 = 0
@@ -346,26 +357,32 @@ while epoch < args.epochs:
         sum_loss += term1 + term2 + term3
 
         # Validation using the Averaged Hausdorff Distance
-        # The estimated map must be thresholded to obtain estimated points
+        # The estimated map must be thresholed to obtain estimated points
         est_map_numpy = est_map.data.cpu().numpy()
         mask = cv2.inRange(est_map_numpy, 2 / 255, 1)
         coord = np.where(mask > 0)
         y = coord[0].reshape((-1, 1))
         x = coord[1].reshape((-1, 1))
         c = np.concatenate((y, x), axis=1)
-        n_components = int(torch.round(est_n_plants).data.cpu().numpy()[0])
-        # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples
-        n_components = max(min(n_components, x.size), 1)
-        centroids = mixture.GaussianMixture(n_components=n_components,
-                                            n_init=1,
-                                            covariance_type='full').\
-            fit(c).means_.astype(np.int)
+        if len(c) == 0:
+            ahd = criterion_training.max_dist
+            centroids = []
+        else:
+            n_components = int(torch.round(est_n_plants).data.cpu().numpy()[0])
+            # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples
+            n_components = max(min(n_components, x.size), 1)
+            centroids = mixture.GaussianMixture(n_components=n_components,
+                                                n_init=1,
+                                                covariance_type='full').\
+                fit(c).means_.astype(np.int)
 
-        target = target.data.cpu().numpy()
-        ahd = losses.averaged_hausdorff_distance(centroids, target)
+            target = target.data.cpu().numpy().reshape(-1, 2)
+            ahd = losses.averaged_hausdorff_distance(centroids, target)
         ahd = torch.cuda.FloatTensor([ahd])
-
         sum_ahd += ahd
+
+        # Validation using Precision and Recall
+        judge.evaluate_sample(centroids, target)
 
         if time.time() > tic_val + args.log_interval:
             tic_val = time.time()
@@ -406,23 +423,25 @@ while epoch < args.epochs:
     avg_term3_val = sum_term3 / len(valset_loader)
     avg_loss_val = sum_loss / len(valset_loader)
     avg_ahd_val = sum_ahd / len(valset_loader)
+    prec, rec = judge.get_p_n_r()
+    prec, rec = torch.cuda.FloatTensor([prec]), torch.cuda.FloatTensor([rec])
 
     # Send validation loss to Visdom
-    win_val_loss = viz.updateTrace(Y=torch.stack((avg_term1_val, avg_term2_val, avg_term3_val, avg_loss_val/3, avg_ahd_val)).view(1, -1).data.cpu(),
-                                   X=torch.Tensor([epoch]).repeat(1, 5),
+    win_val_loss = viz.updateTrace(Y=torch.stack((avg_term1_val, avg_term2_val, avg_term3_val, avg_loss_val/3, avg_ahd_val, prec, rec)).view(1, -1).data.cpu(),
+                                   X=torch.Tensor([epoch]).repeat(1, 7),
                                    opts=dict(title='Validation',
                                              legend=['Term 1', 'Term 2',
-                                                     'Term 3', 'Sum/3', 'AHD'],
+                                                 'Term 3', 'Sum/3', 'AHD', 'Precision', 'Recall'],
                                              ylabel='Loss', xlabel='Epoch'),
                                    append=True,
                                    win='4')
     if win_val_loss == 'win does not exist':
-        win_val_loss = viz.line(Y=torch.stack((avg_term1_val, avg_term2_val, avg_term3_val, avg_loss_val/3, avg_ahd_val)).view(1, -1).data.cpu(),
-                                X=torch.Tensor([epoch]).repeat(1, 5),
-                                opts=dict(title='(Validation) Chamfer',
+        win_val_loss = viz.line(Y=torch.stack((avg_term1_val, avg_term2_val, avg_term3_val, avg_loss_val/3, avg_ahd_val, prec, rec)).view(1, -1).data.cpu(),
+                                X=torch.Tensor([epoch]).repeat(1, 7),
+                                opts=dict(title='Validation',
                                           legend=['Term 1', 'Term 2',
-                                                  'Term 3', 'Sum/3', 'AHD'],
-                                          ylabel='Loss', xlabel='Iteration'),
+                                                 'Term 3', 'Sum/3', 'AHD', 'Precision', 'Recall'],
+                                          ylabel='Loss', xlabel='Epoch'),
                                 win='4')
 
     # If this is the best epoch (in terms of validation error)

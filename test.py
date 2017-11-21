@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 
 import argparse
 import os
@@ -24,6 +24,7 @@ from sklearn import mixture
 import unet_pix2pix
 import losses
 import unet_model
+from eval_precision_recall import Judge
 
 # Testing settings
 parser = argparse.ArgumentParser(description='Plant Location with PyTorch')
@@ -47,6 +48,11 @@ parser.add_argument('--out-dir', type=str,
 parser.add_argument('--paint', default=False, action="store_true",
                     help='Paint red circles at estimated locations? '
                             'It takes an enormous amount of time!')
+parser.add_argument('--radius', type=int, default=5, metavar='R',
+                    help='Default radius to consider a object detection as "match".')
+parser.add_argument('--n-points', type=int, default=None, metavar='N',
+                    help='If you know the number of points (e.g, just one pupil), set it.' \
+                          'Otherwise it will be estimated by adding a L1 cost term.')
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
@@ -120,7 +126,7 @@ testset_loader = data.DataLoader(testset,
 # Model
 print('Building network... ', end='')
 # model = unet.UnetGenerator(input_nc=3, output_nc=1, num_downs=8)
-model = unet_model.UNet(3, 1)
+model = unet_model.UNet(3, 1, known_n_points=args.n_points)
 print('DONE')
 print(model)
 model = nn.DataParallel(model)
@@ -155,7 +161,9 @@ df_out = pd.DataFrame(columns=['plant_count'])
 # Set the module in evaluation mode
 model.eval()
 
+judges = [Judge(r) for r in range(0, 16)]
 sum_ahd = 0
+sum_ape = 0
 for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader),
                                           total=len(testset_loader)):
 
@@ -181,6 +189,11 @@ for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader),
     est_map = est_map.squeeze()
     target = target.squeeze()
 
+    ape = 100*l1_loss.forward(est_n_plants, target_n_plants) / \
+        target_n_plants.type(torch.cuda.FloatTensor)
+    ape = ape.data.cpu().numpy()[0]
+    sum_ape += ape
+
     # Save estimated map to disk
     tv.utils.save_image(est_map.data,
                         os.path.join(args.out_dir, 'est_map', dictionary['filename'][0]))
@@ -193,18 +206,27 @@ for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader),
     y = coord[0].reshape((-1, 1))
     x = coord[1].reshape((-1, 1))
     c = np.concatenate((y, x), axis=1)
-    n_components = int(torch.round(est_n_plants).data.cpu().numpy()[0])
-    # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples
-    n_components = max(min(n_components, x.size), 1)
-    centroids = mixture.GaussianMixture(n_components=n_components,
-                                        n_init=1,
-                                        covariance_type='full').\
-        fit(c).means_.astype(np.int)
+    if len(c) == 0:
+        continue
+        ahd = criterion_training.max_dist
+        centroids = []
+    else:
+        n_components = int(torch.round(est_n_plants).data.cpu().numpy()[0])
+        # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples
+        n_components = max(min(n_components, x.size), 1)
+        centroids = mixture.GaussianMixture(n_components=n_components,
+                                            n_init=1,
+                                            covariance_type='full').\
+            fit(c).means_.astype(np.int)
 
-    target = target.data.cpu().numpy()
-    ahd = losses.averaged_hausdorff_distance(centroids, target)
+        target = target.data.cpu().numpy().reshape(-1, 2)
+        ahd = losses.averaged_hausdorff_distance(centroids, target)
 
     sum_ahd += ahd
+
+    # Validation using Precision and Recall
+    for judge in judges:
+        judge.evaluate_sample(centroids, target)
 
     # Save thresholded map to disk
     cv2.imwrite(os.path.join(args.out_dir, 'est_map_thresholded', dictionary['filename'][0]),
@@ -230,10 +252,16 @@ for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader),
     df_out=df_out.append(df)
 
 avg_ahd = sum_ahd/len(testset_loader)
+mape = sum_ape/len(testset_loader)
 
 # Write CSV to disk
 df_out.to_csv(os.path.join(args.out_dir, 'estimations.csv'))
 
 print('╰─ Average AHD for all the testing set: {:.4f}'.format(avg_ahd))
+print('╰─ Accuracy for all the testing set, r=0, ..., 15')
+for judge in judges:
+    acc, _ = judge.get_p_n_r()
+    print(acc)
+print('╰─ MAPE for all the testing set: {:.4f} %'.format(mape))
 print('It took %s seconds to evaluate all the testing set.' %
       int(time.time() - tic))

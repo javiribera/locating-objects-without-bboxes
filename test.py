@@ -123,16 +123,6 @@ testset_loader = data.DataLoader(testset,
                                  batch_size=args.eval_batch_size,
                                  num_workers=args.nThreads)
 
-# Model
-print('Building network... ', end='')
-# model = unet.UnetGenerator(input_nc=3, output_nc=1, num_downs=8)
-model = unet_model.UNet(3, 1, known_n_points=args.n_points)
-print('DONE')
-print(model)
-model = nn.DataParallel(model)
-if args.cuda:
-    model.cuda()
-
 # Loss function
 l1_loss = nn.L1Loss()
 criterion_training = losses.ModifiedChamferLoss(256, 256, return_2_terms=True)
@@ -142,9 +132,28 @@ print("Loading checkpoint '{}' ...".format(args.checkpoint))
 if os.path.isfile(args.checkpoint):
     checkpoint = torch.load(args.checkpoint)
     start_epoch = checkpoint['epoch']
+    # Model
+    if args.n_points is None:
+        if 'n_points' not in checkpoint:
+            # Model will also estimate # of points
+            model=unet_model.UNet(3, 1, None)
+        else:
+            # The checkpoint tells us the # of points to estimate
+            model=unet_model.UNet(3, 1, checkpoint['n_points'])
+    else:
+        # The user tells us the # of points to estimate
+        model=unet_model.UNet(3, 1, known_n_points=args.n_points)
+
+    # Parallelize
+    model = nn.DataParallel(model)
+    if args.cuda:
+        model.cuda()
+
+    # Load model in checkpoint
     model.load_state_dict(checkpoint['model'])
     print("╰─ loaded checkpoint '{}' (now on epoch {})"
           .format(args.checkpoint, checkpoint['epoch']))
+    print(model)
 else:
     print("╰─ E: no checkpoint found at '{}'".format(args.checkpoint))
     exit(-1)

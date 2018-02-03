@@ -7,7 +7,8 @@ from unet_parts import *
 
 
 class UNet(nn.Module):
-    def __init__(self, n_channels, n_classes, known_n_points=None):
+    def __init__(self, n_channels, n_classes,
+                 known_n_points=None):
         super(UNet, self).__init__()
         self.inc = inconv(n_channels, 64)
         self.down1 = down(64, 128)
@@ -29,12 +30,10 @@ class UNet(nn.Module):
         self.outc = outconv(64, n_classes)
         self.out_nonlin = nn.Sigmoid()
 
-        self.regressor = nn.Linear(256*256, 1)
-        self.regressor_nonlin = nn.Softplus()
-
-        self.lin = nn.Linear(1, 1, bias=False)
-
         self.known_n_points = known_n_points
+        if known_n_points is None:
+            self.regressor = nn.Linear(288*384, 1)
+            self.regressor_nonlin = nn.Softplus()
 
     def forward(self, x):
         x1 = self.inc(x)
@@ -57,12 +56,14 @@ class UNet(nn.Module):
         x = self.outc(x)
         x = self.out_nonlin(x)
 
-        x_flat = x.view(1, -1)
-
-        regression = self.regressor(x_flat)
-        regression = self.regressor_nonlin(regression)
-
-        return x, regression
+        if self.known_n_points is None:
+            x_flat = x.view(1, -1)
+            regression = self.regressor(x_flat)
+            regression = self.regressor_nonlin(regression)
+            return x, regression
+        else:
+            n_pts = Variable(torch.cuda.FloatTensor([self.known_n_points]))
+            return x, n_pts
         # summ = torch.sum(x)
         # count = self.lin(summ)
 

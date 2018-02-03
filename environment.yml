@@ -1,5 +1,6 @@
 name: plant-location-unet
 channels:
+- menpo
 - soumith
 - conda-forge
 - defaults
@@ -99,6 +100,7 @@ dependencies:
 - libgfortran=3.0.0=1
 - libstdcxx-ng=7.2.0=h7a57d05_2
 - mkl=2018.0.0=hb491cac_4
+- opencv3=3.1.0=py36_0
 - cuda80=1.0=0
 - pytorch=0.2.0=py36h53baedd_4cu80
 - torchvision=0.1.9=py36h7584368_1
@@ -108,7 +110,9 @@ dependencies:
   - ipython-genutils==0.2.0
   - prompt-toolkit==1.0.15
   - pycrayon==0.5
+  - pyyaml==3.12
   - torch==0.2.0.post4
   - torchfile==0.1.0
   - visdom==0.1.6.1
+prefix: /home/jprat/.anaconda3/envs/plant-location-unet
 

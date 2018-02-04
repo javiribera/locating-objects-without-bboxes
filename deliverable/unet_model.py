@@ -35,6 +35,10 @@ class UNet(nn.Module):
             self.regressor = nn.Linear(256*256, 1)
             self.regressor_nonlin = nn.Softplus()
 
+        # This layer is not connected anywhere
+        # It is only here for backward compatibility
+        self.lin = nn.Linear(1, 1, bias=False)
+
     def forward(self, x):
         x1 = self.inc(x)
         x2 = self.down1(x1)

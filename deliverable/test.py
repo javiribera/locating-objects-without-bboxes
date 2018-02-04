@@ -40,7 +40,7 @@ parser.add_argument('--paint', default=True, action="store_true",
                     help='Paint a red circle at each of the estimated locations.')
 parser.add_argument('--nThreads', '-j', default=4, type=int, metavar='N',
                     help='Number of data loading threads.')
-parser.add_argument('--no-gpu', '--no-cuda', action='store_true', default=False,
+parser.add_argument('--no-cuda', '--no-gpu', action='store_true', default=False,
                     help='Use CPU only, no GPU.')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='Random seed.')
@@ -171,9 +171,6 @@ else:
 tic = time.time()
 
 
-# === Testing ===
-print("\Testing... ")
-
 # Empty output CSV
 df_out = pd.DataFrame(columns=['plant_count'])
 
@@ -189,6 +186,7 @@ for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader),
     # Pull info from this sample image
     gt_plant_locations = [eval(el) for el in dictionary['plant_locations']]
     target_n_plants = dictionary['plant_count']
+
     # We cannot deal with images with 0 plants (CD is not defined)
     if any(len(target_one_img) == 0 for target_one_img in gt_plant_locations):
         continue
@@ -203,7 +201,7 @@ for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader),
     data, target, target_n_plants = Variable(data, volatile=True), Variable(
         target, volatile=True), Variable(target_n_plants, volatile=True)
 
-    # One forward
+    # Feed forward
     est_map, est_n_plants = model.forward(data)
     est_map = est_map.squeeze()
     target = target.squeeze()

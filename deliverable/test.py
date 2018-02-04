@@ -24,10 +24,10 @@ import unet_model
 from eval_precision_recall import Judge
 
 # Testing settings
-parser = argparse.ArgumentParser(description='Plant Location with PyTorch',
+parser = argparse.ArgumentParser(description='Plant Location with PyTorch (inference/test only)',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--test-dir', required=True,
-                    help='REQUIRED. Directory with test images.\n')
+parser.add_argument('--dataset', required=True,
+                    help='REQUIRED. Directory with test images + CSV.\n')
 # parser.add_argument('--eval-batch-size', type=int, default=1, metavar='N',
 # help='Input batch size.')
 parser.add_argument('--checkpoint', type=str, required=True, metavar='PATH',
@@ -40,8 +40,8 @@ parser.add_argument('--paint', default=True, action="store_true",
                     help='Paint a red circle at each of the estimated locations.')
 parser.add_argument('--nThreads', '-j', default=4, type=int, metavar='N',
                     help='Number of data loading threads.')
-parser.add_argument('--no-cuda', '--no-gpu', action='store_true', default=False,
-                    help='Use CPU only, no GPU.')
+# parser.add_argument('--no-cuda', '--no-gpu', action='store_true', default=False,
+                    # help='Use CPU only, no GPU.')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='Random seed.')
 parser.add_argument('--max-testset-size', type=int, default=np.inf, metavar='N',
@@ -50,7 +50,12 @@ parser.add_argument('--n-points', type=int, default=None, metavar='N',
                     help='If you know the exact number of points in the image, then set it. '
                     'Otherwise it will be estimated by adding a L1 cost term.')
 args = parser.parse_args()
-args.cuda = not args.no_cuda and torch.cuda.is_available()
+
+# args.cuda = not args.no_cuda and torch.cuda.is_available()
+args.cuda = torch.cuda.is_available()
+# For now we cannot use models trained on GPU to do inference with CPU
+if not args.cuda:
+    raise NotImplementedError('You must have a GPU with CUDA.')
 
 # Set seeds
 np.random.seed(0)
@@ -123,7 +128,7 @@ if args.eval_batch_size != 1:
                               % args.eval_batch_size)
 
 # Data loading code
-testset = CSVDataset(args.test_dir,
+testset = CSVDataset(args.dataset,
                      transform=transforms.Compose([
                          transforms.ToTensor(),
                          transforms.Normalize((0.5, 0.5, 0.5),
@@ -133,6 +138,9 @@ testset = CSVDataset(args.test_dir,
 testset_loader = data.DataLoader(testset,
                                  batch_size=args.eval_batch_size,
                                  num_workers=args.nThreads)
+
+# Tensor type to use, select CUDA or not
+tensortype = torch.cuda.FloatTensor if args.cuda else torch.FloatTensor
 
 # Loss function
 l1_loss = nn.L1Loss()
@@ -147,13 +155,13 @@ if os.path.isfile(args.checkpoint):
     if args.n_points is None:
         if 'n_points' not in checkpoint:
             # Model will also estimate # of points
-            model = unet_model.UNet(3, 1, None)
+            model = unet_model.UNet(3, 1, None, tensortype=tensortype)
         else:
             # The checkpoint tells us the # of points to estimate
-            model = unet_model.UNet(3, 1, checkpoint['n_points'])
+            model = unet_model.UNet(3, 1, checkpoint['n_points'], tensortype=tensortype)
     else:
         # The user tells us the # of points to estimate
-        model = unet_model.UNet(3, 1, known_n_points=args.n_points)
+        model = unet_model.UNet(3, 1, known_n_points=args.n_points, tensortype=tensortype)
 
     # Parallelize
     model = nn.DataParallel(model)
@@ -194,10 +202,8 @@ for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader),
     target = gt_plant_locations
 
     # Prepare data and target
-    data, target, target_n_plants = data.type(
-        torch.FloatTensor), torch.FloatTensor(target), target_n_plants.type(torch.FloatTensor)
-    if args.cuda:
-        data, target, target_n_plants = data.cuda(), target.cuda(), target_n_plants.cuda()
+    data, target_n_plants = data.type(tensortype), target_n_plants.type(tensortype)
+    target = torch.FloatTensor(target).type(tensortype)
     data, target, target_n_plants = Variable(data, volatile=True), Variable(
         target, volatile=True), Variable(target_n_plants, volatile=True)
 
@@ -206,8 +212,7 @@ for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader),
     est_map = est_map.squeeze()
     target = target.squeeze()
 
-    ape = 100 * l1_loss.forward(est_n_plants, target_n_plants) / \
-        target_n_plants.type(torch.cuda.FloatTensor)
+    ape = 100 * l1_loss.forward(est_n_plants, target_n_plants) / target_n_plants
     ape = ape.data.cpu().numpy()[0]
     sum_ape += ape
 
@@ -251,7 +256,7 @@ for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader),
 
     if args.paint:
         # Paint a circle in the original image at the estimated location
-        image_with_x = torch.cuda.FloatTensor(data.data.squeeze().size()).\
+        image_with_x = tensortype(data.data.squeeze().size()).\
             copy_(data.data.squeeze())
         image_with_x = ((image_with_x + 1) / 2.0 * 255.0)
         image_with_x = image_with_x.cpu().numpy()

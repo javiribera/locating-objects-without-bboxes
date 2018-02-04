@@ -8,8 +8,12 @@ from unet_parts import *
 
 class UNet(nn.Module):
     def __init__(self, n_channels, n_classes,
-                 known_n_points=None):
+                 known_n_points=None, tensortype=torch.cuda.FloatTensor):
         super(UNet, self).__init__()
+
+        # Type of tensor the output will be
+        self.tensortype = tensortype
+
         self.inc = inconv(n_channels, 64)
         self.down1 = down(64, 128)
         self.down2 = down(128, 256)
@@ -66,7 +70,7 @@ class UNet(nn.Module):
             regression = self.regressor_nonlin(regression)
             return x, regression
         else:
-            n_pts = Variable(torch.cuda.FloatTensor([self.known_n_points]))
+            n_pts = Variable(self.tensortype([self.known_n_points]))
             return x, n_pts
         # summ = torch.sum(x)
         # count = self.lin(summ)

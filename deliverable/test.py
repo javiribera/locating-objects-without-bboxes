@@ -30,7 +30,7 @@ parser.add_argument('--dataset', required=True,
                     help='REQUIRED. Directory with test images + CSV.\n')
 # parser.add_argument('--eval-batch-size', type=int, default=1, metavar='N',
 # help='Input batch size.')
-parser.add_argument('--checkpoint', type=str, required=True, metavar='PATH',
+parser.add_argument('--model', type=str, required=True, metavar='PATH',
                     help='REQUIRED. Checkpoint with the CNN model.\n')
 parser.add_argument('--out-dir', type=str, required=True,
                     help='REQUIRED. Directory where results will be stored (images+CSV).')
@@ -148,9 +148,9 @@ criterion_training = losses.ModifiedChamferLoss(height=256, width=256,
                                                 return_2_terms=True)
 
 # Restore saved checkpoint (model weights)
-print("Loading checkpoint '{}' ...".format(args.checkpoint))
-if os.path.isfile(args.checkpoint):
-    checkpoint = torch.load(args.checkpoint)
+print("Loading checkpoint '{}' ...".format(args.model))
+if os.path.isfile(args.model):
+    checkpoint = torch.load(args.model)
     # Model
     if args.n_points is None:
         if 'n_points' not in checkpoint:
@@ -170,10 +170,10 @@ if os.path.isfile(args.checkpoint):
 
     # Load model in checkpoint
     model.load_state_dict(checkpoint['model'])
-    print("╰─ loaded checkpoint '{}'".format(args.checkpoint))
+    print("╰─ loaded checkpoint '{}'".format(args.model))
     print(model)
 else:
-    print("╰─ E: no checkpoint found at '{}'".format(args.checkpoint))
+    print("╰─ E: no checkpoint found at '{}'".format(args.model))
     exit(-1)
 
 tic = time.time()

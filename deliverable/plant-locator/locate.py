@@ -32,8 +32,9 @@ parser.add_argument('--dataset', required=True,
                     help='REQUIRED. Directory with test images.\n')
 # parser.add_argument('--eval-batch-size', type=int, default=1, metavar='N',
 # help='Input batch size.')
-parser.add_argument('--model', type=str, required=True, metavar='PATH',
-                    help='REQUIRED. Checkpoint with the CNN model.\n')
+parser.add_argument('--model', type=str, metavar='PATH',
+                    default='unet_256x256_sorghum',
+                    help='Checkpoint with the CNN model.\n')
 parser.add_argument('--out-dir', type=str, required=True,
                     help='REQUIRED. Directory where results will be stored (images+CSV).')
 # parser.add_argument('--imgsize', type=str, default='256x256', metavar='HxW',
@@ -186,6 +187,12 @@ criterion_training = losses.WeightedHausdorffDistance(height=height, width=width
 
 # Restore saved checkpoint (model weights)
 print("Loading checkpoint '{}' ...".format(args.model))
+
+# Pretrained models that come with this package
+if args.model == 'unet_256x256_sorghum':
+    args.model = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                              'models',
+                              'unet_256x256_sorghum.ckpt')
 if os.path.isfile(args.model):
     checkpoint = torch.load(args.model)
     # Model

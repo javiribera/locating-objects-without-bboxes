@@ -26,30 +26,28 @@ from eval_precision_recall import Judge
 # Testing settings
 parser = argparse.ArgumentParser(description='Plant Location with PyTorch')
 parser.add_argument('--test-dir', required=True,
-                    help='Directory with testing images')
+                    help='Directory with testing images.')
 parser.add_argument('--eval-batch-size', type=int, default=1, metavar='N',
-                    help='input batch size for validation and testing')
+                    help='Input batch size for validation and testing.')
 parser.add_argument('--nThreads', '-j', default=4, type=int, metavar='N',
-                    help='number of data loading threads (default: 4)')
+                    help='Number of data loading threads (default: 4).')
 parser.add_argument('--no-cuda', action='store_true', default=False,
-                    help='disables CUDA training')
+                    help='Disables CUDA training.')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
-                    help='random seed (default: 1)')
+                    help='Random seed (default: 1).')
 parser.add_argument('--checkpoint', default='', type=str, required=True, metavar='PATH',
-                    help='path to latest checkpoint (default: none)')
+                    help='Path to latest checkpoint (default: none)')
 parser.add_argument('--max-testset-size', type=int, default=np.inf, metavar='N',
-                    help='only use the first N images of the testing dataset')
+                    help='Only use the first N images of the testing dataset.')
 parser.add_argument('--out-dir', type=str,
-                    help='path where to store the results of analyzing the test set \
-                            (images and CSV file)')
+                    help='Directory where results will be stored (images+CSV).')
 parser.add_argument('--paint', default=False, action="store_true",
-                    help='Paint red circles at estimated locations? '
-                            'It takes an enormous amount of time!')
+                    help='Paint red circles at estimated locations.')
 parser.add_argument('--radius', type=int, default=5, metavar='R',
-                    help='Default radius to consider a object detection as "match".')
+                    help='Detections at dist <= r to a GT pt are True Positives.')
 parser.add_argument('--n-points', type=int, default=None, metavar='N',
-                    help='If you know the number of points (e.g, just one pupil), set it.' \
-                          'Otherwise it will be estimated by adding a L1 cost term.')
+                    help='If you know the exact number of points in the image, then set it. '
+                    'Otherwise it will be estimated by adding a L1 cost term.')
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
@@ -134,13 +132,13 @@ if os.path.isfile(args.checkpoint):
     if args.n_points is None:
         if 'n_points' not in checkpoint:
             # Model will also estimate # of points
-            model=unet_model.UNet(3, 1, None)
+            model = unet_model.UNet(3, 1, None)
         else:
             # The checkpoint tells us the # of points to estimate
-            model=unet_model.UNet(3, 1, checkpoint['n_points'])
+            model = unet_model.UNet(3, 1, checkpoint['n_points'])
     else:
         # The user tells us the # of points to estimate
-        model=unet_model.UNet(3, 1, known_n_points=args.n_points)
+        model = unet_model.UNet(3, 1, known_n_points=args.n_points)
 
     # Parallelize
     model = nn.DataParallel(model)
@@ -196,7 +194,7 @@ for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader),
     est_map = est_map.squeeze()
     target = target.squeeze()
 
-    ape = 100*l1_loss.forward(est_n_plants, target_n_plants) / \
+    ape = 100 * l1_loss.forward(est_n_plants, target_n_plants) / \
         target_n_plants.type(torch.cuda.FloatTensor)
     ape = ape.data.cpu().numpy()[0]
     sum_ape += ape
@@ -242,24 +240,24 @@ for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader),
     if args.paint:
         # Paint a circle in the original image at the estimated location
         image_with_x = torch.cuda.FloatTensor(data.data.squeeze().size()).\
-                copy_(data.data.squeeze())
+            copy_(data.data.squeeze())
         image_with_x = ((image_with_x + 1) / 2.0 * 255.0)
         image_with_x = image_with_x.cpu().numpy()
         image_with_x = np.moveaxis(image_with_x, 0, 2).copy()
         for y, x in centroids:
             image_with_x = cv2.circle(image_with_x, (x, y), 3, [255, 0, 0], -1)
         # Save original image with circle to disk
-        image_with_x = image_with_x[:,:,::-1]
+        image_with_x = image_with_x[:, :, ::-1]
         cv2.imwrite(os.path.join(args.out_dir, 'painted', dictionary['filename'][0]),
                     image_with_x)
 
-    df=pd.DataFrame(data=[est_n_plants.data.cpu().numpy()[0]],
+    df = pd.DataFrame(data=[est_n_plants.data.cpu().numpy()[0]],
                       index=[dictionary['filename'][0]],
                       columns=['plant_count'])
-    df_out=df_out.append(df)
+    df_out = df_out.append(df)
 
-avg_ahd = sum_ahd/len(testset_loader)
-mape = sum_ape/len(testset_loader)
+avg_ahd = sum_ahd / len(testset_loader)
+mape = sum_ape / len(testset_loader)
 
 # Write CSV to disk
 df_out.to_csv(os.path.join(args.out_dir, 'estimations.csv'))

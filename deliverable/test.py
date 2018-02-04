@@ -136,7 +136,7 @@ testset_loader = data.DataLoader(testset,
 
 # Loss function
 l1_loss = nn.L1Loss()
-criterion_training = losses.ModifiedChamferLoss(height=288, width=384,
+criterion_training = losses.ModifiedChamferLoss(height=256, width=256,
                                                 return_2_terms=True)
 
 # Restore saved checkpoint (model weights + epoch)

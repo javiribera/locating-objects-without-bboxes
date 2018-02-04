@@ -32,7 +32,7 @@ class UNet(nn.Module):
 
         self.known_n_points = known_n_points
         if known_n_points is None:
-            self.regressor = nn.Linear(288*384, 1)
+            self.regressor = nn.Linear(256*256, 1)
             self.regressor_nonlin = nn.Softplus()
 
     def forward(self, x):

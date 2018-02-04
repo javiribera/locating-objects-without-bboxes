@@ -24,27 +24,28 @@ import unet_model
 from eval_precision_recall import Judge
 
 # Testing settings
-parser = argparse.ArgumentParser(description='Plant Location with PyTorch')
+parser = argparse.ArgumentParser(description='Plant Location with PyTorch',
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--test-dir', required=True,
-                    help='Directory with testing images.')
-parser.add_argument('--eval-batch-size', type=int, default=1, metavar='N',
-                    help='Input batch size for validation and testing.')
+                    help='REQUIRED. Directory with test images.\n')
+# parser.add_argument('--eval-batch-size', type=int, default=1, metavar='N',
+# help='Input batch size.')
+parser.add_argument('--checkpoint', type=str, required=True, metavar='PATH',
+                    help='REQUIRED. Checkpoint with the CNN model.\n')
+parser.add_argument('--out-dir', type=str, required=True,
+                    help='REQUIRED. Directory where results will be stored (images+CSV).')
+parser.add_argument('--radius', type=int, default=5, metavar='R',
+                    help='Detections at dist <= R to a GT pt are True Positives.')
+parser.add_argument('--paint', default=True, action="store_true",
+                    help='Paint a red circle at each of the estimated locations.')
 parser.add_argument('--nThreads', '-j', default=4, type=int, metavar='N',
-                    help='Number of data loading threads (default: 4).')
-parser.add_argument('--no-cuda', action='store_true', default=False,
-                    help='Disables CUDA training.')
+                    help='Number of data loading threads.')
+parser.add_argument('--no-gpu', '--no-cuda', action='store_true', default=False,
+                    help='Use CPU only, no GPU.')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
-                    help='Random seed (default: 1).')
-parser.add_argument('--checkpoint', default='', type=str, required=True, metavar='PATH',
-                    help='Path to latest checkpoint (default: none)')
+                    help='Random seed.')
 parser.add_argument('--max-testset-size', type=int, default=np.inf, metavar='N',
                     help='Only use the first N images of the testing dataset.')
-parser.add_argument('--out-dir', type=str,
-                    help='Directory where results will be stored (images+CSV).')
-parser.add_argument('--paint', default=False, action="store_true",
-                    help='Paint red circles at estimated locations.')
-parser.add_argument('--radius', type=int, default=5, metavar='R',
-                    help='Detections at dist <= r to a GT pt are True Positives.')
 parser.add_argument('--n-points', type=int, default=None, metavar='N',
                     help='If you know the exact number of points in the image, then set it. '
                     'Otherwise it will be estimated by adding a L1 cost term.')
@@ -105,6 +106,12 @@ class PlantDataset(data.Dataset):
 
         return (transformed, dictionary)
 
+
+# Force batchsize == 1
+args.eval_batch_size = 1
+if args.eval_batch_size != 1:
+    raise NotImplementedError('Only a batch size of 1 is implemented for now, got %s'
+                              % args.eval_batch_size)
 
 # Data loading code
 testset = PlantDataset(args.test_dir,

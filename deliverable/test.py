@@ -139,11 +139,10 @@ l1_loss = nn.L1Loss()
 criterion_training = losses.ModifiedChamferLoss(height=256, width=256,
                                                 return_2_terms=True)
 
-# Restore saved checkpoint (model weights + epoch)
+# Restore saved checkpoint (model weights)
 print("Loading checkpoint '{}' ...".format(args.checkpoint))
 if os.path.isfile(args.checkpoint):
     checkpoint = torch.load(args.checkpoint)
-    start_epoch = checkpoint['epoch']
     # Model
     if args.n_points is None:
         if 'n_points' not in checkpoint:
@@ -163,8 +162,7 @@ if os.path.isfile(args.checkpoint):
 
     # Load model in checkpoint
     model.load_state_dict(checkpoint['model'])
-    print("╰─ loaded checkpoint '{}' (now on epoch {})"
-          .format(args.checkpoint, checkpoint['epoch']))
+    print("╰─ loaded checkpoint '{}'".format(args.checkpoint))
     print(model)
 else:
     print("╰─ E: no checkpoint found at '{}'".format(args.checkpoint))

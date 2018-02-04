@@ -156,7 +156,7 @@ tensortype = torch.cuda.FloatTensor if args.cuda else torch.FloatTensor
 
 # Loss function
 l1_loss = nn.L1Loss()
-criterion_training = losses.ModifiedChamferLoss(height=height, width=width,
+criterion_training = losses.WeightedHausdorffDistance(height=height, width=width,
                                                 return_2_terms=True)
 
 # Restore saved checkpoint (model weights)
@@ -192,7 +192,7 @@ if os.path.isfile(args.model):
     # Load model in checkpoint
     model.load_state_dict(checkpoint['model'])
     print("╰─ loaded checkpoint '{}'".format(args.model))
-    print(model)
+    # print(model)
 else:
     print("╰─ E: no checkpoint found at '{}'".format(args.model))
     exit(-1)

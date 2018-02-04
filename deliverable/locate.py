@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import shutil
+from parse import parse
 
 import cv2
 from tqdm import tqdm
@@ -34,6 +35,8 @@ parser.add_argument('--model', type=str, required=True, metavar='PATH',
                     help='REQUIRED. Checkpoint with the CNN model.\n')
 parser.add_argument('--out-dir', type=str, required=True,
                     help='REQUIRED. Directory where results will be stored (images+CSV).')
+# parser.add_argument('--imgsize', type=str, default='256x256', metavar='HxW',
+                    # help='Size of the input images (heightxwidth).')
 parser.add_argument('--radius', type=int, default=5, metavar='R',
                     help='Detections at dist <= R to a GT pt are True Positives.')
 parser.add_argument('--paint', default=True, action="store_true",
@@ -41,7 +44,7 @@ parser.add_argument('--paint', default=True, action="store_true",
 parser.add_argument('--nThreads', '-j', default=4, type=int, metavar='N',
                     help='Number of data loading threads.')
 # parser.add_argument('--no-cuda', '--no-gpu', action='store_true', default=False,
-                    # help='Use CPU only, no GPU.')
+# help='Use CPU only, no GPU.')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='Random seed.')
 parser.add_argument('--max-testset-size', type=int, default=np.inf, metavar='N',
@@ -67,6 +70,15 @@ if args.cuda:
 os.makedirs(os.path.join(args.out_dir, 'painted'), exist_ok=True)
 os.makedirs(os.path.join(args.out_dir, 'est_map'), exist_ok=True)
 os.makedirs(os.path.join(args.out_dir, 'est_map_thresholded'), exist_ok=True)
+
+# Input image size must be 256x256 for the currently trained checkpoint
+args.imgsize = '256x256'
+try:
+    height, width = parse('{}x{}', args.imgsize)
+    height, width = int(height), int(width)
+except TypeError as e:
+    print("╰─ E: The input --imgsize must be in format WxH, got '{}'".format(args.imgsize))
+    exit(-1)
 
 
 class CSVDataset(data.Dataset):
@@ -144,7 +156,7 @@ tensortype = torch.cuda.FloatTensor if args.cuda else torch.FloatTensor
 
 # Loss function
 l1_loss = nn.L1Loss()
-criterion_training = losses.ModifiedChamferLoss(height=256, width=256,
+criterion_training = losses.ModifiedChamferLoss(height=height, width=width,
                                                 return_2_terms=True)
 
 # Restore saved checkpoint (model weights)
@@ -155,13 +167,22 @@ if os.path.isfile(args.model):
     if args.n_points is None:
         if 'n_points' not in checkpoint:
             # Model will also estimate # of points
-            model = unet_model.UNet(3, 1, None, tensortype=tensortype)
+            model = unet_model.UNet(3, 1,
+                                    known_n_points=None,
+                                    height=height, width=width,
+                                    tensortype=tensortype)
         else:
             # The checkpoint tells us the # of points to estimate
-            model = unet_model.UNet(3, 1, checkpoint['n_points'], tensortype=tensortype)
+            model = unet_model.UNet(3, 1,
+                                    known_n_points=checkpoint['n_points'],
+                                    height=height, width=width,
+                                    tensortype=tensortype)
     else:
         # The user tells us the # of points to estimate
-        model = unet_model.UNet(3, 1, known_n_points=args.n_points, tensortype=tensortype)
+        model = unet_model.UNet(3, 1,
+                                known_n_points=args.n_points,
+                                height=height, width=width,
+                                tensortype=tensortype)
 
     # Parallelize
     model = nn.DataParallel(model)
@@ -202,7 +223,8 @@ for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader),
     target = gt_plant_locations
 
     # Prepare data and target
-    data, target_n_plants = data.type(tensortype), target_n_plants.type(tensortype)
+    data, target_n_plants = data.type(
+        tensortype), target_n_plants.type(tensortype)
     target = torch.FloatTensor(target).type(tensortype)
     data, target, target_n_plants = Variable(data, volatile=True), Variable(
         target, volatile=True), Variable(target_n_plants, volatile=True)
@@ -212,7 +234,8 @@ for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader),
     est_map = est_map.squeeze()
     target = target.squeeze()
 
-    ape = 100 * l1_loss.forward(est_n_plants, target_n_plants) / target_n_plants
+    ape = 100 * l1_loss.forward(est_n_plants,
+                                target_n_plants) / target_n_plants
     ape = ape.data.cpu().numpy()[0]
     sum_ape += ape
 

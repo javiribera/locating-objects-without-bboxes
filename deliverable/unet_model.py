@@ -8,8 +8,14 @@ from unet_parts import *
 
 class UNet(nn.Module):
     def __init__(self, n_channels, n_classes,
+                 height, width,
                  known_n_points=None, tensortype=torch.cuda.FloatTensor):
         super(UNet, self).__init__()
+
+        # With this network depth, there is a minimum image size
+        if height < 256 or width < 256:
+            raise ValueError('Minimum input image size is 256x256, got {}x{}'.\
+                             format(height, width))
 
         # Type of tensor the output will be
         self.tensortype = tensortype

@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 import skimage.io
 import torch
-import utils
 from torch import nn
 from torch.autograd import Variable
 from torch.utils import data
@@ -20,9 +19,11 @@ from torchvision import transforms
 import torchvision as tv
 from torchvision.models import inception_v3
 from sklearn import mixture
-import losses
-import unet_model
-from eval_precision_recall import Judge
+
+from . import losses
+from . import unet_model
+from .eval_precision_recall import Judge
+from . import utils
 
 # Testing settings
 parser = argparse.ArgumentParser(description='Plant Location with PyTorch (inference/test only)',

@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from unet_parts import *
+from .unet_parts import *
 
 
 class UNet(nn.Module):

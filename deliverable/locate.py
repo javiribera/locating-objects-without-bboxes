@@ -28,7 +28,7 @@ from eval_precision_recall import Judge
 parser = argparse.ArgumentParser(description='Plant Location with PyTorch (inference/test only)',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--dataset', required=True,
-                    help='REQUIRED. Directory with test images + CSV.\n')
+                    help='REQUIRED. Directory with test images.\n')
 # parser.add_argument('--eval-batch-size', type=int, default=1, metavar='N',
 # help='Input batch size.')
 parser.add_argument('--model', type=str, required=True, metavar='PATH',
@@ -94,36 +94,60 @@ class CSVDataset(data.Dataset):
         :param max_dataset_size: Only use the first N images in the directory.
         """
 
-        # Get groundtruth from CSV file
-        csv_filename = None
-        for filename in os.listdir(directory):
-            if filename.endswith('.csv'):
-                csv_filename = filename
-                break
-        if csv_filename is None:
-            raise ValueError(
-                'The root directory %s does not have a CSV file with groundtruth' % directory)
-        self.csv_df = pd.read_csv(os.path.join(directory, csv_filename))
-
-        # Make the dataset smaller
-        self.csv_df = self.csv_df[0:min(len(self.csv_df), max_dataset_size)]
-
         self.root_dir = directory
         self.transform = transform
 
+        # Get groundtruth from CSV file
+        listfiles = os.listdir(directory)
+        csv_filename = None
+        for filename in listfiles:
+            if filename.endswith('.csv'):
+                csv_filename = filename
+                break
+
+        self.there_is_gt = csv_filename is not None
+
+        # CSV does not exist (no GT available)
+        if not self.there_is_gt:
+            print('W: The dataset directory %s does not contain a CSV file with groundtruth. \n' \
+                  '   Metrics will not be evaluated. Only estimations will be returned.' % directory)
+            self.csv_df = None
+            self.listfiles = listfiles
+            
+            # Make dataset smaller
+            self.listfiles = self.listfiles[0:min(len(self.listfiles), max_dataset_size)]
+
+        # CSV does exist (GT is available)
+        else:
+            self.csv_df = pd.read_csv(os.path.join(directory, csv_filename))
+
+            # Make dataset smaller
+            self.csv_df = self.csv_df[0:min(len(self.csv_df), max_dataset_size)]
+
     def __len__(self):
-        return len(self.csv_df)
+        if self.there_is_gt:
+            return len(self.csv_df)
+        else:
+            return len(self.listfiles)
 
     def __getitem__(self, idx):
         """Get one element of the dataset.
         Returns a tuple. The first element is the image.
         The second element is a dictionary where the keys are the columns of the CSV.
+        If the CSV did not exist in the dataset directory,
+         the dictionary will only contain the filename of the image.
 
         :param idx: Index of the image in the dataset to get.
         """
-        img_path = os.path.join(self.root_dir, self.csv_df.ix[idx, 0])
-        img = skimage.io.imread(img_path)
-        dictionary = dict(self.csv_df.ix[idx])
+
+        if self.there_is_gt:
+            img_abspath = os.path.join(self.root_dir, self.csv_df.ix[idx, 0])
+            dictionary = dict(self.csv_df.ix[idx])
+        else:
+            img_abspath = os.path.join(self.root_dir, self.listfiles[idx])
+            dictionary = {'filename': self.listfiles[idx]}
+
+        img = skimage.io.imread(img_abspath)
 
         if self.transform:
             transformed = self.transform(img)
@@ -206,44 +230,44 @@ df_out = pd.DataFrame(columns=['plant_count'])
 # Set the module in evaluation mode
 model.eval()
 
-judges = [Judge(r) for r in range(0, 16)]
-sum_ahd = 0
-sum_ape = 0
+if testset.there_is_gt:
+    judges = [Judge(r) for r in range(0, 16)]
+    sum_ahd = 0
+    sum_ape = 0
+
 for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader),
                                           total=len(testset_loader)):
 
-    # Pull info from this sample image
-    gt_plant_locations = [eval(el) for el in dictionary['plant_locations']]
-    target_n_plants = dictionary['plant_count']
+    # Prepare data
+    data  = data.type(tensortype)
+    data = Variable(data, volatile=True)
 
-    # We cannot deal with images with 0 plants (CD is not defined)
-    if any(len(target_one_img) == 0 for target_one_img in gt_plant_locations):
-        continue
+    if testset.there_is_gt:
+        # Pull info from this sample image
+        gt_plant_locations = [eval(el) for el in dictionary['plant_locations']]
+        target_n_plants = dictionary['plant_count']
 
-    target = gt_plant_locations
+        # We cannot deal with images with 0 plants (HD is not defined)
+        if any(len(target_one_img) == 0 for target_one_img in gt_plant_locations):
+            continue
 
-    # Prepare data and target
-    data, target_n_plants = data.type(
-        tensortype), target_n_plants.type(tensortype)
-    target = torch.FloatTensor(target).type(tensortype)
-    data, target, target_n_plants = Variable(data, volatile=True), Variable(
-        target, volatile=True), Variable(target_n_plants, volatile=True)
+        target = gt_plant_locations
+
+        # Prepare targets
+        target_n_plants = target_n_plants.type(tensortype)
+        target = torch.FloatTensor(target).type(tensortype)
+        target, target_n_plants = Variable(target, volatile=True), \
+                                  Variable(target_n_plants, volatile=True)
+        target = target.squeeze()
 
     # Feed forward
     est_map, est_n_plants = model.forward(data)
     est_map = est_map.squeeze()
-    target = target.squeeze()
-
-    ape = 100 * l1_loss.forward(est_n_plants,
-                                target_n_plants) / target_n_plants
-    ape = ape.data.cpu().numpy()[0]
-    sum_ape += ape
 
     # Save estimated map to disk
     tv.utils.save_image(est_map.data,
                         os.path.join(args.out_dir, 'est_map', dictionary['filename'][0]))
 
-    # Evaluation using the Averaged Hausdorff Distance
     # The estimated map must be thresholded to obtain estimated points
     est_map_numpy = est_map.data.cpu().numpy()
     mask = cv2.inRange(est_map_numpy, 2 / 255, 1)
@@ -264,19 +288,12 @@ for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader),
                                             covariance_type='full').\
             fit(c).means_.astype(np.int)
 
-        target = target.data.cpu().numpy().reshape(-1, 2)
-        ahd = losses.averaged_hausdorff_distance(centroids, target)
-
-    sum_ahd += ahd
-
-    # Validation using Precision and Recall
-    for judge in judges:
-        judge.evaluate_sample(centroids, target)
-
     # Save thresholded map to disk
     cv2.imwrite(os.path.join(args.out_dir, 'est_map_thresholded', dictionary['filename'][0]),
                 mask)
 
+
+    # Paint red dots if user asked for it
     if args.paint:
         # Paint a circle in the original image at the estimated location
         image_with_x = tensortype(data.data.squeeze().size()).\
@@ -291,22 +308,42 @@ for batch_idx, (data, dictionary) in tqdm(enumerate(testset_loader),
         cv2.imwrite(os.path.join(args.out_dir, 'painted', dictionary['filename'][0]),
                     image_with_x)
 
+    if testset.there_is_gt:
+        # Evaluate Average Percent Error for this image
+        ape = 100 * l1_loss.forward(est_n_plants, target_n_plants) / target_n_plants
+        ape = ape.data.cpu().numpy()[0]
+        sum_ape += ape
+
+        # Evaluation using the Averaged Hausdorff Distance
+        target = target.data.cpu().numpy().reshape(-1, 2)
+        ahd = losses.averaged_hausdorff_distance(centroids, target)
+
+        sum_ahd += ahd
+
+        # Validation using Precision and Recall
+        for judge in judges:
+            judge.evaluate_sample(centroids, target)
+
+
     df = pd.DataFrame(data=[est_n_plants.data.cpu().numpy()[0]],
                       index=[dictionary['filename'][0]],
                       columns=['plant_count'])
     df_out = df_out.append(df)
 
-avg_ahd = sum_ahd / len(testset_loader)
-mape = sum_ape / len(testset_loader)
+if testset.there_is_gt:
+    avg_ahd = sum_ahd / len(testset_loader)
+    mape = sum_ape / len(testset_loader)
+
+    print('╰─ Average AHD for all the testing set: {:.4f}'.format(avg_ahd))
+    print('╰─ Accuracy for all the testing set, r=0, ..., 15')
+    for judge in judges:
+        acc, _ = judge.get_p_n_r()
+        print(acc)
+    print('╰─ MAPE for all the testing set: {:.4f} %'.format(mape))
+
+print('It took %s seconds to evaluate all the testing set.' %
+      int(time.time() - tic))
 
 # Write CSV to disk
 df_out.to_csv(os.path.join(args.out_dir, 'estimations.csv'))
 
-print('╰─ Average AHD for all the testing set: {:.4f}'.format(avg_ahd))
-print('╰─ Accuracy for all the testing set, r=0, ..., 15')
-for judge in judges:
-    acc, _ = judge.get_p_n_r()
-    print(acc)
-print('╰─ MAPE for all the testing set: {:.4f} %'.format(mape))
-print('It took %s seconds to evaluate all the testing set.' %
-      int(time.time() - tic))

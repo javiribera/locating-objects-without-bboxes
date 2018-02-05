@@ -70,7 +70,6 @@ dependencies:
 - python-dateutil=2.6.1=py36_0
 - pytz=2017.2=py36_0
 - pywavelets=0.5.2=np113py36_0
-- pyzmq=16.0.2=py36_2
 - qt=5.6.2=3
 - readline=6.2=0
 - requests=2.18.4=py36_1
@@ -89,7 +88,7 @@ dependencies:
 - traitlets=4.3.2=py36_0
 - urllib3=1.22=py36_0
 - wcwidth=0.1.7=py36_0
-- wheel=0.30.0=py_1
+- wheel=0.30.0
 - xorg-libxau=1.0.8=3
 - xorg-libxdmcp=1.1.2=3
 - xz=5.2.3=0

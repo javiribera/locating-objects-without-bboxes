@@ -79,7 +79,7 @@ try:
     height, width = parse('{}x{}', args.imgsize)
     height, width = int(height), int(width)
 except TypeError as e:
-    print("╰─ E: The input --imgsize must be in format WxH, got '{}'".format(args.imgsize))
+    print("\__  E: The input --imgsize must be in format WxH, got '{}'".format(args.imgsize))
     exit(-1)
 
 
@@ -223,10 +223,10 @@ if os.path.isfile(args.model):
 
     # Load model in checkpoint
     model.load_state_dict(checkpoint['model'])
-    print("╰─ loaded checkpoint '{}'".format(args.model))
+    print("\__ loaded checkpoint '{}'".format(args.model))
     # print(model)
 else:
-    print("╰─ E: no checkpoint found at '{}'".format(args.model))
+    print("\__  E: no checkpoint found at '{}'".format(args.model))
     exit(-1)
 
 tic = time.time()
@@ -342,12 +342,12 @@ if testset.there_is_gt:
     avg_ahd = sum_ahd / len(testset_loader)
     mape = sum_ape / len(testset_loader)
 
-    print('╰─ Average AHD for all the testing set: {:.4f}'.format(avg_ahd))
-    print('╰─ Accuracy for all the testing set, r=0, ..., 15')
+    print('\__ Average AHD for all the testing set: {:.4f}'.format(avg_ahd))
+    print('\__  Accuracy for all the testing set, r=0, ..., 15')
     for judge in judges:
         acc, _ = judge.get_p_n_r()
         print(acc)
-    print('╰─ MAPE for all the testing set: {:.4f} %'.format(mape))
+    print('\__  MAPE for all the testing set: {:.4f} %'.format(mape))
 
 print('It took %s seconds to evaluate all the testing set.' %
       int(time.time() - tic))

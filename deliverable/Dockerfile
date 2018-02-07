@@ -21,6 +21,6 @@ RUN [ "conda", "env", "create", "--file", "environment.yml" ]
 RUN [ "/bin/bash", "-c", "source activate plant-location-unet && python setup.py install" ]
 
 # Prepare entrypoint, which just calls the plant-locator
-RUN echo -e '#!/bin/bash \n source activate plant-location-unet \n python -m plant-locator "$@"' > /plant_locator/entrypoint.bash
+RUN echo '#!/bin/bash \n source activate plant-location-unet \n python -m plant-locator "$@"' > /plant_locator/entrypoint.bash
 RUN chmod u+x "/plant_locator/entrypoint.bash"
 ENTRYPOINT ["/plant_locator/entrypoint.bash"]

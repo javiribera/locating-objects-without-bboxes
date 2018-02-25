@@ -25,7 +25,7 @@ import unet_model
 from eval_precision_recall import Judge
 from torchvision import transforms
 from torch.utils.data import DataLoader
-from data import PlantDataset
+from data import CSVDataset
 from data import RandomHorizontalFlipImageAndLabel
 from data import RandomVerticalFlipImageAndLabel
 
@@ -101,7 +101,7 @@ viz_train_gt_win, viz_val_gt_win = None, None
 viz_train_est_win, viz_val_est_win = None, None
 
 # Data loading code
-trainset = PlantDataset(args.train_dir,
+trainset = CSVDataset(args.train_dir,
                         transform=transforms.Compose([
                             RandomHorizontalFlipImageAndLabel(p=0.5),
                             RandomVerticalFlipImageAndLabel(p=0.5),
@@ -115,7 +115,7 @@ trainset_loader = DataLoader(trainset,
                              shuffle=True,
                              num_workers=args.nThreads)
 if args.val_dir:
-    valset = PlantDataset(args.val_dir,
+    valset = CSVDataset(args.val_dir,
                           transform=transforms.Compose([
                               transforms.ToTensor(),
                               transforms.Normalize((0.5, 0.5, 0.5),
@@ -179,30 +179,24 @@ while epoch < args.epochs:
         model.train()
 
         # Pull info from this sample image
-        gt_plant_locations = dictionary['plant_locations']
-        target_n_plants = dictionary['plant_count']
+        target_locations = dictionary['plant_locations']
+        target_count = dictionary['plant_count']
 
         # We cannot deal with images with 0 plants (CD is not defined)
-        if target_n_plants[0][0] == 0:
+        if target_count[0][0] == 0:
             continue
 
-        if criterion_training is chamfer_loss:
-            target = gt_plant_locations
-        else:
-            target = dots_img_tensor
-
         if args.cuda:
-            data, target, target_n_plants = data.cuda(), target.cuda(), target_n_plants.cuda()
-        data, target, target_n_plants = Variable(
-            data), Variable(target), Variable(target_n_plants)
+            data, target_locations, target_count = data.cuda(), target_locations.cuda(), target_count.cuda()
+        data, target_locations, target_count = Variable(data), Variable(target_locations), Variable(target_count)
 
         # One training step
         optimizer.zero_grad()
-        est_map, est_n_plants = model.forward(data)
+        est_map, est_count = model.forward(data)
         est_map = est_map.squeeze()
-        term1, term2 = criterion_training.forward(est_map, target)
-        term3 = l1_loss.forward(est_n_plants, target_n_plants) / \
-            target_n_plants.type(torch.cuda.FloatTensor)
+        term1, term2 = criterion_training.forward(est_map, target_locations)
+        term3 = l1_loss.forward(est_count, target_count) / \
+            target_count.type(torch.cuda.FloatTensor)
         term3 *= args.lambdaa
         loss = term1 + term2 + term3
         loss.backward()
@@ -276,35 +270,28 @@ while epoch < args.epochs:
     for batch_idx, (data, dictionary) in tqdm(enumerate(valset_loader), total=len(valset_loader)):
 
         # Pull info from this sample image
-        gt_plant_locations = [eval(el) for el in dictionary['plant_locations']]
-        target_n_plants = dictionary['plant_count']
+        target_locations = [eval(el) for el in dictionary['plant_locations']]
+        target_count = dictionary['plant_count']
+
         # We cannot deal with images with 0 plants (CD is not defined)
-        if any(len(target_one_img) == 0 for target_one_img in gt_plant_locations):
+        if target_count[0][0] == 0:
             continue
 
-        if criterion_training is chamfer_loss:
-            target = gt_plant_locations
-        else:
-            target = dots_img_tensor
-
-        # Prepare data and target
-        data, target, target_n_plants = data.type(
-            torch.FloatTensor), torch.FloatTensor(target), target_n_plants.type(torch.FloatTensor)
         if args.cuda:
-            data, target, target_n_plants = data.cuda(), target.cuda(), target_n_plants.cuda()
-        data, target, target_n_plants = Variable(data, volatile=True), Variable(
-            target, volatile=True), Variable(target_n_plants, volatile=True)
+            data, target_locations, target_count = data.cuda(), target_locations.cuda(), target_count.cuda()
+        data, target, target_count = Variable(data, volatile=True), Variable(
+            target, volatile=True), Variable(target_count, volatile=True)
 
         # Feed-forward
-        est_map, est_n_plants = model.forward(data)
+        est_map, est_count = model.forward(data)
         est_map = est_map.squeeze()
-        est_n_plants = est_n_plants.squeeze()
+        est_count = est_count.squeeze()
         target = target.squeeze()
 
         # The 3 terms
         term1, term2 = criterion_training.forward(est_map, target)
-        term3 = l1_loss.forward(est_n_plants, target_n_plants) / \
-            target_n_plants.type(torch.cuda.FloatTensor)
+        term3 = l1_loss.forward(est_count, target_count) / \
+            target_count.type(torch.cuda.FloatTensor)
         sum_term1 += term1
         sum_term2 += term2
         sum_term3 += term3
@@ -322,7 +309,7 @@ while epoch < args.epochs:
             ahd = criterion_training.max_dist
             centroids = []
         else:
-            n_components = int(torch.round(est_n_plants).data.cpu().numpy()[0])
+            n_components = int(torch.round(est_count).data.cpu().numpy()[0])
             # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples
             n_components = max(min(n_components, x.size), 1)
             centroids = mixture.GaussianMixture(n_components=n_components,

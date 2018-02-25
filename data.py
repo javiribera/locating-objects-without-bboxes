@@ -11,7 +11,7 @@ from torchvision import datasets
 from torchvision import transforms
 
 
-class PlantDataset(data.Dataset):
+class CSVDataset(data.Dataset):
     def __init__(self, root_dir, transform=None, max_dataset_size=float('inf')):
         """
         Args:

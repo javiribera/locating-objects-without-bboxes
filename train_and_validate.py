@@ -454,6 +454,7 @@ while epoch < args.epochs:
                         'model': model.state_dict(),
                         'lowest_avg_ahd_val': avg_ahd_val_float,
                         'optimizer': optimizer.state_dict(),
+                        'n_points': args.n_points,
                         }, args.save)
             print("Saved best checkpoint so far in %s " % args.save)
 

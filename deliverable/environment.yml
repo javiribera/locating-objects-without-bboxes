@@ -51,6 +51,7 @@ dependencies:
 - openblas=0.2.19=2
 - openssl=1.0.2l=0
 - pandas=0.21.0=py36_0
+- parse=1.8.2=py36_0
 - pcre=8.39=0
 - pexpect=4.2.1=py36_0
 - pickleshare=0.7.4=py36_0
@@ -107,10 +108,7 @@ dependencies:
   - dask==0.15.4
   - ipython-genutils==0.2.0
   - prompt-toolkit==1.0.15
-  - pycrayon==0.5
   - pyyaml==3.12
   - torch==0.2.0.post4
   - torchfile==0.1.0
   - visdom==0.1.6.1
-prefix: /home/jprat/.anaconda3/envs/plant-location-unet
-

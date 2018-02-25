@@ -3,13 +3,23 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from unet_parts import *
+from .unet_parts import *
 
 
 class UNet(nn.Module):
     def __init__(self, n_channels, n_classes,
-                 known_n_points=None):
+                 height, width,
+                 known_n_points=None, tensortype=torch.cuda.FloatTensor):
         super(UNet, self).__init__()
+
+        # With this network depth, there is a minimum image size
+        if height < 256 or width < 256:
+            raise ValueError('Minimum input image size is 256x256, got {}x{}'.\
+                             format(height, width))
+
+        # Type of tensor the output will be
+        self.tensortype = tensortype
+
         self.inc = inconv(n_channels, 64)
         self.down1 = down(64, 128)
         self.down2 = down(128, 256)
@@ -32,8 +42,12 @@ class UNet(nn.Module):
 
         self.known_n_points = known_n_points
         if known_n_points is None:
-            self.regressor = nn.Linear(288*384, 1)
+            self.regressor = nn.Linear(256*256, 1)
             self.regressor_nonlin = nn.Softplus()
+
+        # This layer is not connected anywhere
+        # It is only here for backward compatibility
+        self.lin = nn.Linear(1, 1, bias=False)
 
     def forward(self, x):
         x1 = self.inc(x)
@@ -62,7 +76,7 @@ class UNet(nn.Module):
             regression = self.regressor_nonlin(regression)
             return x, regression
         else:
-            n_pts = Variable(torch.cuda.FloatTensor([self.known_n_points]))
+            n_pts = Variable(self.tensortype([self.known_n_points]))
             return x, n_pts
         # summ = torch.sum(x)
         # count = self.lin(summ)

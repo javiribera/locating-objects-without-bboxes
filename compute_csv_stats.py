@@ -6,9 +6,9 @@ import statistics
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 
-CSV_PATH = '/data/jprat/projects/phenosorg/gt/plant_locations/20170616_F41/GxE/chopped/manual20170616_F41_GNSSINS_1cm_vertices_GxEPMZ_withplants_chopped.csv'
-OUTPUT_CSV = '/data/jprat/projects/phenosorg/gt/plant_locations/20170616_F41/GxE/chopped/aa.csv'
-OUTPUT_FIGURES_DIR = '/data/jprat/projects/phenosorg/gt/plant_locations/20170616_F41/GxE/chopped/histograms'
+CSV_PATH = '/data/jprat/projects/phenosorg/gt/plant_locations/20170616_F41/GxE/manual20170616_F41_GNSSINS_1cm_vertices_GxEPMZ_withplants_and_plotnum.csv'
+OUTPUT_CSV = '/data/jprat/projects/phenosorg/gt/plant_locations/20170616_F41/GxE/manual20170616_F41_GNSSINS_1cm_vertices_GxEPMZ_withplants_and_plotnum_withstats.csv'
+OUTPUT_FIGURES_DIR = '/data/jprat/projects/phenosorg/gt/plant_locations/20170616_F41/GxE/histograms'
 
 os.makedirs(OUTPUT_FIGURES_DIR, exist_ok=True)
 
@@ -19,7 +19,7 @@ df = pd.read_csv(CSV_PATH)
 means, medians, stds = [], [], []
 
 for idx, row in tqdm(df.iterrows(), total=len(df.index)):
-    locs = eval(row['plant_locations'])
+    locs = eval(row['plant_locations_wrt_orthophoto'])
 
     # 1. Sort by row coordinate
     locs = sorted(locs, key=lambda x: x[0])

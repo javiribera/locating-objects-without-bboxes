@@ -274,6 +274,7 @@ while epoch < args.epochs:
 
     # At the end of each epoch, validate + save checkpoint if validation error decreased
     if not args.val_dir or not valset_loader or len(valset_loader) == 0:
+        epoch += 1
         continue
 
     # === VALIDATION ===

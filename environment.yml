@@ -1,115 +1,121 @@
 name: plant-location-unet
 channels:
-- menpo
-- soumith
-- conda-forge
-- defaults
+  - soumith
+  - conda-forge
+  - pytorch
+  - menpo
+  - defaults
 dependencies:
-- asn1crypto=0.22.0=py36_0
-- backports=1.0=py36_1
-- backports.functools_lru_cache=1.4=py36_1
-- blas=1.1=openblas
-- ca-certificates=2017.7.27.1=0
-- certifi=2017.7.27.1=py36_0
-- cffi=1.10.0=py36_0
-- chardet=3.0.4=py36_0
-- cryptography=2.0.3=py36_0
-- cycler=0.10.0=py36_0
-- dask-core=0.15.4=py_0
-- dbus=1.10.22=0
-- decorator=4.1.2=py36_0
-- expat=2.2.1=0
-- fontconfig=2.12.1=4
-- freetype=2.7=1
-- gettext=0.19.7=1
-- glib=2.53.5=0
-- gst-plugins-base=1.8.0=0
-- gstreamer=1.8.0=1
-- h5py=2.7.1=py36_1
-- hdf5=1.8.18=1
-- icu=58.1=1
-- idna=2.6=py36_1
-- imageio=2.2.0=py36_0
-- ipdb=0.10.3=py36_0
-- ipython=6.2.1=py36_0
-- ipython_genutils=0.2.0=py36_0
-- jedi=0.10.2=py36_0
-- jpeg=9b=1
-- libffi=3.2.1=3
-- libiconv=1.14=4
-- libpng=1.6.28=1
-- libsodium=1.0.10=0
-- libtiff=4.0.7=0
-- libxcb=1.12=1
-- libxml2=2.9.5=0
-- matplotlib=2.1.0=py36_0
-- ncurses=5.9=10
-- networkx=2.0=py36_0
-- nibabel=2.2.0=py36_0
-- numpy=1.13.3=py36_blas_openblas_200
-- olefile=0.44=py36_0
-- openblas=0.2.19=2
-- openssl=1.0.2l=0
-- pandas=0.21.0=py36_0
-- pcre=8.39=0
-- pexpect=4.2.1=py36_0
-- pickleshare=0.7.4=py36_0
-- pillow=4.3.0=py36_0
-- pip=9.0.1=py36_0
-- prompt_toolkit=1.0.15=py36_0
-- ptyprocess=0.5.2=py36_0
-- pycparser=2.18=py36_0
-- pydicom=0.9.9=py36_0
-- pygments=2.2.0=py36_0
-- pyopenssl=17.2.0=py36_0
-- pyparsing=2.2.0=py36_0
-- pyqt=5.6.0=py36_4
-- pysocks=1.6.7=py36_0
-- python=3.6.3=0
-- python-dateutil=2.6.1=py36_0
-- pytz=2017.2=py36_0
-- pywavelets=0.5.2=np113py36_0
-- qt=5.6.2=3
-- readline=6.2=0
-- requests=2.18.4=py36_1
-- scikit-image=0.13.0=py36_2
-- scikit-learn=0.19.1=py36_blas_openblas_200
-- scipy=0.19.1=py36_blas_openblas_202
-- setuptools=36.6.0=py36_1
-- simplegeneric=0.8.1=py36_0
-- sip=4.18=py36_1
-- six=1.11.0=py36_1
-- sqlite=3.13.0=1
-- tk=8.5.19=2
-- toolz=0.8.2=py_2
-- tornado=4.5.2=py36_0
-- tqdm=4.19.4=py_0
-- traitlets=4.3.2=py36_0
-- urllib3=1.22=py36_0
-- wcwidth=0.1.7=py36_0
-- xorg-libxau=1.0.8=3
-- xorg-libxdmcp=1.1.2=3
-- xz=5.2.3=0
-- zeromq=4.2.1=1
-- zlib=1.2.8=3
-- intel-openmp=2018.0.0=h15fc484_7
-- libgcc=7.2.0=h69d50b8_2
-- libgcc-ng=7.2.0=h7cc24e2_2
-- libgfortran=3.0.0=1
-- libstdcxx-ng=7.2.0=h7a57d05_2
-- mkl=2018.0.0=hb491cac_4
-- opencv3=3.1.0=py36_0
-- cuda80=1.0=0
-- pytorch=0.2.0=py36h53baedd_4cu80
-- torchvision=0.1.9=py36h7584368_1
-- pip:
-  - backports.functools-lru-cache==1.4
-  - dask==0.15.4
-  - ipython-genutils==0.2.0
-  - prompt-toolkit==1.0.15
-  - pyyaml==3.12
-  - torch==0.2.0.post4
-  - torchfile==0.1.0
-  - visdom==0.1.6.1
+  - asn1crypto=0.22.0=py36_0
+  - backports=1.0=py36_1
+  - backports.functools_lru_cache=1.4=py36_1
+  - blas=1.1=openblas
+  - ca-certificates=2017.7.27.1=0
+  - certifi=2017.7.27.1=py36_0
+  - cffi=1.10.0=py36_0
+  - chardet=3.0.4=py36_0
+  - cryptography=2.0.3=py36_0
+  - cycler=0.10.0=py36_0
+  - dask-core=0.15.4=py_0
+  - dbus=1.10.22=0
+  - decorator=4.1.2=py36_0
+  - expat=2.2.1=0
+  - fontconfig=2.12.1=4
+  - freetype=2.7=1
+  - gettext=0.19.7=1
+  - glib=2.53.5=0
+  - gst-plugins-base=1.8.0=0
+  - gstreamer=1.8.0=1
+  - h5py=2.7.1=py36_1
+  - hdf5=1.8.18=1
+  - icu=58.1=1
+  - idna=2.6=py36_1
+  - imageio=2.2.0=py36_0
+  - ipdb=0.10.3=py36_0
+  - ipython=6.2.1=py36_0
+  - ipython_genutils=0.2.0=py36_0
+  - jedi=0.10.2=py36_0
+  - jpeg=9b=1
+  - libffi=3.2.1=3
+  - libiconv=1.14=4
+  - libpng=1.6.28=1
+  - libsodium=1.0.10=0
+  - libtiff=4.0.7=0
+  - libxcb=1.12=1
+  - libxml2=2.9.5=0
+  - matplotlib=2.1.0=py36_0
+  - ncurses=5.9=10
+  - networkx=2.0=py36_0
+  - nibabel=2.2.0=py36_0
+  - numpy=1.13.3=py36_blas_openblas_200
+  - olefile=0.44=py36_0
+  - openblas=0.2.19=2
+  - openssl=1.0.2l=0
+  - pandas=0.21.0=py36_0
+  - pcre=8.39=0
+  - pexpect=4.2.1=py36_0
+  - pickleshare=0.7.4=py36_0
+  - pillow=4.3.0=py36_0
+  - pip=9.0.1=py36_0
+  - prompt_toolkit=1.0.15=py36_0
+  - ptyprocess=0.5.2=py36_0
+  - pycparser=2.18=py36_0
+  - pydicom=0.9.9=py36_0
+  - pygments=2.2.0=py36_0
+  - pyopenssl=17.2.0=py36_0
+  - pyparsing=2.2.0=py36_0
+  - pyqt=5.6.0=py36_4
+  - pysocks=1.6.7=py36_0
+  - python=3.6.3=0
+  - python-dateutil=2.6.1=py36_0
+  - pytz=2017.2=py36_0
+  - pywavelets=0.5.2=np113py36_0
+  - qt=5.6.2=3
+  - readline=6.2=0
+  - requests=2.18.4=py36_1
+  - scikit-image=0.13.0=py36_2
+  - scikit-learn=0.19.1=py36_blas_openblas_200
+  - scipy=0.19.1=py36_blas_openblas_202
+  - setuptools=36.6.0=py36_1
+  - simplegeneric=0.8.1=py36_0
+  - sip=4.18=py36_1
+  - six=1.11.0=py36_1
+  - sqlite=3.13.0=1
+  - tk=8.5.19=2
+  - toolz=0.8.2=py_2
+  - tornado=4.5.2=py36_0
+  - tqdm=4.19.4=py_0
+  - traitlets=4.3.2=py36_0
+  - urllib3=1.22=py36_0
+  - wcwidth=0.1.7=py36_0
+  - wheel=0.30.0=py36_2
+  - xorg-libxau=1.0.8=3
+  - xorg-libxdmcp=1.1.2=3
+  - xz=5.2.3=0
+  - zeromq=4.2.1=1
+  - zlib=1.2.8=3
+  - cudatoolkit=8.0=3
+  - cudnn=6.0.21=cuda8.0_0
+  - intel-openmp=2018.0.0=h15fc484_7
+  - libgcc=7.2.0=h69d50b8_2
+  - libgcc-ng=7.2.0=h7cc24e2_2
+  - libgfortran=3.0.0=1
+  - libstdcxx-ng=7.2.0=h7a57d05_2
+  - mkl=2018.0.0=hb491cac_4
+  - nccl=1.3.4=cuda8.0_1
+  - pytorch=0.2.0=py36cuda8.0cudnn6.0_0
+  - opencv3=3.1.0=py36_0
+  - cuda80=1.0=0
+  - torchvision=0.1.9=py36h7584368_1
+  - pip:
+    - colored-traceback==0.3.0
+    - dask==0.15.4
+    - parse==1.8.2
+    - pycrayon==0.5
+    - pyyaml==3.12
+    - pyzmq==17.0.0
+    - torch==0.2.0.post0
+    - torchfile==0.1.0
+    - visdom==0.1.7
 prefix: /home/jprat/.anaconda3/envs/plant-location-unet
 

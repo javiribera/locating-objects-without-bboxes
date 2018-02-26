@@ -12,6 +12,7 @@ class double_conv(nn.Module):
         self.conv = nn.Sequential(
             nn.Conv2d(in_ch, out_ch, 3, padding=1),
             # nn.Dropout(p=0.1),
+            # TODO: BATCH NORM WITH A BATCH SIZE OF 1 crashes w/ pytorch 0.3
             nn.BatchNorm2d(out_ch),
             nn.ReLU(inplace=True),
             nn.Conv2d(out_ch, out_ch, 3, padding=1),

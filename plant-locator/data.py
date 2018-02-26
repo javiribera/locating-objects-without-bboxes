@@ -1,4 +1,5 @@
 import os
+# 
 import inspect
 import random
 
@@ -12,7 +13,11 @@ from torchvision import transforms
 
 
 class CSVDataset(data.Dataset):
-    def __init__(self, directory, transforms=None, max_dataset_size=float('inf')):
+    def __init__(self,
+                 directory,
+                 transforms=None,
+                 max_dataset_size=float('inf'),
+                 tensortype=torch.FloatTensor):
         """CSVDataset.
         The sample images of this dataset must be all inside one directory.
         Inside the same directory, there must be one CSV file.
@@ -22,10 +27,14 @@ class CSVDataset(data.Dataset):
         :param directory: Directory with all the images and the CSV file.
         :param transform: Transform to be applied to each image.
         :param max_dataset_size: Only use the first N images in the directory.
+        :param tensortype: The data and labels will be returned in this type format.
         """
 
         self.root_dir = directory
         self.transforms = transforms
+
+        # Type of tensor the output will be
+        self.tensortype = tensortype
 
         # Get groundtruth from CSV file
         listfiles = os.listdir(directory)
@@ -39,20 +48,22 @@ class CSVDataset(data.Dataset):
 
         # CSV does not exist (no GT available)
         if not self.there_is_gt:
-            print('W: The dataset directory %s does not contain a CSV file with groundtruth. \n' \
+            print('W: The dataset directory %s does not contain a CSV file with groundtruth. \n'
                   '   Metrics will not be evaluated. Only estimations will be returned.' % directory)
             self.csv_df = None
             self.listfiles = listfiles
-            
+
             # Make dataset smaller
-            self.listfiles = self.listfiles[0:min(len(self.listfiles), max_dataset_size)]
+            self.listfiles = self.listfiles[0:min(
+                len(self.listfiles), max_dataset_size)]
 
         # CSV does exist (GT is available)
         else:
             self.csv_df = pd.read_csv(os.path.join(directory, csv_filename))
 
             # Make dataset smaller
-            self.csv_df = self.csv_df[0:min(len(self.csv_df), max_dataset_size)]
+            self.csv_df = self.csv_df[0:min(
+                len(self.csv_df), max_dataset_size)]
 
     def __len__(self):
         if self.there_is_gt:
@@ -85,9 +96,9 @@ class CSVDataset(data.Dataset):
             list(loc) for loc in dictionary['plant_locations']]
 
         # list --> Tensors
-        dictionary['plant_locations'] = torch.FloatTensor(
+        dictionary['plant_locations'] = self.tensortype(
             dictionary['plant_locations'])
-        dictionary['plant_count'] = torch.FloatTensor(
+        dictionary['plant_count'] = self.tensortype(
             [dictionary['plant_count']])
 
         img_transformed = img
@@ -104,7 +115,7 @@ class CSVDataset(data.Dataset):
 
         # Prevents crash when making a batch out of an empty tensor
         if dictionary['plant_count'][0] == 0:
-            dictionary['plant_locations'] = torch.FloatTensor([-1, -1])
+            dictionary['plant_locations'] = self.tensortype([-1, -1])
 
         return (img_transformed, transformed_dictionary)
 

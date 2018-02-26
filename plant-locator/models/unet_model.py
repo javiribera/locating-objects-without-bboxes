@@ -9,7 +9,8 @@ from .unet_parts import *
 class UNet(nn.Module):
     def __init__(self, n_channels, n_classes,
                  height, width,
-                 known_n_points=None, tensortype=torch.cuda.FloatTensor):
+                 known_n_points=None,
+                 tensortype=torch.FloatTensor):
         super(UNet, self).__init__()
 
         # With this network depth, there is a minimum image size

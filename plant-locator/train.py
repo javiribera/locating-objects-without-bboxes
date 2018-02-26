@@ -82,6 +82,8 @@ args.cuda = not args.no_cuda and torch.cuda.is_available()
 
 # Tensor type to use, select CUDA or not
 tensortype = torch.cuda.FloatTensor if args.cuda else torch.FloatTensor
+tensortype_cpu = torch.FloatTensor
+
 
 # Force batchsize == 1
 args.eval_batch_size = 1
@@ -128,7 +130,8 @@ trainset = CSVDataset(args.train_dir,
                           transforms.Normalize((0.5, 0.5, 0.5),
                                                (0.5, 0.5, 0.5)),
                       ]),
-                      max_dataset_size=args.max_trainset_size)
+                      max_dataset_size=args.max_trainset_size,
+                      tensortype=tensortype_cpu)
 trainset_loader = DataLoader(trainset,
                              batch_size=args.batch_size,
                              shuffle=True,
@@ -140,7 +143,8 @@ if args.val_dir:
                             transforms.Normalize((0.5, 0.5, 0.5),
                                                  (0.5, 0.5, 0.5)),
                         ]),
-                        max_dataset_size=args.max_valset_size)
+                        max_dataset_size=args.max_valset_size,
+                        tensortype=tensortype_cpu)
     valset_loader = DataLoader(valset,
                                batch_size=args.eval_batch_size,
                                shuffle=True,
@@ -218,7 +222,7 @@ while epoch < args.epochs:
         est_map = est_map.squeeze()
         term1, term2 = criterion_training.forward(est_map, target_locations)
         term3 = l1_loss.forward(est_count, target_count) / target_count
-        term3 *= args.lambdaa
+        term3 = term3.squeeze()
         loss = term1 + term2 + term3
         loss.backward()
         optimizer.step()
@@ -228,7 +232,7 @@ while epoch < args.epochs:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx *
                 args.batch_size, len(trainset_loader.dataset),
-                100. * batch_idx / len(trainset_loader), loss.data[0][0]))
+                100. * batch_idx / len(trainset_loader), loss.data[0]))
             tic_train = time.time()
 
             # Send training loss to Visdom
@@ -292,29 +296,29 @@ while epoch < args.epochs:
     for batch_idx, (data, dictionary) in tqdm(enumerate(valset_loader), total=len(valset_loader)):
 
         # Pull info from this sample image
-        target_locations = [eval(el) for el in dictionary['plant_locations']]
+        target_locations = dictionary['plant_locations']
         target_count = dictionary['plant_count']
 
         # We cannot deal with images with 0 plants (CD is not defined)
         if target_count[0][0] == 0:
             continue
-#
 
         if args.cuda:
             data, target_locations, target_count = data.cuda(
             ), target_locations.cuda(), target_count.cuda()
-        data, target, target_count = Variable(data, volatile=True), Variable(
-            target, volatile=True), Variable(target_count, volatile=True)
+        data, target_locations, target_count = Variable(data, volatile=True), Variable(
+            target_locations, volatile=True), Variable(target_count, volatile=True)
 
         # Feed-forward
         est_map, est_count = model.forward(data)
         est_map = est_map.squeeze()
         est_count = est_count.squeeze()
-        target = target.squeeze()
+        target_locations = target_locations.squeeze()
 
         # The 3 terms
-        term1, term2 = criterion_training.forward(est_map, target)
+        term1, term2 = criterion_training.forward(est_map, target_locations)
         term3 = l1_loss.forward(est_count, target_count) / target_count
+        term3 = term3.squeeze()
         sum_term1 += term1
         sum_term2 += term2
         sum_term3 += term3
@@ -340,13 +344,14 @@ while epoch < args.epochs:
                                                 covariance_type='full').\
                 fit(c).means_.astype(np.int)
 
-            target = target.data.cpu().numpy().reshape(-1, 2)
-            ahd = losses.averaged_hausdorff_distance(centroids, target)
-        ahd = tensortype([ahd])
+            target_locations = target_locations.data.cpu().numpy().reshape(-1, 2)
+            ahd = losses.averaged_hausdorff_distance(
+                centroids, target_locations)
+        ahd = Variable(tensortype([ahd]))
         sum_ahd += ahd
 
         # Validation using Precision and Recall
-        judge.evaluate_sample(centroids, target)
+        judge.evaluate_sample(centroids, target_locations)
 
         if time.time() > tic_val + args.log_interval:
             tic_val = time.time()
@@ -390,20 +395,30 @@ while epoch < args.epochs:
     avg_loss_val = sum_loss / len(valset_loader)
     avg_ahd_val = sum_ahd / len(valset_loader)
     prec, rec = judge.get_p_n_r()
-    prec, rec = tensortype([prec]), tensortype([rec])
+    prec, rec = Variable(tensortype([prec])), Variable(tensortype([rec]))
 
     # Send validation loss to Visdom
-    win_val_loss = viz.updateTrace(Y=torch.stack((avg_term1_val, avg_term2_val, avg_term3_val, avg_loss_val / 3, avg_ahd_val, prec, rec)).view(1, -1).data.cpu(),
-                                   X=torch.Tensor([epoch]).repeat(1, 7),
+    y = torch.stack((avg_term1_val,
+                     avg_term2_val,
+                     avg_term3_val,
+                     avg_loss_val / 3,
+                     avg_ahd_val,
+                     prec,
+                     rec)).view(1, -1).cpu().data.numpy()
+    x = tensortype([epoch]).repeat(1, 7).cpu().numpy()
+    win_val_loss = viz.updateTrace(Y=y,
+                                   X=x,
                                    opts=dict(title='Validation',
                                              legend=['Term 1', 'Term 2',
-                                                     'Term 3', 'Sum/3', 'AHD', 'Precision', 'Recall'],
-                                             ylabel='Loss', xlabel='Epoch'),
+                                                     'Term 3', 'Sum/3',
+                                                     'AHD', 'Precision', 'Recall'],
+                                             ylabel='Loss',
+                                             xlabel='Epoch'),
                                    append=True,
                                    win='4')
     if win_val_loss == 'win does not exist':
-        win_val_loss = viz.line(Y=torch.stack((avg_term1_val, avg_term2_val, avg_term3_val, avg_loss_val / 3, avg_ahd_val, prec, rec)).view(1, -1).data.cpu(),
-                                X=torch.Tensor([epoch]).repeat(1, 7),
+        win_val_loss = viz.line(Y=y,
+                                X=x,
                                 opts=dict(title='Validation',
                                           legend=['Term 1', 'Term 2',
                                                   'Term 3', 'Sum/3', 'AHD', 'Precision', 'Recall'],
@@ -411,7 +426,7 @@ while epoch < args.epochs:
                                 win='4')
 
     # If this is the best epoch (in terms of validation error)
-    avg_ahd_val_float = avg_ahd_val.cpu().numpy()[0]
+    avg_ahd_val_float = avg_ahd_val.data.cpu().numpy()[0]
     if avg_ahd_val_float < lowest_avg_ahd_val:
         # Keep the best model
         lowest_avg_ahd_val = avg_ahd_val_float

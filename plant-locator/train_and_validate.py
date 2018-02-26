@@ -9,6 +9,7 @@ import shutil
 from itertools import chain
 from tqdm import tqdm
 
+from parse import parse
 import numpy as np
 import torch
 import torch.optim as optim
@@ -19,9 +20,8 @@ from torch.autograd import Variable
 import torchvision as tv
 from torchvision.models import inception_v3
 from sklearn import mixture
-import unet_pix2pix
 import losses
-import unet_model
+from models import unet_model
 from eval_precision_recall import Judge
 from torchvision import transforms
 from torch.utils.data import DataLoader
@@ -31,11 +31,14 @@ from data import RandomVerticalFlipImageAndLabel
 
 
 # Training settings
-parser = argparse.ArgumentParser(description='Plant Location with PyTorch')
+parser = argparse.ArgumentParser(description='Plant Location with PyTorch',
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--train-dir', required=True,
-                    help='Directory with training images')
+                    help='Directory with training images.')
 parser.add_argument('--val-dir',
                     help='Directory with validation images. If left blank no validation will be done.')
+parser.add_argument('--imgsize', type=str, default='256x256', metavar='HxW',
+                    help='Size of the input images (height x width).')
 parser.add_argument('--batch-size', type=int, default=1, metavar='N',
                     help='input batch size for training')
 parser.add_argument('--eval-batch-size', type=int, default=1, metavar='N',
@@ -43,7 +46,7 @@ parser.add_argument('--eval-batch-size', type=int, default=1, metavar='N',
 parser.add_argument('--epochs', type=int, default=np.inf, metavar='N',
                     help='number of epochs to train')
 parser.add_argument('--nThreads', '-j', default=4, type=int, metavar='N',
-                    help='number of data loading threads (default: 4)')
+                    help='Number of data loading threads')
 parser.add_argument('--lr', type=float, default=4e-5, metavar='LR',
                     help='learning rate (default: 1e-5)')
 parser.add_argument('--no-cuda', action='store_true', default=False,
@@ -66,7 +69,7 @@ parser.add_argument('--paint', default=False, action="store_true",
                     help='Paint red circles at estimated locations in Validation? '
                     'It takes an enormous amount of time!')
 parser.add_argument('--radius', type=int, default=5, metavar='R',
-                    help='Default radius to consider a object detection as "match".')
+                    help='Detections at dist <= R to a GT pt are True Positives.')
 parser.add_argument('--n-points', type=int, default=None, metavar='N',
                     help='If you know the number of points (e.g, just one pupil), set it.'
                     'Otherwise it will be estimated by adding a L1 cost term.')
@@ -74,7 +77,17 @@ parser.add_argument('--lambdaa', type=float, default=1, metavar='L',
                     help='Weight that will multiply the MAPE term in the loss function.')
 
 args = parser.parse_args()
+
 args.cuda = not args.no_cuda and torch.cuda.is_available()
+
+# Tensor type to use, select CUDA or not
+tensortype = torch.cuda.FloatTensor if args.cuda else torch.FloatTensor
+
+# Force batchsize == 1
+args.eval_batch_size = 1
+if args.eval_batch_size != 1:
+    raise NotImplementedError('Only a batch size of 1 is implemented for now, got %s'
+                              % args.eval_batch_size)
 
 # Check we are not overwriting a checkpoint without resume from it
 if args.save and os.path.isfile(args.save) and \
@@ -86,6 +99,12 @@ if args.save and os.path.isfile(args.save) and \
 if args.save:
     os.makedirs(os.path.split(args.save)[0], exist_ok=True)
 
+try:
+    height, width = parse('{}x{}', args.imgsize)
+    height, width = int(height), int(width)
+except TypeError as e:
+    print("\__  E: The input --imgsize must be in format WxH, got '{}'".format(args.imgsize))
+    exit(-1)
 
 # Set seeds
 np.random.seed(0)
@@ -102,26 +121,26 @@ viz_train_est_win, viz_val_est_win = None, None
 
 # Data loading code
 trainset = CSVDataset(args.train_dir,
-                        transform=transforms.Compose([
-                            RandomHorizontalFlipImageAndLabel(p=0.5),
-                            RandomVerticalFlipImageAndLabel(p=0.5),
-                            transforms.ToTensor(),
-                            transforms.Normalize((0.5, 0.5, 0.5),
-                                                 (0.5, 0.5, 0.5)),
-                        ]),
-                        max_dataset_size=args.max_trainset_size)
+                      transforms=transforms.Compose([
+                          RandomHorizontalFlipImageAndLabel(p=0.5),
+                          RandomVerticalFlipImageAndLabel(p=0.5),
+                          transforms.ToTensor(),
+                          transforms.Normalize((0.5, 0.5, 0.5),
+                                               (0.5, 0.5, 0.5)),
+                      ]),
+                      max_dataset_size=args.max_trainset_size)
 trainset_loader = DataLoader(trainset,
                              batch_size=args.batch_size,
                              shuffle=True,
                              num_workers=args.nThreads)
 if args.val_dir:
     valset = CSVDataset(args.val_dir,
-                          transform=transforms.Compose([
-                              transforms.ToTensor(),
-                              transforms.Normalize((0.5, 0.5, 0.5),
-                                                   (0.5, 0.5, 0.5)),
-                          ]),
-                          max_dataset_size=args.max_valset_size)
+                        transforms=transforms.Compose([
+                            transforms.ToTensor(),
+                            transforms.Normalize((0.5, 0.5, 0.5),
+                                                 (0.5, 0.5, 0.5)),
+                        ]),
+                        max_dataset_size=args.max_valset_size)
     valset_loader = DataLoader(valset,
                                batch_size=args.eval_batch_size,
                                shuffle=True,
@@ -129,8 +148,9 @@ if args.val_dir:
 
 # Model
 print('Building network... ', end='')
-#model = unet.UnetGenerator(input_nc=3, output_nc=1, num_downs=8)
-model = unet_model.UNet(3, 1, known_n_points=args.n_points)
+model = unet_model.UNet(3, 1,
+                        height=height, width=width,
+                        tensortype=tensortype)
 print('DONE')
 print(model)
 model = nn.DataParallel(model)
@@ -139,8 +159,8 @@ if args.cuda:
 
 # Loss function
 l1_loss = nn.L1Loss()
-chamfer_loss = losses.ModifiedChamferLoss(256, 256, return_2_terms=True)
-criterion_training = chamfer_loss
+criterion_training = losses.WeightedHausdorffDistance(height=height, width=width,
+                                                      return_2_terms=True)
 
 # Optimization strategy
 optimizer = optim.SGD(model.parameters(),
@@ -158,10 +178,10 @@ if args.resume:
         lowest_avg_ahd_val = checkpoint['lowest_avg_ahd_val']
         model.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
-        print("╰─ loaded checkpoint '{}' (now on epoch {})"
+        print("\__ loaded checkpoint '{}' (now on epoch {})"
               .format(args.resume, checkpoint['epoch']))
     else:
-        print("╰─ E: no checkpoint found at '{}'".format(args.resume))
+        print("\__ E: no checkpoint found at '{}'".format(args.resume))
         exit(-1)
 
 # Time at the last evaluation
@@ -187,16 +207,17 @@ while epoch < args.epochs:
             continue
 
         if args.cuda:
-            data, target_locations, target_count = data.cuda(), target_locations.cuda(), target_count.cuda()
-        data, target_locations, target_count = Variable(data), Variable(target_locations), Variable(target_count)
+            data, target_locations, target_count = data.cuda(
+            ), target_locations.cuda(), target_count.cuda()
+        data, target_locations, target_count = Variable(
+            data), Variable(target_locations), Variable(target_count)
 
         # One training step
         optimizer.zero_grad()
         est_map, est_count = model.forward(data)
         est_map = est_map.squeeze()
         term1, term2 = criterion_training.forward(est_map, target_locations)
-        term3 = l1_loss.forward(est_count, target_count) / \
-            target_count.type(torch.cuda.FloatTensor)
+        term3 = l1_loss.forward(est_count, target_count) / target_count
         term3 *= args.lambdaa
         loss = term1 + term2 + term3
         loss.backward()
@@ -276,9 +297,11 @@ while epoch < args.epochs:
         # We cannot deal with images with 0 plants (CD is not defined)
         if target_count[0][0] == 0:
             continue
+#
 
         if args.cuda:
-            data, target_locations, target_count = data.cuda(), target_locations.cuda(), target_count.cuda()
+            data, target_locations, target_count = data.cuda(
+            ), target_locations.cuda(), target_count.cuda()
         data, target, target_count = Variable(data, volatile=True), Variable(
             target, volatile=True), Variable(target_count, volatile=True)
 
@@ -290,8 +313,7 @@ while epoch < args.epochs:
 
         # The 3 terms
         term1, term2 = criterion_training.forward(est_map, target)
-        term3 = l1_loss.forward(est_count, target_count) / \
-            target_count.type(torch.cuda.FloatTensor)
+        term3 = l1_loss.forward(est_count, target_count) / target_count
         sum_term1 += term1
         sum_term2 += term2
         sum_term3 += term3
@@ -319,7 +341,7 @@ while epoch < args.epochs:
 
             target = target.data.cpu().numpy().reshape(-1, 2)
             ahd = losses.averaged_hausdorff_distance(centroids, target)
-        ahd = torch.cuda.FloatTensor([ahd])
+        ahd = tensortype([ahd])
         sum_ahd += ahd
 
         # Validation using Precision and Recall
@@ -348,7 +370,7 @@ while epoch < args.epochs:
             #           win=7)
             if args.paint:
                 # Send original image with a cross at the estimated centroids to Visdom
-                image_with_x = torch.cuda.FloatTensor(data.data.squeeze().size()).\
+                image_with_x = tensortype(data.data.squeeze().size()).\
                     copy_(data.data.squeeze())
                 image_with_x = ((image_with_x + 1) / 2.0 * 255.0)
                 image_with_x = image_with_x.cpu().numpy()
@@ -367,7 +389,7 @@ while epoch < args.epochs:
     avg_loss_val = sum_loss / len(valset_loader)
     avg_ahd_val = sum_ahd / len(valset_loader)
     prec, rec = judge.get_p_n_r()
-    prec, rec = torch.cuda.FloatTensor([prec]), torch.cuda.FloatTensor([rec])
+    prec, rec = tensortype([prec]), tensortype([rec])
 
     # Send validation loss to Visdom
     win_val_loss = viz.updateTrace(Y=torch.stack((avg_term1_val, avg_term2_val, avg_term3_val, avg_loss_val / 3, avg_ahd_val, prec, rec)).view(1, -1).data.cpu(),

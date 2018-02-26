@@ -12,40 +12,72 @@ from torchvision import transforms
 
 
 class CSVDataset(data.Dataset):
-    def __init__(self, root_dir, transform=None, max_dataset_size=float('inf')):
-        """
-        Args:
-            root_dir (string): Directory with all the images.
-            transform (callable, optional): Optional transform to be applied
-                on a sample.
-            max_dataset_size: If the dataset is bigger than this integer,
-                              ignore additional samples.
+    def __init__(self, directory, transforms=None, max_dataset_size=float('inf')):
+        """CSVDataset.
+        The sample images of this dataset must be all inside one directory.
+        Inside the same directory, there must be one CSV file.
+        This file must contain one row per image.
+        It can containas many columns as wanted, i.e, filename, count...
+
+        :param directory: Directory with all the images and the CSV file.
+        :param transform: Transform to be applied to each image.
+        :param max_dataset_size: Only use the first N images in the directory.
         """
 
+        self.root_dir = directory
+        self.transforms = transforms
+
         # Get groundtruth from CSV file
+        listfiles = os.listdir(directory)
         csv_filename = None
-        for filename in os.listdir(root_dir):
+        for filename in listfiles:
             if filename.endswith('.csv'):
                 csv_filename = filename
                 break
-        if csv_filename is None:
-            raise ValueError(
-                'The root directory %s does not have a CSV file with groundtruth' % root_dir)
-        self.csv_df = pd.read_csv(os.path.join(root_dir, csv_filename))
 
-        # Make the dataset smaller
-        self.csv_df = self.csv_df[0:min(len(self.csv_df), max_dataset_size)]
+        self.there_is_gt = csv_filename is not None
 
-        self.root_dir = root_dir
-        self.transforms = transform
+        # CSV does not exist (no GT available)
+        if not self.there_is_gt:
+            print('W: The dataset directory %s does not contain a CSV file with groundtruth. \n' \
+                  '   Metrics will not be evaluated. Only estimations will be returned.' % directory)
+            self.csv_df = None
+            self.listfiles = listfiles
+            
+            # Make dataset smaller
+            self.listfiles = self.listfiles[0:min(len(self.listfiles), max_dataset_size)]
+
+        # CSV does exist (GT is available)
+        else:
+            self.csv_df = pd.read_csv(os.path.join(directory, csv_filename))
+
+            # Make dataset smaller
+            self.csv_df = self.csv_df[0:min(len(self.csv_df), max_dataset_size)]
 
     def __len__(self):
-        return len(self.csv_df)
+        if self.there_is_gt:
+            return len(self.csv_df)
+        else:
+            return len(self.listfiles)
 
     def __getitem__(self, idx):
-        img_path = os.path.join(self.root_dir, self.csv_df.ix[idx, 0])
-        img = Image.open(img_path)
-        dictionary = dict(self.csv_df.ix[idx])
+        """Get one element of the dataset.
+        Returns a tuple. The first element is the image.
+        The second element is a dictionary where the keys are the columns of the CSV.
+        If the CSV did not exist in the dataset directory,
+         the dictionary will only contain the filename of the image.
+
+        :param idx: Index of the image in the dataset to get.
+        """
+
+        if self.there_is_gt:
+            img_abspath = os.path.join(self.root_dir, self.csv_df.ix[idx, 0])
+            dictionary = dict(self.csv_df.ix[idx])
+        else:
+            img_abspath = os.path.join(self.root_dir, self.listfiles[idx])
+            dictionary = {'filename': self.listfiles[idx]}
+
+        img = Image.open(img_abspath)
 
         # str -> lists
         dictionary['plant_locations'] = eval(dictionary['plant_locations'])

@@ -12,10 +12,6 @@ from matplotlib import pyplot as plt
 from torch import nn
 from torch.autograd import Variable
 
-"""
-We recommend copying this file to any project you need.
-"""
-
 
 def _assert_no_grad(variable):
     assert not variable.requires_grad, \
@@ -34,6 +30,7 @@ def cdist(x, y):
     differences = x.unsqueeze(1) - y.unsqueeze(0)
     distances = torch.sum(differences**2, -1).sqrt()
     return distances
+
 
 def averaged_hausdorff_distance(set1, set2):
     """
@@ -54,13 +51,14 @@ def averaged_hausdorff_distance(set1, set2):
     assert set1.shape[1] == set2.shape[1], \
         'The points in both sets must have the same number of dimensions, got %s and %s.'\
         % (set2.shape[1], set2.shape[1])
-    
+
     d2_matrix = pairwise_distances(set1, set2, metric='euclidean')
 
     res = np.average(np.min(d2_matrix, axis=0)) + \
-          np.average(np.min(d2_matrix, axis=1))
+        np.average(np.min(d2_matrix, axis=1))
 
     return res
+
 
 class AveragedHausdorffLoss(nn.Module):
     def __init__(self):
@@ -82,7 +80,7 @@ class AveragedHausdorffLoss(nn.Module):
         assert set1.size()[1] == set2.size()[1], \
             'The points in both sets must have the same number of dimensions, got %s and %s.'\
             % (set2.size()[1], set2.size()[1])
- 
+
         d2_matrix = cdist(set1, set2)
 
         # Modified Chamfer Loss
@@ -93,7 +91,8 @@ class AveragedHausdorffLoss(nn.Module):
 
         return res
 
-class ModifiedChamferLoss(nn.Module):
+
+class WeightedHausdorffDistance(nn.Module):
     def __init__(self, height, width, return_2_terms=False):
         """
         :param height: Number of rows in the image.
@@ -138,16 +137,12 @@ class ModifiedChamferLoss(nn.Module):
         # Reshape probability map as a long column vector,
         # and prepare it for multiplication
         p = prob_map.view(prob_map.nelement())
-        # Think of the next line as a regular threshold at 0.5 to {0,1} (damn pytorch!)
-        # Hard threshold
-        # p_thresh = F.threshold(p,0.1,0)/p
         n_est_pts = p.sum()
         p_replicated = p.view(-1, 1).repeat(1, n_gt_pts)
-        # p_thresh_replicated = p_thresh.view(-1, 1).repeat(1, n_gt_pts)
 
         eps = 1e-6
 
-        # Modified Chamfer Loss
+        # Weighted Hausdorff Distance
         term_1 = (1 / (n_est_pts + eps)) * \
             torch.sum(p * torch.min(d2_matrix, 1)[0])
         d_div_p = torch.min((d2_matrix + eps) /

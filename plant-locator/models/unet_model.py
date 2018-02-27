@@ -29,7 +29,7 @@ class UNet(nn.Module):
         self.down5 = down(512, 512)
         self.down6 = down(512, 512)
         self.down7 = down(512, 512)
-        self.down8 = down(512, 512)
+        self.down8 = down(512, 512, normaliz=False)
         self.up1 = up(1024, 512)
         self.up2 = up(1024, 512)
         self.up3 = up(1024, 512)

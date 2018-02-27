@@ -411,7 +411,7 @@ while epoch < args.epochs:
                                    opts=dict(title='Validation',
                                              legend=['Term 1', 'Term 2',
                                                      'Term 3', 'Sum/3',
-                                                     'AHD', 'Precision', 'Recall'],
+                                                     'AHD', 'Precision (%)', 'Recall (%)'],
                                              ylabel='Loss',
                                              xlabel='Epoch'),
                                    append=True,
@@ -421,7 +421,8 @@ while epoch < args.epochs:
                                 X=x,
                                 opts=dict(title='Validation',
                                           legend=['Term 1', 'Term 2',
-                                                  'Term 3', 'Sum/3', 'AHD', 'Precision', 'Recall'],
+                                                  'Term 3', 'Sum/3',
+                                                  'AHD', 'Precision (%)', 'Recall (%)'],
                                           ylabel='Loss', xlabel='Epoch'),
                                 win='4')
 

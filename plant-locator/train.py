@@ -13,7 +13,6 @@ from parse import parse
 import numpy as np
 import torch
 import torch.optim as optim
-import visdom
 import utils
 from torch import nn
 from torch.autograd import Variable
@@ -28,6 +27,7 @@ from torch.utils.data import DataLoader
 from data import CSVDataset
 from data import RandomHorizontalFlipImageAndLabel
 from data import RandomVerticalFlipImageAndLabel
+import logger
 
 
 # Training settings
@@ -115,11 +115,7 @@ if args.cuda:
     torch.cuda.manual_seed_all(args.seed)
 
 # Visdom setup
-viz = visdom.Visdom(env=args.env_name)
-viz_train_input_win, viz_val_input_win = None, None
-viz_train_loss_win, viz_val_loss_win = None, None
-viz_train_gt_win, viz_val_gt_win = None, None
-viz_train_est_win, viz_val_est_win = None, None
+log = logger.Logger(env_name=args.env_name)
 
 # Data loading code
 trainset = CSVDataset(args.train_dir,
@@ -235,34 +231,21 @@ while epoch < args.epochs:
                 100. * batch_idx / len(trainset_loader), loss.data[0]))
             tic_train = time.time()
 
-            # Send training loss to Visdom
-            win_train_loss = viz.updateTrace(Y=torch.cat([term1, term2, term3, loss / 3]).view(1, -1).data.cpu(),
-                                             X=torch.Tensor(
-                                                 [it_num]).repeat(1, 4),
-                                             opts=dict(title='Training',
-                                                       legend=[
-                                                           'Term 1', 'Term 2', 'Term3', 'Sum/3'],
-                                                       ylabel='Loss', xlabel='Iteration'),
-                                             append=True,
-                                             win='0')
-            if win_train_loss == 'win does not exist':
-                win_train_loss = viz.line(Y=torch.cat([term1, term2, term3, loss / 3]).view(1, -1).data.cpu(),
-                                          X=torch.Tensor(
-                                              [it_num]).repeat(1, 4),
-                                          opts=dict(title='Training',
-                                                    legend=[
-                                                        'Term 1', 'Term 2', 'Term3', 'Sum/3'],
-                                                    ylabel='Loss', xlabel='Iteration'),
-                                          win='0')
+            # Log training losses
+            log.train_losses(terms=[term1, term2, term3, loss / 3],
+                             iteration_number=it_num,
+                             terms_legends=['Term1',
+                                            'Term2',
+                                            'Term3',
+                                            'Sum/3'])
 
-            # Send input image to Visdom
-            viz.image(((data.data + 1) / 2.0 * 255.0).squeeze().cpu().numpy(),
-                      opts=dict(title='(Training) Input'),
-                      win=1)
-            # Send estimated image to Visdom
-            viz.image(est_map.data.unsqueeze(0).cpu().numpy(),
-                      opts=dict(title='(Training) U-Net output'),
-                      win=2)
+            # Send input and output images
+            log.image(imgs=[((data.data + 1) / 2.0 * 255.0).squeeze().cpu().numpy(),
+                            est_map.data.unsqueeze(0).cpu().numpy()],
+                      titles=['(Training) Input',
+                              '(Training) U-Net output'],
+                      windows=[1, 2])
+
             # # Read image with GT dots from disk
             # gt_img_numpy = skimage.io.imread(
             #     os.path.join('/home/jprat/projects/phenosorg/data/plant_counts_dots/20160613_F54_training_256x256_white_bigdots',
@@ -356,14 +339,11 @@ while epoch < args.epochs:
         if time.time() > tic_val + args.log_interval:
             tic_val = time.time()
 
-            # Send input image to Visdom
-            viz.image(((data.data + 1) / 2.0 * 255.0).squeeze().cpu().numpy(),
-                      opts=dict(title='(Validation) Input'),
-                      win=5)
-            # Send estimated image to Visdom
-            viz.image(est_map.data.unsqueeze(0).cpu().numpy(),
-                      opts=dict(title='(Validation) UNet output'),
-                      win=6)
+            log.image(imgs=[((data.data + 1) / 2.0 * 255.0).squeeze().cpu().numpy(),
+                            est_map.data.unsqueeze(0).cpu().numpy()],
+                      titles=['(Validation) Input',
+                              '(Validation) U-Net output'],
+                      windows=[5, 6])
             # # Read image with GT dots from disk
             # gt_img_numpy = skimage.io.imread(
             #     os.path.join('/home/jprat/projects/phenosorg/data/plant_counts_dots/20160613_F54_validation_256x256_white_bigdots',
@@ -384,10 +364,11 @@ while epoch < args.epochs:
                 for y, x in centroids:
                     image_with_x = cv2.circle(
                         image_with_x, (x, y), 3, [255, 0, 0], -1)
-                viz.image(np.moveaxis(image_with_x, 2, 0),
-                          opts=dict(
-                              title='(Validation) Estimated centers @ crossings'),
-                          win=8)
+
+                log.image(imgs=[np.moveaxis(image_with_x, 2, 0)],
+                          titles=[
+                              '(Validation) Estimated centers @ crossings'],
+                          windows=[8])
 
     avg_term1_val = sum_term1 / len(valset_loader)
     avg_term2_val = sum_term2 / len(valset_loader)
@@ -397,34 +378,22 @@ while epoch < args.epochs:
     prec, rec = judge.get_p_n_r()
     prec, rec = Variable(tensortype([prec])), Variable(tensortype([rec]))
 
-    # Send validation loss to Visdom
-    y = torch.stack((avg_term1_val,
-                     avg_term2_val,
-                     avg_term3_val,
-                     avg_loss_val / 3,
-                     avg_ahd_val,
-                     prec,
-                     rec)).view(1, -1).cpu().data.numpy()
-    x = tensortype([epoch]).repeat(1, 7).cpu().numpy()
-    win_val_loss = viz.updateTrace(Y=y,
-                                   X=x,
-                                   opts=dict(title='Validation',
-                                             legend=['Term 1', 'Term 2',
-                                                     'Term 3', 'Sum/3',
-                                                     'AHD', 'Precision (%)', 'Recall (%)'],
-                                             ylabel='Loss',
-                                             xlabel='Epoch'),
-                                   append=True,
-                                   win='4')
-    if win_val_loss == 'win does not exist':
-        win_val_loss = viz.line(Y=y,
-                                X=x,
-                                opts=dict(title='Validation',
-                                          legend=['Term 1', 'Term 2',
-                                                  'Term 3', 'Sum/3',
-                                                  'AHD', 'Precision (%)', 'Recall (%)'],
-                                          ylabel='Loss', xlabel='Epoch'),
-                                win='4')
+    # Log validation losses
+    log.val_losses(terms=(avg_term1_val,
+                          avg_term2_val,
+                          avg_term3_val,
+                          avg_loss_val / 3,
+                          avg_ahd_val,
+                          prec,
+                          rec),
+                   iteration_number=it_num,
+                   terms_legends=['Term 1',
+                                  'Term 2',
+                                  'Term 3',
+                                  'Sum/3',
+                                  'AHD',
+                                  'Precision (%)',
+                                  'Recall (%)'])
 
     # If this is the best epoch (in terms of validation error)
     avg_ahd_val_float = avg_ahd_val.data.cpu().numpy()[0]

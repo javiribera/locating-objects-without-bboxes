@@ -120,6 +120,33 @@ class CSVDataset(data.Dataset):
         return (img_transformed, transformed_dictionary)
 
 
+def csv_collator(samples):
+    """Merge a list of samples to form a batch.
+    The batch is a 2-element tuple, being the first element
+     the BxHxW tensor and the second element a list of dictionaries.
+
+    :param samples: List of samples returned by CSVDataset as (img, dict) tuples.
+    """
+
+    imgs = []
+    dicts = []
+
+    for sample in samples:
+        img = sample[0]
+        dictt = sample[1]
+
+        # We cannot deal with images with 0 plants (WHD is not defined)
+        if dictt['plant_count'][0] == 0:
+            continue
+
+        imgs.append(img)
+        dicts.append(dictt)
+
+    data = torch.stack(imgs)
+
+    return data, dicts
+
+
 class RandomHorizontalFlipImageAndLabel(object):
     """ Horizontally flip a numpy array image and the GT with probability p """
 

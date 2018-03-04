@@ -25,6 +25,7 @@ from eval_precision_recall import Judge
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from data import CSVDataset
+from data import csv_collator
 from data import RandomHorizontalFlipImageAndLabel
 from data import RandomVerticalFlipImageAndLabel
 import logger
@@ -118,32 +119,6 @@ if args.cuda:
 # Visdom setup
 log = logger.Logger(env_name=args.env_name)
 
-
-def collator(samples):
-    """ Merge a list of samples to form a batch.
-    The batch is a 2-element tuple, being the first element
-     the BxHxW tensor and the second element a list of dictionaries.
-    """
-
-    imgs = []
-    dicts = []
-
-    for sample in samples:
-        img = sample[0]
-        dictt = sample[1]
-
-        # We cannot deal with images with 0 plants (WHD is not defined)
-        if dictt['plant_count'][0] == 0:
-            continue
-
-        imgs.append(img)
-        dicts.append(dictt)
-
-    data = torch.stack(imgs)
-
-    return data, dicts
-
-
 # Data loading code
 trainset = CSVDataset(args.train_dir,
                       transforms=transforms.Compose([
@@ -159,7 +134,7 @@ trainset_loader = DataLoader(trainset,
                              batch_size=args.batch_size,
                              shuffle=True,
                              num_workers=args.nThreads,
-                             collate_fn=collator)
+                             collate_fn=csv_collator)
 if args.val_dir:
     valset = CSVDataset(args.val_dir,
                         transforms=transforms.Compose([
@@ -173,7 +148,7 @@ if args.val_dir:
                                batch_size=args.eval_batch_size,
                                shuffle=True,
                                num_workers=args.nThreads,
-                               collate_fn=collator)
+                               collate_fn=csv_collator)
 
 # Model
 print('Building network... ', end='')
@@ -231,18 +206,19 @@ while epoch < args.epochs:
         # Pull info from this batch
         target_locations = [dictt['plant_locations'] for dictt in dictionaries]
         target_count = torch.stack([dictt['plant_count']
-                                   for dictt in dictionaries])
+                                    for dictt in dictionaries])
 
         imgs = Variable(imgs.type(tensortype))
         target_locations = [Variable(t.type(tensortype))
-                                     for t in target_locations]
+                            for t in target_locations]
         target_count = Variable(target_count.type(tensortype))
 
         # One training step
         optimizer.zero_grad()
         est_map, est_count = model.forward(imgs)
         term1, term2 = criterion_training.forward(est_map, target_locations)
-        term3 = torch.sum(l1_loss.forward(est_count, target_count))/torch.sum(target_count)
+        term3 = torch.sum(l1_loss.forward(
+            est_count, target_count)) / torch.sum(target_count)
         term3 *= args.lambdaa
         loss = term1 + term2 + term3
         loss.backward()
@@ -306,11 +282,11 @@ while epoch < args.epochs:
         # Pull info from this batch
         target_locations = [dictt['plant_locations'] for dictt in dictionaries]
         target_count = torch.stack([dictt['plant_count']
-                                   for dictt in dictionaries])
+                                    for dictt in dictionaries])
 
         imgs = Variable(imgs.type(tensortype))
         target_locations = [Variable(t.type(tensortype))
-                                     for t in target_locations]
+                            for t in target_locations]
         target_count = Variable(target_count.type(tensortype))
 
         # Feed-forward
@@ -318,7 +294,8 @@ while epoch < args.epochs:
 
         # The 3 terms
         term1, term2 = criterion_training.forward(est_map, target_locations)
-        term3 = torch.sum(l1_loss.forward(est_count, target_count))/torch.sum(target_count)
+        term3 = torch.sum(l1_loss.forward(
+            est_count, target_count)) / torch.sum(target_count)
         term3 *= args.lambdaa
         sum_term1 += term1
         sum_term2 += term2
@@ -346,7 +323,8 @@ while epoch < args.epochs:
                                                 covariance_type='full').\
                 fit(c).means_.astype(np.int)
 
-            target_locations = target_locations[0].data.cpu().numpy().reshape(-1, 2)
+            target_locations = target_locations[0].data.cpu(
+            ).numpy().reshape(-1, 2)
             ahd = losses.averaged_hausdorff_distance(
                 centroids, target_locations)
         ahd = Variable(tensortype([ahd]))
@@ -359,7 +337,7 @@ while epoch < args.epochs:
             tic_val = time.time()
 
             log.image(imgs=[((imgs.data[0, :, :] + 1) / 2.0 * 255.0).squeeze().cpu().numpy(),
-                             est_map[0, :, :].data.unsqueeze(0).cpu().numpy()],
+                            est_map[0, :, :].data.unsqueeze(0).cpu().numpy()],
                       titles=['(Validation) Input',
                               '(Validation) U-Net output'],
                       windows=[5, 6])

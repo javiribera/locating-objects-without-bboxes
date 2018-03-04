@@ -71,8 +71,12 @@ class UNet(nn.Module):
         x = self.outc(x)
         x = self.out_nonlin(x)
 
+        # Reshape Bx1xHxW -> BxHxW
+        # because probability map is real-valued by definition
+        x = x.squeeze(1)
+
         if self.known_n_points is None:
-            x_flat = x.view(1, -1)
+            x_flat = x.view(x.shape[0], -1)
             regression = self.regressor(x_flat)
             regression = self.regressor_nonlin(regression)
             return x, regression

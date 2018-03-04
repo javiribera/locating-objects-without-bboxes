@@ -36,7 +36,8 @@ parser = argparse.ArgumentParser(description='Plant Location with PyTorch',
 parser.add_argument('--train-dir', required=True,
                     help='Directory with training images.')
 parser.add_argument('--val-dir',
-                    help='Directory with validation images. If left blank no validation will be done.')
+                    help='Directory with validation images. If left blank no validation will be done.'
+                         'If not provided, will not do validation')
 parser.add_argument('--imgsize', type=str, default='256x256', metavar='HxW',
                     help='Size of the input images (height x width).')
 parser.add_argument('--batch-size', type=int, default=1, metavar='N',
@@ -117,6 +118,32 @@ if args.cuda:
 # Visdom setup
 log = logger.Logger(env_name=args.env_name)
 
+
+def collator(samples):
+    """ Merge a list of samples to form a batch.
+    The batch is a 2-element tuple, being the first element
+     the BxHxW tensor and the second element a list of dictionaries.
+    """
+
+    imgs = []
+    dicts = []
+
+    for sample in samples:
+        img = sample[0]
+        dictt = sample[1]
+
+        # We cannot deal with images with 0 plants (WHD is not defined)
+        if dictt['plant_count'][0] == 0:
+            continue
+
+        imgs.append(img)
+        dicts.append(dictt)
+
+    data = torch.stack(imgs)
+
+    return data, dicts
+
+
 # Data loading code
 trainset = CSVDataset(args.train_dir,
                       transforms=transforms.Compose([
@@ -131,7 +158,8 @@ trainset = CSVDataset(args.train_dir,
 trainset_loader = DataLoader(trainset,
                              batch_size=args.batch_size,
                              shuffle=True,
-                             num_workers=args.nThreads)
+                             num_workers=args.nThreads,
+                             collate_fn=collator)
 if args.val_dir:
     valset = CSVDataset(args.val_dir,
                         transforms=transforms.Compose([
@@ -144,7 +172,8 @@ if args.val_dir:
     valset_loader = DataLoader(valset,
                                batch_size=args.eval_batch_size,
                                shuffle=True,
-                               num_workers=args.nThreads)
+                               num_workers=args.nThreads,
+                               collate_fn=collator)
 
 # Model
 print('Building network... ', end='')
@@ -158,9 +187,10 @@ if args.cuda:
     model.cuda()
 
 # Loss function
-l1_loss = nn.L1Loss()
+l1_loss = nn.L1Loss(reduce=False)
 criterion_training = losses.WeightedHausdorffDistance(height=height, width=width,
-                                                      return_2_terms=True)
+                                                      return_2_terms=True,
+                                                      tensortype=tensortype)
 
 # Optimization strategy
 optimizer = optim.SGD(model.parameters(),
@@ -192,33 +222,28 @@ epoch = start_epoch
 it_num = 0
 while epoch < args.epochs:
 
-    for batch_idx, (data, dictionary) in enumerate(trainset_loader):
+    for batch_idx, (imgs, dictionaries) in enumerate(trainset_loader):
         # === TRAIN ===
 
         # Set the module in training mode
         model.train()
 
-        # Pull info from this sample image
-        target_locations = dictionary['plant_locations']
-        target_count = dictionary['plant_count']
+        # Pull info from this batch
+        target_locations = [dictt['plant_locations'] for dictt in dictionaries]
+        target_count = torch.stack([dictt['plant_count']
+                                   for dictt in dictionaries])
 
-        # We cannot deal with images with 0 plants (CD is not defined)
-        if target_count[0][0] == 0:
-            continue
-
-        if args.cuda:
-            data, target_locations, target_count = data.cuda(
-            ), target_locations.cuda(), target_count.cuda()
-        data, target_locations, target_count = Variable(
-            data), Variable(target_locations), Variable(target_count)
+        imgs = Variable(imgs.type(tensortype))
+        target_locations = [Variable(t.type(tensortype))
+                                     for t in target_locations]
+        target_count = Variable(target_count.type(tensortype))
 
         # One training step
         optimizer.zero_grad()
-        est_map, est_count = model.forward(data)
-        est_map = est_map.squeeze()
+        est_map, est_count = model.forward(imgs)
         term1, term2 = criterion_training.forward(est_map, target_locations)
-        term3 = l1_loss.forward(est_count, target_count) / target_count
-        term3 = term3.squeeze()
+        term3 = torch.sum(l1_loss.forward(est_count, target_count))/torch.sum(target_count)
+        term3 *= args.lambdaa
         loss = term1 + term2 + term3
         loss.backward()
         optimizer.step()
@@ -239,9 +264,9 @@ while epoch < args.epochs:
                                             'Term3',
                                             'Sum/3'])
 
-            # Send input and output images
-            log.image(imgs=[((data.data + 1) / 2.0 * 255.0).squeeze().cpu().numpy(),
-                            est_map.data.unsqueeze(0).cpu().numpy()],
+            # Send input and output images (first one in the batch)
+            log.image(imgs=[((imgs[0, :, :].data + 1) / 2.0 * 255.0).squeeze().cpu().numpy(),
+                            est_map[0, :, :].data.unsqueeze(0).cpu().numpy()],
                       titles=['(Training) Input',
                               '(Training) U-Net output'],
                       windows=[1, 2])
@@ -276,40 +301,34 @@ while epoch < args.epochs:
     sum_term3 = 0
     sum_loss = 0
     sum_ahd = 0
-    for batch_idx, (data, dictionary) in tqdm(enumerate(valset_loader), total=len(valset_loader)):
+    for batch_idx, (imgs, dictionaries) in tqdm(enumerate(valset_loader), total=len(valset_loader)):
 
-        # Pull info from this sample image
-        target_locations = dictionary['plant_locations']
-        target_count = dictionary['plant_count']
+        # Pull info from this batch
+        target_locations = [dictt['plant_locations'] for dictt in dictionaries]
+        target_count = torch.stack([dictt['plant_count']
+                                   for dictt in dictionaries])
 
-        # We cannot deal with images with 0 plants (CD is not defined)
-        if target_count[0][0] == 0:
-            continue
-
-        if args.cuda:
-            data, target_locations, target_count = data.cuda(
-            ), target_locations.cuda(), target_count.cuda()
-        data, target_locations, target_count = Variable(data, volatile=True), Variable(
-            target_locations, volatile=True), Variable(target_count, volatile=True)
+        imgs = Variable(imgs.type(tensortype))
+        target_locations = [Variable(t.type(tensortype))
+                                     for t in target_locations]
+        target_count = Variable(target_count.type(tensortype))
 
         # Feed-forward
-        est_map, est_count = model.forward(data)
-        est_map = est_map.squeeze()
-        est_count = est_count.squeeze()
-        target_locations = target_locations.squeeze()
+        est_map, est_count = model.forward(imgs)
 
         # The 3 terms
         term1, term2 = criterion_training.forward(est_map, target_locations)
-        term3 = l1_loss.forward(est_count, target_count) / target_count
-        term3 = term3.squeeze()
+        term3 = torch.sum(l1_loss.forward(est_count, target_count))/torch.sum(target_count)
+        term3 *= args.lambdaa
         sum_term1 += term1
         sum_term2 += term2
         sum_term3 += term3
         sum_loss += term1 + term2 + term3
 
         # Validation using the Averaged Hausdorff Distance
+        # __on the first image of the batch__
         # The estimated map must be thresholed to obtain estimated points
-        est_map_numpy = est_map.data.cpu().numpy()
+        est_map_numpy = est_map[0, :, :].data.cpu().numpy()
         mask = cv2.inRange(est_map_numpy, 2 / 255, 1)
         coord = np.where(mask > 0)
         y = coord[0].reshape((-1, 1))
@@ -327,7 +346,7 @@ while epoch < args.epochs:
                                                 covariance_type='full').\
                 fit(c).means_.astype(np.int)
 
-            target_locations = target_locations.data.cpu().numpy().reshape(-1, 2)
+            target_locations = target_locations[0].data.cpu().numpy().reshape(-1, 2)
             ahd = losses.averaged_hausdorff_distance(
                 centroids, target_locations)
         ahd = Variable(tensortype([ahd]))
@@ -339,8 +358,8 @@ while epoch < args.epochs:
         if time.time() > tic_val + args.log_interval:
             tic_val = time.time()
 
-            log.image(imgs=[((data.data + 1) / 2.0 * 255.0).squeeze().cpu().numpy(),
-                            est_map.data.unsqueeze(0).cpu().numpy()],
+            log.image(imgs=[((imgs.data[0, :, :] + 1) / 2.0 * 255.0).squeeze().cpu().numpy(),
+                             est_map[0, :, :].data.unsqueeze(0).cpu().numpy()],
                       titles=['(Validation) Input',
                               '(Validation) U-Net output'],
                       windows=[5, 6])
@@ -356,8 +375,8 @@ while epoch < args.epochs:
             #           win=7)
             if args.paint:
                 # Send original image with a cross at the estimated centroids to Visdom
-                image_with_x = tensortype(data.data.squeeze().size()).\
-                    copy_(data.data.squeeze())
+                image_with_x = tensortype(imgs.data[0, :, :].squeeze().size()).\
+                    copy_(imgs.data[0, :, :].squeeze())
                 image_with_x = ((image_with_x + 1) / 2.0 * 255.0)
                 image_with_x = image_with_x.cpu().numpy()
                 image_with_x = np.moveaxis(image_with_x, 0, 2).copy()

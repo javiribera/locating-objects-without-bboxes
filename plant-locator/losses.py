@@ -13,10 +13,11 @@ from torch import nn
 from torch.autograd import Variable
 
 
-def _assert_no_grad(variable):
-    assert not variable.requires_grad, \
-        "nn criterions don't compute the gradient w.r.t. targets - please " \
-        "mark these variables as volatile or not requiring gradients"
+def _assert_no_grad(variables):
+    for var in variables:
+        assert not var.requires_grad, \
+            "nn criterions don't compute the gradient w.r.t. targets - please " \
+            "mark these variables as volatile or not requiring gradients"
 
 
 def cdist(x, y):
@@ -93,13 +94,19 @@ class AveragedHausdorffLoss(nn.Module):
 
 
 class WeightedHausdorffDistance(nn.Module):
-    def __init__(self, height, width, return_2_terms=False):
+    def __init__(self,
+                 height, width,
+                 return_2_terms=False,
+                 tensortype=torch.FloatTensor):
         """
         :param height: Number of rows in the image.
         :param width: Number of columns in the image.
         :param return_2_terms: Whether to return the 2 terms of the CD instead of their sum. Default: False.
+        :param tensortype: The result will be in this Tensor type.
         """
         super(nn.Module, self).__init__()
+
+        self.tensortype = tensortype
 
         # Prepare all possible (row, col) locations in the image
         self.height, self.width = height, width
@@ -107,52 +114,79 @@ class WeightedHausdorffDistance(nn.Module):
         self.n_pixels = height * width
         self.all_img_locations = torch.from_numpy(cartesian([np.arange(height),
                                                              np.arange(width)]))
-        self.all_img_locations = self.all_img_locations.type(torch.FloatTensor)
-        self.all_img_locations = self.all_img_locations.cuda()
+        self.all_img_locations = self.all_img_locations.type(tensortype)
         self.all_img_locations = Variable(self.all_img_locations)
 
         self.return_2_terms = return_2_terms
 
     def forward(self, prob_map, gt):
         """
-        Compute the Modified Chamfer Distance function
+        Compute the Weighted Hausdorff Distance function
          between the estimated probability map and ground truth points.
+        The output is the WHD averaged through all the batch.
 
-        :param prob_map: Tensor of the probability map of the estimation, must be between 0 and 1.
-        :param gt: Tensor where each row is the (y, x), i.e, (row, col) of GT points.
-        :return: Value of the Modified Chamfer Distance, or their 2 terms as a tuples.
+        :param prob_map: (B x H x W) Tensor of the probability map of the estimation.
+                         B is batch size, H is height and W is width.
+                         Values must be between 0 and 1.
+        :param gt: List of Tensors of the Ground Truth points.
+                   Must be of size B as in prob_map.
+                   Each element in the list must be a 2D Tensor,
+                   where each row is the (y, x), i.e, (row, col) of a GT point.
+        :return: Single-scalar Tensor with the Weighted Hausdorff Distance.
+                 If self.return_2_terms=True, then return a tuple containing
+                 the two terms of the Weighted Hausdorff Distance. 
         """
+
         _assert_no_grad(gt)
 
-        assert prob_map.size()[0:2] == (self.height, self.width), \
-            'You must configure the ModifiedChamferLoss with the height and width of the ' \
-            'probability map that you are using, got a probability map of size (%s, %s)'\
-            % prob_map.size()
+        assert prob_map.dim() == 3, 'The probability map must be (B x H x W)'
+        assert prob_map.size()[1:3] == (self.height, self.width), \
+            'You must configure the WeightedHausdorffDistance with the height and width of the ' \
+            'probability map that you are using, got a probability map of size %s'\
+            % str(prob_map.size())
 
-        # Pairwise distances between all possible locations and the GTed locations
-        gt = gt.squeeze()
-        n_gt_pts = gt.size()[0]
-        d2_matrix = cdist(self.all_img_locations, gt)
+        batch_size = prob_map.shape[0]
+        assert batch_size == len(gt)
 
-        # Reshape probability map as a long column vector,
-        # and prepare it for multiplication
-        p = prob_map.view(prob_map.nelement())
-        n_est_pts = p.sum()
-        p_replicated = p.view(-1, 1).repeat(1, n_gt_pts)
+        terms_1 = []#Variable(self.tensortype(batch_size))
+        terms_2 = []#Variable(self.tensortype(batch_size))
+        for b in range(batch_size):
 
-        eps = 1e-6
+            # One by one
+            prob_map_b = prob_map[b, :, :]
+            gt_b = gt[b] 
 
-        # Weighted Hausdorff Distance
-        term_1 = (1 / (n_est_pts + eps)) * \
-            torch.sum(p * torch.min(d2_matrix, 1)[0])
-        d_div_p = torch.min((d2_matrix + eps) /
-                            (p_replicated**4 + eps / self.max_dist), 0)[0]
-        d_div_p = torch.clamp(d_div_p, 0, self.max_dist)
-        term_2 = 1 * torch.mean(d_div_p, 0)[0]
+            # Pairwise distances between all possible locations and the GTed locations
+            n_gt_pts = gt_b.size()[0]
+            d2_matrix = cdist(self.all_img_locations, gt_b)
+
+            # Reshape probability map as a long column vector,
+            # and prepare it for multiplication
+            p = prob_map_b.view(prob_map_b.nelement())
+            n_est_pts = p.sum()
+            p_replicated = p.view(-1, 1).repeat(1, n_gt_pts)
+
+            eps = 1e-6
+
+            # Weighted Hausdorff Distance
+            term_1 = (1 / (n_est_pts + eps)) * \
+                torch.sum(p * torch.min(d2_matrix, 1)[0])
+            d_div_p = torch.min((d2_matrix + eps) /
+                                (p_replicated**4 + eps / self.max_dist), 0)[0]
+            d_div_p = torch.clamp(d_div_p, 0, self.max_dist)
+            term_2 = 1 * torch.mean(d_div_p, 0)[0]
+
+            # terms_1[b] = term_1
+            # terms_2[b] = term_2
+            terms_1.append(term_1)
+            terms_2.append(term_2)
+
+        terms_1 = torch.stack(terms_1)
+        terms_2 = torch.stack(terms_2)
 
         if self.return_2_terms:
-            res = (term_1, term_2)
+            res = terms_1.mean(), terms_2.mean()
         else:
-            res = term_1 + term_2
+            res = terms_1.mean() + terms_2.mean()
 
         return res

@@ -127,7 +127,7 @@ if not args.no_data_augm:
     training_transforms += [RandomVerticalFlipImageAndLabel(p=0.5)]
 training_transforms += [transforms.ToTensor()]
 training_transforms += [transforms.Normalize((0.5, 0.5, 0.5),
-                                               (0.5, 0.5, 0.5))]
+                                             (0.5, 0.5, 0.5))]
 trainset = CSVDataset(args.train_dir,
                       transforms=transforms.Compose(training_transforms),
                       max_dataset_size=args.max_trainset_size,
@@ -279,7 +279,8 @@ while epoch < args.epochs:
     sum_term3 = 0
     sum_loss = 0
     sum_ahd = 0
-    for batch_idx, (imgs, dictionaries) in tqdm(enumerate(valset_loader), total=len(valset_loader)):
+    for batch_idx, (imgs, dictionaries) in tqdm(enumerate(valset_loader),
+                                                total=len(valset_loader)):
 
         # Pull info from this batch
         target_locations = [dictt['locations'] for dictt in dictionaries]
@@ -325,8 +326,8 @@ while epoch < args.epochs:
                                                 covariance_type='full').\
                 fit(c).means_.astype(np.int)
 
-            target_locations = target_locations[0].data.cpu(
-            ).numpy().reshape(-1, 2)
+            target_locations = \
+                target_locations[0].data.cpu().numpy().reshape(-1, 2)
             ahd = losses.averaged_hausdorff_distance(
                 centroids, target_locations)
         ahd = tensortype([ahd])

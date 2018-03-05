@@ -330,7 +330,7 @@ while epoch < args.epochs:
                 target_locations[0].data.cpu().numpy().reshape(-1, 2)
             ahd = losses.averaged_hausdorff_distance(
                 centroids, target_locations)
-        ahd = tensortype([ahd])
+        ahd = Variable(tensortype([ahd]), volatile=True)
         sum_ahd += ahd
 
         # Validation using Precision and Recall
@@ -376,9 +376,10 @@ while epoch < args.epochs:
     avg_loss_val = sum_loss / len(valset_loader)
     avg_ahd_val = sum_ahd / len(valset_loader)
     prec, rec = judge.get_p_n_r()
-    prec, rec = tensortype([prec]), tensortype([rec])
+    prec = Variable(tensortype([prec]), volatile=True)
+    rec = Variable(tensortype([rec]), volatile=True)
 
-    # Log validation losses
+    # Log validation metrics
     log.val_losses(terms=(avg_term1_val,
                           avg_term2_val,
                           avg_term3_val,
@@ -396,7 +397,7 @@ while epoch < args.epochs:
                                   'Recall (%)'])
 
     # If this is the best epoch (in terms of validation error)
-    avg_ahd_val_float = avg_ahd_val.cpu().numpy()[0]
+    avg_ahd_val_float = avg_ahd_val.data.cpu().numpy()[0]
     if avg_ahd_val_float < lowest_avg_ahd_val:
         # Keep the best model
         lowest_avg_ahd_val = avg_ahd_val_float

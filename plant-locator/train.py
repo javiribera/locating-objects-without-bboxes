@@ -287,10 +287,10 @@ while epoch < args.epochs:
         target_count = torch.stack([dictt['plant_count']
                                     for dictt in dictionaries])
 
-        imgs = Variable(imgs.type(tensortype))
-        target_locations = [Variable(t.type(tensortype))
+        imgs = Variable(imgs.type(tensortype), volatile=True)
+        target_locations = [Variable(t.type(tensortype), volatile=True)
                             for t in target_locations]
-        target_count = Variable(target_count.type(tensortype))
+        target_count = Variable(target_count.type(tensortype), volatile=True)
 
         # Feed-forward
         est_map, est_count = model.forward(imgs)
@@ -330,7 +330,7 @@ while epoch < args.epochs:
             ).numpy().reshape(-1, 2)
             ahd = losses.averaged_hausdorff_distance(
                 centroids, target_locations)
-        ahd = Variable(tensortype([ahd]))
+        ahd = tensortype([ahd])
         sum_ahd += ahd
 
         # Validation using Precision and Recall
@@ -376,7 +376,7 @@ while epoch < args.epochs:
     avg_loss_val = sum_loss / len(valset_loader)
     avg_ahd_val = sum_ahd / len(valset_loader)
     prec, rec = judge.get_p_n_r()
-    prec, rec = Variable(tensortype([prec])), Variable(tensortype([rec]))
+    prec, rec = tensortype([prec]), tensortype([rec])
 
     # Log validation losses
     log.val_losses(terms=(avg_term1_val,
@@ -396,7 +396,7 @@ while epoch < args.epochs:
                                   'Recall (%)'])
 
     # If this is the best epoch (in terms of validation error)
-    avg_ahd_val_float = avg_ahd_val.data.cpu().numpy()[0]
+    avg_ahd_val_float = avg_ahd_val.cpu().numpy()[0]
     if avg_ahd_val_float < lowest_avg_ahd_val:
         # Keep the best model
         lowest_avg_ahd_val = avg_ahd_val_float

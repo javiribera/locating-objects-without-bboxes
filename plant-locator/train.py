@@ -13,7 +13,6 @@ from parse import parse
 import numpy as np
 import torch
 import torch.optim as optim
-import utils
 from torch import nn
 from torch.autograd import Variable
 import torchvision as tv
@@ -32,7 +31,7 @@ import logger
 
 
 # Training settings
-parser = argparse.ArgumentParser(description='Plant Location with PyTorch',
+parser = argparse.ArgumentParser(description='BoundingBox-less Location with PyTorch',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--train-dir', required=True,
                     help='Directory with training images.')
@@ -207,8 +206,8 @@ while epoch < args.epochs:
         model.train()
 
         # Pull info from this batch
-        target_locations = [dictt['plant_locations'] for dictt in dictionaries]
-        target_count = torch.stack([dictt['plant_count']
+        target_locations = [dictt['locations'] for dictt in dictionaries]
+        target_count = torch.stack([dictt['count']
                                     for dictt in dictionaries])
 
         imgs = Variable(imgs.type(tensortype))
@@ -283,8 +282,8 @@ while epoch < args.epochs:
     for batch_idx, (imgs, dictionaries) in tqdm(enumerate(valset_loader), total=len(valset_loader)):
 
         # Pull info from this batch
-        target_locations = [dictt['plant_locations'] for dictt in dictionaries]
-        target_count = torch.stack([dictt['plant_count']
+        target_locations = [dictt['locations'] for dictt in dictionaries]
+        target_count = torch.stack([dictt['count']
                                     for dictt in dictionaries])
 
         imgs = Variable(imgs.type(tensortype), volatile=True)

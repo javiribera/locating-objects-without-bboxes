@@ -91,15 +91,15 @@ class CSVDataset(data.Dataset):
         img = Image.open(img_abspath)
 
         # str -> lists
-        dictionary['plant_locations'] = eval(dictionary['plant_locations'])
-        dictionary['plant_locations'] = [
-            list(loc) for loc in dictionary['plant_locations']]
+        dictionary['locations'] = eval(dictionary['locations'])
+        dictionary['locations'] = [
+            list(loc) for loc in dictionary['locations']]
 
         # list --> Tensors
-        dictionary['plant_locations'] = self.tensortype(
-            dictionary['plant_locations'])
-        dictionary['plant_count'] = self.tensortype(
-            [dictionary['plant_count']])
+        dictionary['locations'] = self.tensortype(
+            dictionary['locations'])
+        dictionary['count'] = self.tensortype(
+            [dictionary['count']])
 
         img_transformed = img
         transformed_dictionary = dictionary
@@ -114,8 +114,8 @@ class CSVDataset(data.Dataset):
                     img_transformed = transform(img_transformed)
 
         # Prevents crash when making a batch out of an empty tensor
-        if dictionary['plant_count'][0] == 0:
-            dictionary['plant_locations'] = self.tensortype([-1, -1])
+        if dictionary['count'][0] == 0:
+            dictionary['locations'] = self.tensortype([-1, -1])
 
         return (img_transformed, transformed_dictionary)
 
@@ -136,7 +136,7 @@ def csv_collator(samples):
         dictt = sample[1]
 
         # We cannot deal with images with 0 plants (WHD is not defined)
-        if dictt['plant_count'][0] == 0:
+        if dictt['count'][0] == 0:
             continue
 
         imgs.append(img)
@@ -161,8 +161,8 @@ class RandomHorizontalFlipImageAndLabel(object):
         if random.random() < self.p:
             transformed_img = hflip(img)
             width = img.size[1]
-            for l, loc in enumerate(dictionary['plant_locations']):
-                dictionary['plant_locations'][l][1] = (width - 1) - loc[1]
+            for l, loc in enumerate(dictionary['locations']):
+                dictionary['locations'][l][1] = (width - 1) - loc[1]
 
         return transformed_img, transformed_dictionary
 
@@ -181,8 +181,8 @@ class RandomVerticalFlipImageAndLabel(object):
         if random.random() < self.p:
             transformed_img = vflip(img)
             height = img.size[0]
-            for l, loc in enumerate(dictionary['plant_locations']):
-                dictionary['plant_locations'][l][0] = (height - 1) - loc[0]
+            for l, loc in enumerate(dictionary['locations']):
+                dictionary['locations'][l][0] = (height - 1) - loc[0]
 
         return transformed_img, transformed_dictionary
 

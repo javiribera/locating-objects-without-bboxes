@@ -164,8 +164,8 @@ if args.cuda:
     model.cuda()
 
 # Loss function
-l1_loss = nn.L1Loss(reduce=False)
-criterion_training = losses.WeightedHausdorffDistance(height=height, width=width,
+loss_regress = nn.SmoothL1Loss(reduce=False)
+loss_loc = losses.WeightedHausdorffDistance(height=height, width=width,
                                                       return_2_terms=True,
                                                       tensortype=tensortype)
 
@@ -218,9 +218,9 @@ while epoch < args.epochs:
         # One training step
         optimizer.zero_grad()
         est_map, est_count = model.forward(imgs)
-        term1, term2 = criterion_training.forward(est_map, target_locations)
-        term3 = torch.sum(l1_loss.forward(
-            est_count, target_count)) / torch.sum(target_count)
+        term1, term2 = loss_loc.forward(est_map, target_locations)
+        term3 = torch.sum(loss_regress.forward(est_count, target_count)) \
+            / torch.sum(target_count)
         term3 *= args.lambdaa
         loss = term1 + term2 + term3
         loss.backward()
@@ -296,9 +296,12 @@ while epoch < args.epochs:
         est_map, est_count = model.forward(imgs)
 
         # The 3 terms
-        term1, term2 = criterion_training.forward(est_map, target_locations)
-        term3 = torch.sum(l1_loss.forward(
-            est_count, target_count)) / torch.sum(target_count)
+        term1, term2 = loss_loc.forward(est_map, target_locations)
+        if bool((torch.sum(target_count)==0).data.cpu().numpy()[0][0]):
+            term3 = torch.sum(loss_regress.forward(est_count, target_count)**2)
+        else:
+            term3 = torch.sum(loss_regress.forward(est_count, target_count)**2) \
+                / torch.sum(target_count)
         term3 *= args.lambdaa
         sum_term1 += term1
         sum_term2 += term2

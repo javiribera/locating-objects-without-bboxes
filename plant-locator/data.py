@@ -135,9 +135,9 @@ def csv_collator(samples):
         img = sample[0]
         dictt = sample[1]
 
-        # We cannot deal with images with 0 plants (WHD is not defined)
-        if dictt['count'][0] == 0:
-            continue
+        # # We cannot deal with images with 0 plants (WHD is not defined)
+        # if dictt['count'][0] == 0:
+        #     continue
 
         imgs.append(img)
         dicts.append(dictt)

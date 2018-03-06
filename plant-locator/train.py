@@ -42,8 +42,6 @@ parser.add_argument('--imgsize', type=str, default='256x256', metavar='HxW',
                     help='Size of the input images (height x width).')
 parser.add_argument('--batch-size', type=int, default=1, metavar='N',
                     help='input batch size for training')
-parser.add_argument('--eval-batch-size', type=int, default=1, metavar='N',
-                    help='input batch size for validation')
 parser.add_argument('--epochs', type=int, default=np.inf, metavar='N',
                     help='number of epochs to train')
 parser.add_argument('--nThreads', '-j', default=4, type=int, metavar='N',

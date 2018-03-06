@@ -169,8 +169,11 @@ loss_loc = losses.WeightedHausdorffDistance(height=height, width=width,
 loss_regress_eval = nn.L1Loss(size_average=False)
 
 # Optimization strategy
-optimizer = optim.SGD(model.parameters(),
-                      lr=args.lr)
+# optimizer = optim.SGD(model.parameters(),
+#                       lr=args.lr,
+#                       momentum=0.9)
+#                       # nesterov=True)
+optimizer = optim.Adam(model.parameters())
 
 start_epoch = 0
 lowest_avg_ahd_val = np.infty

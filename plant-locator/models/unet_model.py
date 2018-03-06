@@ -43,7 +43,7 @@ class UNet(nn.Module):
 
         self.known_n_points = known_n_points
         if known_n_points is None:
-            self.regressor = nn.Linear(256*256, 1)
+            self.regressor = nn.Linear(256*256 + 512, 1)
             self.regressor_nonlin = nn.Softplus()
 
         # This layer is not connected anywhere
@@ -77,7 +77,9 @@ class UNet(nn.Module):
 
         if self.known_n_points is None:
             x_flat = x.view(x.shape[0], -1)
-            regression = self.regressor(x_flat)
+            x9_flat = x9.view(x9.shape[0], -1)
+            regression_features = torch.cat((x_flat, x9_flat), dim=1)
+            regression = self.regressor(regression_features)
             regression = self.regressor_nonlin(regression)
             return x, regression
         else:

@@ -158,7 +158,7 @@ class WeightedHausdorffDistance(nn.Module):
 
             # Pairwise distances between all possible locations and the GTed locations
             n_gt_pts = gt_b.size()[0]
-            d2_matrix = cdist(self.all_img_locations, gt_b)
+            d_matrix = cdist(self.all_img_locations, gt_b)
 
             # Reshape probability map as a long column vector,
             # and prepare it for multiplication
@@ -167,14 +167,15 @@ class WeightedHausdorffDistance(nn.Module):
             p_replicated = p.view(-1, 1).repeat(1, n_gt_pts)
 
             eps = 1e-6
+            alpha = 4
 
             # Weighted Hausdorff Distance
             term_1 = (1 / (n_est_pts + eps)) * \
-                torch.sum(p * torch.min(d2_matrix, 1)[0])
-            d_div_p = torch.min((d2_matrix + eps) /
-                                (p_replicated**4 + eps / self.max_dist), 0)[0]
+                torch.sum(p * torch.min(d_matrix, 1)[0])
+            d_div_p = torch.min((d_matrix + eps) /
+                                (p_replicated**alpha + eps / self.max_dist), 0)[0]
             d_div_p = torch.clamp(d_div_p, 0, self.max_dist)
-            term_2 = 1 * torch.mean(d_div_p, 0)[0]
+            term_2 = torch.mean(d_div_p, 0)[0]
 
             # terms_1[b] = term_1
             # terms_2[b] = term_2

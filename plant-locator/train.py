@@ -52,7 +52,7 @@ parser.add_argument('--lr', type=float, default=4e-5, metavar='LR',
                     help='learning rate (default: 1e-5)')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='disables CUDA training')
-parser.add_argument('--no-data-augm', action='store_true', default=True,
+parser.add_argument('--no-data-augm', action='store_true', default=False,
                     help='Disables Data Augmentation (random vert+horiz flip)')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')

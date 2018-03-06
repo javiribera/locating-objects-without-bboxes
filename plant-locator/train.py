@@ -162,10 +162,11 @@ if args.cuda:
     model.cuda()
 
 # Loss function
-loss_regress = nn.SmoothL1Loss(reduce=False)
+loss_regress = nn.SmoothL1Loss()
 loss_loc = losses.WeightedHausdorffDistance(height=height, width=width,
                                                       return_2_terms=True,
                                                       tensortype=tensortype)
+loss_regress_eval = nn.L1Loss(size_average=False)
 
 # Optimization strategy
 optimizer = optim.SGD(model.parameters(),
@@ -217,8 +218,8 @@ while epoch < args.epochs:
         optimizer.zero_grad()
         est_map, est_count = model.forward(imgs)
         term1, term2 = loss_loc.forward(est_map, target_locations)
-        term3 = torch.sum(loss_regress.forward(est_count, target_count)) \
-            / torch.sum(target_count)
+        term3 = loss_regress.forward(est_count, target_count) #\
+            # / torch.sum(target_count)
         term3 *= args.lambdaa
         loss = term1 + term2 + term3
         loss.backward()
@@ -277,6 +278,7 @@ while epoch < args.epochs:
     sum_term3 = 0
     sum_loss = 0
     sum_ahd = 0
+    sum_ape = 0
     for batch_idx, (imgs, dictionaries) in tqdm(enumerate(valset_loader),
                                                 total=len(valset_loader)):
 
@@ -284,6 +286,9 @@ while epoch < args.epochs:
         target_locations = [dictt['locations'] for dictt in dictionaries]
         target_count = torch.stack([dictt['count']
                                     for dictt in dictionaries])
+
+        if bool((target_count==0).cpu().numpy()[0]):
+            continue
 
         imgs = Variable(imgs.type(tensortype), volatile=True)
         target_locations = [Variable(t.type(tensortype), volatile=True)
@@ -295,11 +300,9 @@ while epoch < args.epochs:
 
         # The 3 terms
         term1, term2 = loss_loc.forward(est_map, target_locations)
-        if bool((torch.sum(target_count)==0).data.cpu().numpy()[0][0]):
-            term3 = torch.sum(loss_regress.forward(est_count, target_count)**2)
-        else:
-            term3 = torch.sum(loss_regress.forward(est_count, target_count)**2) \
-                / torch.sum(target_count)
+        # if bool((torch.sum(target_count)==0).data.cpu().numpy()[0]):
+        term3 = loss_regress.forward(est_count, target_count)
+                # / torch.sum(target_count)
         term3 *= args.lambdaa
         sum_term1 += term1
         sum_term2 += term2
@@ -333,6 +336,10 @@ while epoch < args.epochs:
                 centroids, target_locations)
         ahd = Variable(tensortype([ahd]), volatile=True)
         sum_ahd += ahd
+
+        # Validation using MAPE
+        ape = torch.abs(target_count - est_count)/target_count
+        sum_ape += ape
 
         # Validation using Precision and Recall
         judge.evaluate_sample(centroids, target_locations)
@@ -376,6 +383,8 @@ while epoch < args.epochs:
     avg_term3_val = sum_term3 / len(valset_loader)
     avg_loss_val = sum_loss / len(valset_loader)
     avg_ahd_val = sum_ahd / len(valset_loader)
+    mape = sum_ape/len(valset_loader)
+    mape = mape.squeeze()
     prec, rec = judge.get_p_n_r()
     prec = Variable(tensortype([prec]), volatile=True)
     rec = Variable(tensortype([rec]), volatile=True)
@@ -386,6 +395,7 @@ while epoch < args.epochs:
                           avg_term3_val,
                           avg_loss_val / 3,
                           avg_ahd_val,
+                          mape*100,
                           prec,
                           rec),
                    iteration_number=it_num,
@@ -394,6 +404,7 @@ while epoch < args.epochs:
                                   'Term3*%s' % args.lambdaa,
                                   'Sum/3',
                                   'AHD',
+                                  'MAPE (%)',
                                   'Precision (%)',
                                   'Recall (%)'])
 

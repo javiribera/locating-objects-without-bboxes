@@ -239,7 +239,7 @@ while epoch < args.epochs:
                              iteration_number=it_num,
                              terms_legends=['Term1',
                                             'Term2',
-                                            'Term3',
+                                            'Term3*%s' % args.lambdaa,
                                             'Sum/3'])
 
             # Send input and output images (first one in the batch)
@@ -393,7 +393,7 @@ while epoch < args.epochs:
                    iteration_number=it_num,
                    terms_legends=['Term 1',
                                   'Term 2',
-                                  'Term 3',
+                                  'Term3*%s' % args.lambdaa,
                                   'Sum/3',
                                   'AHD',
                                   'Precision (%)',

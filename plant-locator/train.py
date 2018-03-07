@@ -240,7 +240,7 @@ while epoch < args.epochs:
 
             # Log training losses
             log.train_losses(terms=[term1, term2, term3, loss / 3],
-                             iteration_number=it_num,
+                             iteration_number=epoch + batch_idx/len(trainset_loader),
                              terms_legends=['Term1',
                                             'Term2',
                                             'Term3*%s' % args.lambdaa,
@@ -407,7 +407,7 @@ while epoch < args.epochs:
                           mape*100,
                           prec,
                           rec),
-                   iteration_number=it_num,
+                   iteration_number=epoch,
                    terms_legends=['Term 1',
                                   'Term 2',
                                   'Term3*%s' % args.lambdaa,

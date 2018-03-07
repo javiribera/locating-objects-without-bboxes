@@ -51,7 +51,7 @@ class Logger():
                                     opts=dict(title='Training',
                                               legend=terms_legends,
                                               ylabel='Loss',
-                                              xlabel='Iteration'),
+                                              xlabel='Epoch'),
                                     append=True,
                                     win='0')
         if self.win_train_loss == 'win does not exist':
@@ -61,7 +61,7 @@ class Logger():
                                  opts=dict(title='Training',
                                            legend=terms_legends,
                                            ylabel='Loss',
-                                           xlabel='Iteration'),
+                                           xlabel='Epoch'),
                                  win='0')
 
     def image(self, imgs, titles, windows):

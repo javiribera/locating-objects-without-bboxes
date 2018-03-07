@@ -240,7 +240,7 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
         else:
             ape = 100 * l1_loss.forward(est_count,
                                         target_count) / target_count
-        ape = ape.data.cpu().numpy()[0]
+        ape = ape.data.cpu().numpy()[0][0]
         sum_ape += ape
 
         # Evaluation using the Averaged Hausdorff Distance

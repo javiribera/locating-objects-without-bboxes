@@ -264,16 +264,15 @@ if testset.there_is_gt:
     avg_ahd = sum_ahd / len(testset_loader)
     mape = sum_ape / len(testset_loader)
 
-    print('\__ Average AHD for all the testing set: {:.4f}'.format(avg_ahd))
+    print(f'\__ Average AHD for all the testing set: {avg_ahd:.3f}')
     print('\__  Accuracy for all the testing set, r=0, ..., 15')
     for judge in judges:
         acc, _ = judge.get_p_n_r()
         print(acc)
-    print('\__  MAPE for all the testing set: {:.4f} %'.format(mape))
+    print(f'\__  MAPE for all the testing set: {mape:.3f} %')
 
 print('It took %s seconds to evaluate all the testing set.' %
       int(time.time() - tic))
 
 # Write CSV to disk
 df_out.to_csv(os.path.join(args.out_dir, 'estimations.csv'))
-

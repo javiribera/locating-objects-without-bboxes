@@ -267,8 +267,8 @@ if testset.there_is_gt:
     print(f'\__ Average AHD for all the testing set: {avg_ahd:.3f}')
     print('\__  Accuracy for all the testing set, r=0, ..., 15')
     for judge in judges:
-        acc, _ = judge.get_p_n_r()
-        print(acc)
+        prec, rec = judge.get_p_n_r()
+        print(f'r={judge.r} => Precision: {prec:.3f}, Recall: {rec:.3f}')
     print(f'\__  MAPE for all the testing set: {mape:.3f} %')
 
 print('It took %s seconds to evaluate all the testing set.' %

@@ -64,7 +64,7 @@ parser.add_argument('--max-trainset-size', type=int, default=np.inf, metavar='N'
                     help='only use the first N images of the training dataset')
 parser.add_argument('--max-valset-size', type=int, default=np.inf, metavar='N',
                     help='only use the first N images of the validation dataset')
-parser.add_argument('--val-freq', default=1, type=int, metavar='F',
+parser.add_argument('--val-freq', default=4, type=int, metavar='F',
                     help='Run validation after F epochs.')
 parser.add_argument('--env-name', default='Pure U-Net', type=str, metavar='NAME',
                     help='Name of the environment in Visdom')
@@ -271,7 +271,7 @@ while epoch < args.epochs:
         epoch += 1
         continue
 
-    if (epoch + 1) % args.val_frequency != 0:
+    if (epoch + 1) % args.val_freq != 0:
         epoch += 1
         continue
 

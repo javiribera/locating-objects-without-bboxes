@@ -166,7 +166,7 @@ if testset.there_is_gt:
     sum_ape = 0
 
 for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
-                                          total=len(testset_loader)):
+                                            total=len(testset_loader)):
 
     imgs = Variable(imgs.type(tensortype), volatile=True)
 
@@ -235,7 +235,7 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
 
     if testset.there_is_gt:
         # Evaluate Average Percent Error for this image
-        if bool((target_count==0).data.cpu().numpy()[0][0]):
+        if bool((target_count == 0).data.cpu().numpy()[0][0]):
             ape = 100 * l1_loss.forward(est_count, target_count)
         else:
             ape = 100 * l1_loss.forward(est_count,
@@ -246,8 +246,8 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
         # Evaluation using the Averaged Hausdorff Distance
         target_locations = \
             target_locations[0].data.cpu().numpy().reshape(-1, 2)
-        ahd = losses.averaged_hausdorff_distance(
-            centroids, target_locations)
+        ahd = losses.averaged_hausdorff_distance(centroids,
+                                                 target_locations)
 
         sum_ahd += ahd
 

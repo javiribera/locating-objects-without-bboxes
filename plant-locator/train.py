@@ -330,6 +330,7 @@ while epoch < args.epochs:
         if len(c) == 0:
             ahd = criterion_training.max_dist
             centroids = []
+            print('len(c) == 0')
         else:
             n_components = int(torch.round(est_count).data.cpu().numpy()[0])
             # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples

@@ -415,8 +415,8 @@ while epoch < args.epochs:
                                   'Sum/3',
                                   'AHD',
                                   'MAPE (%)',
-                                  'Precision (%)',
-                                  'Recall (%)'])
+                                  f'r{args.radius}-Precision (%)',
+                                  f'r{args.radius}-Recall (%)'])
 
     # If this is the best epoch (in terms of validation error)
     avg_ahd_val_float = avg_ahd_val.data.cpu().numpy()[0]

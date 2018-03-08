@@ -166,7 +166,7 @@ if testset.there_is_gt:
     sum_ape = 0
 
 for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
-                                          total=len(testset_loader)):
+                                            total=len(testset_loader)):
 
     imgs = Variable(imgs.type(tensortype), volatile=True)
 
@@ -235,19 +235,19 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
 
     if testset.there_is_gt:
         # Evaluate Average Percent Error for this image
-        if bool((target_count==0).data.cpu().numpy()[0][0]):
+        if bool((target_count == 0).data.cpu().numpy()[0][0]):
             ape = 100 * l1_loss.forward(est_count, target_count)
         else:
             ape = 100 * l1_loss.forward(est_count,
                                         target_count) / target_count
-        ape = ape.data.cpu().numpy()[0]
+        ape = ape.data.cpu().numpy()[0][0]
         sum_ape += ape
 
         # Evaluation using the Averaged Hausdorff Distance
         target_locations = \
             target_locations[0].data.cpu().numpy().reshape(-1, 2)
-        ahd = losses.averaged_hausdorff_distance(
-            centroids, target_locations)
+        ahd = losses.averaged_hausdorff_distance(centroids,
+                                                 target_locations)
 
         sum_ahd += ahd
 
@@ -264,16 +264,15 @@ if testset.there_is_gt:
     avg_ahd = sum_ahd / len(testset_loader)
     mape = sum_ape / len(testset_loader)
 
-    print('\__ Average AHD for all the testing set: {:.4f}'.format(avg_ahd))
+    print(f'\__ Average AHD for all the testing set: {avg_ahd:.3f}')
     print('\__  Accuracy for all the testing set, r=0, ..., 15')
     for judge in judges:
-        acc, _ = judge.get_p_n_r()
-        print(acc)
-    print('\__  MAPE for all the testing set: {:.4f} %'.format(mape))
+        prec, rec = judge.get_p_n_r()
+        print(f'r={judge.r} => Precision: {prec:.3f}, Recall: {rec:.3f}')
+    print(f'\__  MAPE for all the testing set: {mape:.3f} %')
 
 print('It took %s seconds to evaluate all the testing set.' %
       int(time.time() - tic))
 
 # Write CSV to disk
 df_out.to_csv(os.path.join(args.out_dir, 'estimations.csv'))
-

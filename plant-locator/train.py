@@ -329,7 +329,7 @@ while epoch < args.epochs:
         x = coord[1].reshape((-1, 1))
         c = np.concatenate((y, x), axis=1)
         if len(c) == 0:
-            ahd = criterion_training.max_dist
+            ahd = loss_loc.max_dist
             centroids = []
             print('len(c) == 0')
         else:

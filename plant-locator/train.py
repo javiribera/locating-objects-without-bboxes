@@ -156,6 +156,7 @@ if args.val_dir:
 print('Building network... ', end='')
 model = unet_model.UNet(3, 1,
                         height=height, width=width,
+                        known_n_points=args.n_points,
                         tensortype=tensortype)
 print('DONE')
 print(model)

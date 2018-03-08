@@ -51,6 +51,9 @@ class UNet(nn.Module):
         self.lin = nn.Linear(1, 1, bias=False)
 
     def forward(self, x):
+
+        batch_size = x.shape[0]
+
         x1 = self.inc(x)
         x2 = self.down1(x1)
         x3 = self.down2(x2)
@@ -76,14 +79,14 @@ class UNet(nn.Module):
         x = x.squeeze(1)
 
         if self.known_n_points is None:
-            x_flat = x.view(x.shape[0], -1)
-            x9_flat = x9.view(x9.shape[0], -1)
+            x_flat = x.view(batch_size, -1)
+            x9_flat = x9.view(batch_size, -1)
             regression_features = torch.cat((x_flat, x9_flat), dim=1)
             regression = self.regressor(regression_features)
             regression = self.regressor_nonlin(regression)
             return x, regression
         else:
-            n_pts = Variable(self.tensortype([self.known_n_points]))
+            n_pts = Variable(self.tensortype([self.known_n_points]*batch_size))
             return x, n_pts
         # summ = torch.sum(x)
         # count = self.lin(summ)

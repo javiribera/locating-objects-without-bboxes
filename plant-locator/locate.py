@@ -264,11 +264,22 @@ if testset.there_is_gt:
     avg_ahd = sum_ahd / len(testset_loader)
     mape = sum_ape / len(testset_loader)
 
+    # Output CSV where we will put
+    # the precision as a function of r
+    df_prec_n_rec = pd.DataFrame(columns=['precision', 'recall'])
+
+
     print(f'\__ Average AHD for all the testing set: {avg_ahd:.3f}')
     print('\__  Accuracy for all the testing set, r=0, ..., 15')
     for judge in judges:
         prec, rec = judge.get_p_n_r()
         print(f'r={judge.r} => Precision: {prec:.3f}, Recall: {rec:.3f}')
+
+        # Accumulate precision and recall in the CSV dataframe
+        df = pd.DataFrame(data=[[prec, rec]],
+                          index=[judge.r],
+                          columns=['precision', 'recall'])
+        df_prec_n_rec = df_prec_n_rec.append(df)
     print(f'\__  MAPE for all the testing set: {mape:.3f} %')
 
 print('It took %s seconds to evaluate all the testing set.' %
@@ -276,3 +287,4 @@ print('It took %s seconds to evaluate all the testing set.' %
 
 # Write CSV to disk
 df_out.to_csv(os.path.join(args.out_dir, 'estimations.csv'))
+df_prec_n_rec.to_csv(os.path.join(args.out_dir, 'precision_and_recall.csv'))

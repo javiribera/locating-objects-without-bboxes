@@ -6,6 +6,7 @@ import sys
 import time
 import shutil
 from parse import parse
+import math
 
 import cv2
 from tqdm import tqdm
@@ -103,6 +104,7 @@ testset_loader = data.DataLoader(testset,
 
 # Loss function
 l1_loss = nn.L1Loss(reduce=False)
+mse_loss = nn.MSELoss(reduce=False)
 criterion_training = losses.WeightedHausdorffDistance(height=height, width=width,
                                                       return_2_terms=True,
                                                       tensortype=tensortype)
@@ -163,6 +165,8 @@ model.eval()
 if testset.there_is_gt:
     judges = [Judge(r) for r in range(0, 16)]
     sum_ahd = 0
+    sum_ae = 0
+    sum_se = 0
     sum_ape = 0
 
 for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
@@ -240,7 +244,15 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
         else:
             ape = 100 * l1_loss.forward(est_count,
                                         target_count) / target_count
+        ae = l1_loss.forward(est_count, target_count)
+        se = mse_loss.forward(est_count, target_count)
+
         ape = ape.data.cpu().numpy()[0][0]
+        ae = ae.data.cpu().numpy()[0][0]
+        se = se.data.cpu().numpy()[0][0]
+
+        sum_ae += ae
+        sum_se += se
         sum_ape += ape
 
         # Evaluation using the Averaged Hausdorff Distance
@@ -262,6 +274,9 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
 
 if testset.there_is_gt:
     avg_ahd = sum_ahd / len(testset_loader)
+    mae = sum_ae / len(testset_loader)
+    mse = sum_se / len(testset_loader)
+    rmse = math.sqrt(sum_se / len(testset_loader))
     mape = sum_ape / len(testset_loader)
 
     # Output CSV where we will put
@@ -281,6 +296,9 @@ if testset.there_is_gt:
                           columns=['precision', 'recall'])
         df_prec_n_rec = df_prec_n_rec.append(df)
     print(f'\__  MAPE for all the testing set: {mape:.3f} %')
+    print(f'\__  MAE for all the testing set: {mae:.3f}')
+    print(f'\__  MSE for all the testing set: {mse:.3f}')
+    print(f'\__  RMSE for all the testing set: {rmse:.3f}')
 
 print('It took %s seconds to evaluate all the testing set.' %
       int(time.time() - tic))

@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import math
 import cv2
 import argparse
 import os
@@ -169,7 +170,8 @@ loss_regress = nn.SmoothL1Loss()
 loss_loc = losses.WeightedHausdorffDistance(height=height, width=width,
                                                       return_2_terms=True,
                                                       tensortype=tensortype)
-loss_regress_eval = nn.L1Loss(size_average=False)
+l1_loss = nn.L1Loss(size_average=False)
+mse_loss = nn.MSELoss(reduce=False)
 
 # Optimization strategy
 # optimizer = optim.SGD(model.parameters(),
@@ -288,6 +290,8 @@ while epoch < args.epochs:
     sum_term3 = 0
     sum_loss = 0
     sum_ahd = 0
+    sum_ae = 0
+    sum_se = 0
     sum_ape = 0
     for batch_idx, (imgs, dictionaries) in tqdm(enumerate(valset_loader),
                                                 total=len(valset_loader)):
@@ -348,10 +352,14 @@ while epoch < args.epochs:
         ahd = Variable(tensortype([ahd]), volatile=True)
         sum_ahd += ahd
 
-        # Validation using MAPE
+        # Validation using MAE, MSE, MAPE
+        ae = l1_loss.forward(est_count, target_count)
+        se = mse_loss.forward(est_count, target_count)
         ape = torch.abs(target_count - est_count)/target_count
+        sum_ae += ae
+        sum_se += se
         sum_ape += ape
-
+    
         # Validation using Precision and Recall
         judge.evaluate_sample(centroids, target_locations)
 
@@ -394,7 +402,11 @@ while epoch < args.epochs:
     avg_term3_val = sum_term3 / len(valset_loader)
     avg_loss_val = sum_loss / len(valset_loader)
     avg_ahd_val = sum_ahd / len(valset_loader)
+    mae = sum_ae / len(valset_loader)
+    rmse = torch.sqrt(sum_se / len(valset_loader))
     mape = sum_ape/len(valset_loader)
+    mae = mae.squeeze()
+    rmse = rmse.squeeze()
     mape = mape.squeeze()
     prec, rec = judge.get_p_n_r()
     prec = Variable(tensortype([prec]), volatile=True)
@@ -406,6 +418,8 @@ while epoch < args.epochs:
                           avg_term3_val,
                           avg_loss_val / 3,
                           avg_ahd_val,
+                          mae,
+                          rmse,
                           mape*100,
                           prec,
                           rec),
@@ -415,6 +429,8 @@ while epoch < args.epochs:
                                   'Term3*%s' % args.lambdaa,
                                   'Sum/3',
                                   'AHD',
+                                  'MAE',
+                                  'RMSE',
                                   'MAPE (%)',
                                   f'r{args.radius}-Precision (%)',
                                   f'r{args.radius}-Recall (%)'])

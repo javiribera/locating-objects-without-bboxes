@@ -109,11 +109,13 @@ l1_loss = nn.L1Loss(size_average=False)
 mse_loss = nn.MSELoss(reduce=False)
 
 # Optimization strategy
-# optimizer = optim.SGD(model.parameters(),
-#                       lr=args.lr,
-#                       momentum=0.9)
-#                       # nesterov=True)
-optimizer = optim.Adam(model.parameters())
+if args.optimizer == 'sgd':
+    optimizer = optim.SGD(model.parameters(),
+                          lr=args.lr,
+                          momentum=0.9)
+                          # nesterov=True)
+elif args.optimizer == 'adam':
+    optimizer = optim.Adam(model.parameters())
 
 start_epoch = 0
 lowest_avg_ahd_val = np.infty

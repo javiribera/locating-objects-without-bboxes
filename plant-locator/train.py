@@ -205,7 +205,10 @@ while epoch < args.epochs:
         it_num += 1
 
     # Always save checkpoint at end of epoch if there is no validation set
-    if not args.val_dir or not valset_loader or len(valset_loader) == 0:
+    if not args.val_dir or \
+            not valset_loader or \
+            len(valset_loader) == 0 or \
+            args.val_freq == 0:
         epoch += 1
         torch.save({'epoch': epoch,
                     'model': model.state_dict(),

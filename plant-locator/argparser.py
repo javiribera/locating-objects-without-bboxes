@@ -61,6 +61,12 @@ def parse_command_args(training_or_testing):
                             action='store_true',
                             default=False,
                             help='Disables Data Augmentation (random vert+horiz flip)')
+        parser.add_argument('--drop-last-batch',
+                            action='store_true',
+                            default=False,
+                            help='drop the last incomplete batch during training. '
+                                 'If the dataset size is not divisible by '
+                                 'the batch size, then the last batch will be smaller.')
         parser.add_argument('--seed',
                             type=int,
                             default=1,

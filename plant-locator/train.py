@@ -68,6 +68,7 @@ trainset = CSVDataset(args.train_dir,
                       tensortype=tensortype_cpu)
 trainset_loader = DataLoader(trainset,
                              batch_size=args.batch_size,
+                             drop_last=args.drop_last_batch,
                              shuffle=True,
                              num_workers=args.nThreads,
                              collate_fn=csv_collator)

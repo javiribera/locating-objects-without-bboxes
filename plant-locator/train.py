@@ -327,7 +327,7 @@ while epoch < args.epochs:
         # __on the first image of the batch__
         # The estimated map must be thresholed to obtain estimated points
         est_map_numpy = est_map[0, :, :].data.cpu().numpy()
-        mask = cv2.inRange(est_map_numpy, 2 / 255, 1)
+        mask = cv2.inRange(est_map_numpy, 4 / 255, 1)
         coord = np.where(mask > 0)
         y = coord[0].reshape((-1, 1))
         x = coord[1].reshape((-1, 1))

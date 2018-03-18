@@ -204,9 +204,14 @@ while epoch < args.epochs:
 
         it_num += 1
 
-    # At the end of each epoch, validate + save checkpoint if validation error decreased
+    # Always save checkpoint at end of epoch if there is no validation set
     if not args.val_dir or not valset_loader or len(valset_loader) == 0:
         epoch += 1
+        torch.save({'epoch': epoch,
+                    'model': model.state_dict(),
+                    'optimizer': optimizer.state_dict(),
+                    'n_points': args.n_points,
+                    }, args.save)
         continue
 
     if (epoch + 1) % args.val_freq != 0:
@@ -383,5 +388,3 @@ while epoch < args.epochs:
                         'n_points': args.n_points,
                         }, args.save)
             print("Saved best checkpoint so far in %s " % args.save)
-
-    epoch += 1

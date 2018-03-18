@@ -26,43 +26,17 @@ from .data import CSVDataset
 from .data import csv_collator
 
 from . import losses
+from . import argparser
 from .models import unet_model
 from .eval_precision_recall import Judge
 
-# Testing settings
-parser = argparse.ArgumentParser(description='BoundingBox-less Location with PyTorch (inference/test only)',
-                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--dataset', required=True,
-                    help='REQUIRED. Directory with test images.\n')
-parser.add_argument('--model', type=str, metavar='PATH',
-                    default='unet_256x256_sorghum',
-                    help='Checkpoint with the CNN model.\n')
-parser.add_argument('--out-dir', type=str, required=True,
-                    help='REQUIRED. Directory where results will be stored (images+CSV).')
-# parser.add_argument('--imgsize', type=str, default='256x256', metavar='HxW',
-# help='Size of the input images (heightxwidth).')
-parser.add_argument('--radius', type=int, default=5, metavar='R',
-                    help='Detections at dist <= R to a GT pt are True Positives.')
-parser.add_argument('--paint', default=True, action="store_true",
-                    help='Paint a red circle at each of the estimated locations.')
-parser.add_argument('--nThreads', '-j', default=4, type=int, metavar='N',
-                    help='Number of data loading threads.')
-# parser.add_argument('--no-cuda', '--no-gpu', action='store_true', default=False,
-# help='Use CPU only, no GPU.')
-parser.add_argument('--seed', type=int, default=1, metavar='S',
-                    help='Random seed.')
-parser.add_argument('--max-testset-size', type=int, default=np.inf, metavar='N',
-                    help='Only use the first N images of the testing dataset.')
-parser.add_argument('--n-points', type=int, default=None, metavar='N',
-                    help='If you know the exact number of points in the image, then set it. '
-                    'Otherwise it will be estimated by adding a L1 cost term.')
-args = parser.parse_args()
 
-# args.cuda = not args.no_cuda and torch.cuda.is_available()
-args.cuda = torch.cuda.is_available()
-# For now we cannot use models trained on GPU to do inference with CPU
-if not args.cuda:
-    raise NotImplementedError('You must have a GPU with CUDA.')
+if __name__ != '__main__':
+    print("E: This script must be called from command line")
+    exit(1)
+
+# Parse command line arguments
+args = argparser.parse_command_args('testing')
 
 # Set seeds
 np.random.seed(0)
@@ -74,15 +48,6 @@ if args.cuda:
 os.makedirs(os.path.join(args.out_dir, 'painted'), exist_ok=True)
 os.makedirs(os.path.join(args.out_dir, 'est_map'), exist_ok=True)
 os.makedirs(os.path.join(args.out_dir, 'est_map_thresholded'), exist_ok=True)
-
-# Input image size must be 256x256 for the currently trained checkpoint
-args.imgsize = '256x256'
-try:
-    height, width = parse('{}x{}', args.imgsize)
-    height, width = int(height), int(width)
-except TypeError as e:
-    print("\__  E: The input --imgsize must be in format WxH, got '{}'".format(args.imgsize))
-    exit(-1)
 
 # Tensor type to use, select CUDA or not
 tensortype = torch.cuda.FloatTensor if args.cuda else torch.FloatTensor
@@ -105,7 +70,8 @@ testset_loader = data.DataLoader(testset,
 # Loss function
 l1_loss = nn.L1Loss(reduce=False)
 mse_loss = nn.MSELoss(reduce=False)
-criterion_training = losses.WeightedHausdorffDistance(height=height, width=width,
+criterion_training = losses.WeightedHausdorffDistance(height=args.height,
+                                                      width=args.width,
                                                       return_2_terms=True,
                                                       tensortype=tensortype)
 
@@ -125,19 +91,22 @@ if os.path.isfile(args.model):
             # Model will also estimate # of points
             model = unet_model.UNet(3, 1,
                                     known_n_points=None,
-                                    height=height, width=width,
+                                    height=args.height,
+                                    width=args.width,
                                     tensortype=tensortype)
         else:
             # The checkpoint tells us the # of points to estimate
             model = unet_model.UNet(3, 1,
                                     known_n_points=checkpoint['n_points'],
-                                    height=height, width=width,
+                                    height=args.height,
+                                    width=args.width,
                                     tensortype=tensortype)
     else:
         # The user tells us the # of points to estimate
         model = unet_model.UNet(3, 1,
                                 known_n_points=args.n_points,
-                                height=height, width=width,
+                                height=args.height,
+                                width=args.width,
                                 tensortype=tensortype)
 
     # Parallelize

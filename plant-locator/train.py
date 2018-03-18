@@ -2,7 +2,6 @@ from __future__ import print_function
 
 import math
 import cv2
-import argparse
 import os
 import sys
 import time
@@ -10,7 +9,6 @@ import shutil
 from itertools import chain
 from tqdm import tqdm
 
-from parse import parse
 import numpy as np
 import torch
 import torch.optim as optim
@@ -29,88 +27,23 @@ from data import csv_collator
 from data import RandomHorizontalFlipImageAndLabel
 from data import RandomVerticalFlipImageAndLabel
 import logger
+import argparser
 
 
-# Training settings
-parser = argparse.ArgumentParser(description='BoundingBox-less Location with PyTorch',
-                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--train-dir', required=True,
-                    help='Directory with training images.')
-parser.add_argument('--val-dir',
-                    help='Directory with validation images. If left blank no validation will be done.'
-                         'If not provided, will not do validation')
-parser.add_argument('--imgsize', type=str, default='256x256', metavar='HxW',
-                    help='Size of the input images (height x width).')
-parser.add_argument('--batch-size', type=int, default=1, metavar='N',
-                    help='input batch size for training')
-parser.add_argument('--epochs', type=int, default=np.inf, metavar='N',
-                    help='number of epochs to train')
-parser.add_argument('--nThreads', '-j', default=4, type=int, metavar='N',
-                    help='Number of data loading threads')
-parser.add_argument('--lr', type=float, default=4e-5, metavar='LR',
-                    help='learning rate (default: 1e-5)')
-parser.add_argument('--no-cuda', action='store_true', default=False,
-                    help='disables CUDA training')
-parser.add_argument('--no-data-augm', action='store_true', default=False,
-                    help='Disables Data Augmentation (random vert+horiz flip)')
-parser.add_argument('--seed', type=int, default=1, metavar='S',
-                    help='random seed (default: 1)')
-parser.add_argument('--resume', default='', type=str, metavar='PATH',
-                    help='path to latest checkpoint (default: none)')
-parser.add_argument('--save', default='', type=str, metavar='PATH',
-                    help='where to save the model after each epoch')
-parser.add_argument('--log-interval', type=float, default=3, metavar='N',
-                    help='time to wait between logging training status (in seconds)')
-parser.add_argument('--max-trainset-size', type=int, default=np.inf, metavar='N',
-                    help='only use the first N images of the training dataset')
-parser.add_argument('--max-valset-size', type=int, default=np.inf, metavar='N',
-                    help='only use the first N images of the validation dataset')
-parser.add_argument('--val-freq', default=4, type=int, metavar='F',
-                    help='Run validation after F epochs.')
-parser.add_argument('--env-name', default='Pure U-Net', type=str, metavar='NAME',
-                    help='Name of the environment in Visdom')
-parser.add_argument('--paint', default=False, action="store_true",
-                    help='Paint red circles at estimated locations in Validation? '
-                    'It takes an enormous amount of time!')
-parser.add_argument('--radius', type=int, default=5, metavar='R',
-                    help='Detections at dist <= R to a GT pt are True Positives.')
-parser.add_argument('--n-points', type=int, default=None, metavar='N',
-                    help='If you know the number of points (e.g, just one pupil), set it.'
-                    'Otherwise it will be estimated by adding a L1 cost term.')
-parser.add_argument('--lambdaa', type=float, default=1, metavar='L',
-                    help='Weight that will multiply the MAPE term in the loss function.')
+if __name__ != '__main__':
+    print("E: This script must be called from command line")
+    exit(1)
 
-args = parser.parse_args()
-
-args.cuda = not args.no_cuda and torch.cuda.is_available()
+# Parse command line arguments
+args = argparser.parse_command_args('training')
 
 # Tensor type to use, select CUDA or not
 tensortype = torch.cuda.FloatTensor if args.cuda else torch.FloatTensor
 tensortype_cpu = torch.FloatTensor
 
-
-# Force batchsize == 1
-args.eval_batch_size = 1
-if args.eval_batch_size != 1:
-    raise NotImplementedError('Only a batch size of 1 is implemented for now, got %s'
-                              % args.eval_batch_size)
-
-# Check we are not overwriting a checkpoint without resume from it
-if args.save and os.path.isfile(args.save) and \
-        not (args.resume and args.resume == args.save):
-    print("E: Don't overwrite a checkpoint without resuming from it (if you want that, remove it manually).")
-    exit(1)
-
 # Create directory for checkpoint to be saved
 if args.save:
     os.makedirs(os.path.split(args.save)[0], exist_ok=True)
-
-try:
-    height, width = parse('{}x{}', args.imgsize)
-    height, width = int(height), int(width)
-except TypeError as e:
-    print("\__  E: The input --imgsize must be in format WxH, got '{}'".format(args.imgsize))
-    exit(-1)
 
 # Set seeds
 np.random.seed(0)
@@ -156,7 +89,8 @@ if args.val_dir:
 # Model
 print('Building network... ', end='')
 model = unet_model.UNet(3, 1,
-                        height=height, width=width,
+                        height=args.height,
+                        width=args.width,
                         known_n_points=args.n_points,
                         tensortype=tensortype)
 print('DONE')
@@ -167,7 +101,8 @@ if args.cuda:
 
 # Loss function
 loss_regress = nn.SmoothL1Loss()
-loss_loc = losses.WeightedHausdorffDistance(height=height, width=width,
+loss_loc = losses.WeightedHausdorffDistance(height=args.height,
+                                            width=args.width,
                                                       return_2_terms=True,
                                                       tensortype=tensortype)
 l1_loss = nn.L1Loss(size_average=False)

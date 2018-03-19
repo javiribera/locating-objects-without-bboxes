@@ -144,7 +144,11 @@ epoch = start_epoch
 it_num = 0
 while epoch < args.epochs:
 
-    for batch_idx, (imgs, dictionaries) in enumerate(trainset_loader):
+    loss_avg_this_epoch = 0
+    iter_train = tqdm(trainset_loader,
+                      desc=f'Epoch {epoch} ({len(trainset)} images)')
+
+    for batch_idx, (imgs, dictionaries) in enumerate(iter_train):
         # === TRAIN ===
 
         # Set the module in training mode
@@ -171,12 +175,13 @@ while epoch < args.epochs:
         loss.backward()
         optimizer.step()
 
+        # Update progress bar
+        loss_avg_this_epoch = (1/(batch_idx + 1))*(batch_idx * loss_avg_this_epoch +
+                                                   loss.data[0])
+        iter_train.set_postfix(avg_train_loss_this_epoch=f'{loss_avg_this_epoch:.1f}')
+
         # Log training error
         if time.time() > tic_train + args.log_interval:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx *
-                args.batch_size, len(trainset_loader.dataset),
-                100. * batch_idx / len(trainset_loader), loss.data[0]))
             tic_train = time.time()
 
             # Log training losses
@@ -225,7 +230,6 @@ while epoch < args.epochs:
         continue
 
     # === VALIDATION ===
-    print("\nValidating... ")
 
     # Set the module in evaluation mode
     model.eval()
@@ -239,8 +243,9 @@ while epoch < args.epochs:
     sum_ae = 0
     sum_se = 0
     sum_ape = 0
-    for batch_idx, (imgs, dictionaries) in tqdm(enumerate(valset_loader),
-                                                total=len(valset_loader)):
+    iter_val = tqdm(valset_loader,
+                      desc=f'Validating Epoch {epoch} ({len(valset)} images)')
+    for batch_idx, (imgs, dictionaries) in enumerate(iter_val):
 
         # Pull info from this batch
         target_locations = [dictt['locations'] for dictt in dictionaries]
@@ -268,6 +273,11 @@ while epoch < args.epochs:
         sum_term2 += term2
         sum_term3 += term3
         sum_loss += term1 + term2 + term3
+
+        # Update progress bar
+        loss_avg_this_epoch = sum_loss.data[0] / (batch_idx + 1)
+        iter_val.set_postfix(avg_val_loss_this_epoch=f'{loss_avg_this_epoch:.1f}-----')
+
 
         # Validation using the Averaged Hausdorff Distance
         # __on the first image of the batch__

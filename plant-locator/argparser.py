@@ -109,7 +109,7 @@ def parse_command_args(training_or_testing):
                             type=str,
                             metavar='NAME',
                             help='name of the environment in Visdom')
-        parser.add_argument('--optimizer',
+        parser.add_argument('--optimizer', '--optim',
                             default='sgd',
                             type=str.lower,
                             metavar='OPTIM',

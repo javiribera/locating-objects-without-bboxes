@@ -116,7 +116,8 @@ if args.optimizer == 'sgd':
                           momentum=0.9)
                           # nesterov=True)
 elif args.optimizer == 'adam':
-    optimizer = optim.Adam(model.parameters())
+    optimizer = optim.Adam(model.parameters(),
+                           lr=args.lr)
 
 start_epoch = 0
 lowest_avg_ahd_val = np.infty

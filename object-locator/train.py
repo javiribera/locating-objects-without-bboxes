@@ -31,10 +31,6 @@ from . import logger
 from . import argparser
 
 
-if __name__ != '__main__':
-    print("E: This script must be called from command line")
-    exit(1)
-
 # Parse command line arguments
 args = argparser.parse_command_args('training')
 

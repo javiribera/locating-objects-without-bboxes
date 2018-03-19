@@ -31,10 +31,6 @@ from .models import unet_model
 from .eval_precision_recall import Judge
 
 
-if __name__ != '__main__':
-    print("E: This script must be called from command line")
-    exit(1)
-
 # Parse command line arguments
 args = argparser.parse_command_args('testing')
 

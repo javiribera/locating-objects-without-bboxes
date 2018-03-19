@@ -16,18 +16,19 @@ from torch import nn
 from torch.autograd import Variable
 import torchvision as tv
 from torchvision.models import inception_v3
-from sklearn import mixture
-import losses
-from models import unet_model
-from eval_precision_recall import Judge
 from torchvision import transforms
 from torch.utils.data import DataLoader
-from data import CSVDataset
-from data import csv_collator
-from data import RandomHorizontalFlipImageAndLabel
-from data import RandomVerticalFlipImageAndLabel
-import logger
-import argparser
+from sklearn import mixture
+
+from . import losses
+from .models import unet_model
+from .eval_precision_recall import Judge
+from .data import CSVDataset
+from .data import csv_collator
+from .data import RandomHorizontalFlipImageAndLabel
+from .data import RandomVerticalFlipImageAndLabel
+from . import logger
+from . import argparser
 
 
 if __name__ != '__main__':

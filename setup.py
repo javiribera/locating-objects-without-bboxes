@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='plant-locator',
-    version='1.0.0',
-    description='Plant Location using PyTorch (inference/testing only).',
+    name='object-locator',
+    version='1.1.0',
+    description='Object Location using PyTorch (inference/testing only).',
 
     # The project's main homepage.
     url='https://viperlab.org',
@@ -25,13 +25,13 @@ setup(
     ],
     python_requires='~=3.6',
     # What does your project relate to?
-    keywords='phenotyping purdue location sorghum',
+    keywords='object localization purdue',
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
     packages=find_packages(),
     
-    package_data={'plant-locator': ['models/*.ckpt']},
+    package_data={'object-locator': ['models/*.ckpt']},
 
     # List run-time dependencies here.  These will be installed by pip when
     # your project is installed. For an analysis of "install_requires" vs pip's

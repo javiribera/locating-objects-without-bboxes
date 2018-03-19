@@ -218,11 +218,12 @@ while epoch < args.epochs:
             len(valset_loader) == 0 or \
             args.val_freq == 0:
         epoch += 1
-        torch.save({'epoch': epoch,
-                    'model': model.state_dict(),
-                    'optimizer': optimizer.state_dict(),
-                    'n_points': args.n_points,
-                    }, args.save)
+        if args.save:
+            torch.save({'epoch': epoch,
+                        'model': model.state_dict(),
+                        'optimizer': optimizer.state_dict(),
+                        'n_points': args.n_points,
+                        }, args.save)
         continue
 
     if (epoch + 1) % args.val_freq != 0:

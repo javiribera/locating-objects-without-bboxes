@@ -406,3 +406,6 @@ while epoch < args.epochs:
                         'n_points': args.n_points,
                         }, args.save)
             print("Saved best checkpoint so far in %s " % args.save)
+
+    epoch += 1
+

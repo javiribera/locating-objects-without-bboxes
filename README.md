@@ -16,7 +16,7 @@ curl -L https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -o
 bash /tmp/miniconda.sh -bf
 rm -rf /tmp/miniconda.sh
 </pre>
-2. Make sure you have access to Conda with `which conda`. If not, maybe the conda directory is not in your math. Make sure that in your `~/.bash.rc` file you have a line such as 
+2. Make sure you have access to Conda with `which conda`. If not, maybe the conda directory is not in your path. Make sure that in your `~/.bash.rc` file you have a line such as 
 <pre>
 export PATH="~/miniconda3/bin:$PATH"`
 </pre>
@@ -45,9 +45,18 @@ If you do not want to use one of the provided pretrained models, you can train y
 <pre>
 python -m object-locator.train -h
 </pre>
+
 This is a simple example:
+
 <pre>
-CUDA_VISIBLE_DEVICES="0,1,3" python -m object-locator.train --train-dir ~/data/20160613_F54_training_256x256 --batch-size 32 --env-name sorghum --lr 1e-3 --val-dir ~/data/plant_counts_random_patches/20160613_F54_validation_256x256 --optim Adam --save unet_model.ckpt 
+CUDA_VISIBLE_DEVICES="0,1,3" python -m object-locator.train \
+                                    --train-dir ~/data/20160613_F54_training_256x256 \
+                                    --batch-size 32 \
+                                    --env-name sorghum \
+                                    --lr 1e-3 \
+                                    --val-dir ~/data/plant_counts_random_patches/20160613_F54_validation_256x256 \
+                                    --optim Adam \
+                                    --save unet_model.ckpt 
 </pre>
 
 #### Test/evaluate
@@ -55,9 +64,15 @@ Use a model/checkpoint to evaluate, i.e, to locate all the objects in a dataset.
 <pre>
 python -m object-locator.locate -h
 </pre>
+
 <pre>
-python -m object-locator.locate --dataset ~/data/20160613_F54_testing_256x256 --radius 5 --model ~/checkpoints/unet_model.ckpt --out results
+python -m object-locator.locate \
+       --model ~/checkpoints/unet_model.ckpt \
+       --dataset ~/data/20160613_F54_testing_256x256 \
+       --radius 5 \
+       --out results
 </pre>
+
 ## Using Docker <a name="docker"></a>
 1. Install docker-ce as described in https://docs.docker.com/install/linux/docker-ce/ubuntu/#set-up-the-repository
 2. Install NVIDIA drivers

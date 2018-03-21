@@ -137,16 +137,17 @@ def parse_command_args(training_or_testing):
             raise NotImplementedError('Only a batch size of 1 is implemented for now, got %s'
                                       % args.eval_batch_size)
 
-        # Check we are not overwriting a checkpoint without resume from it
-        if args.save and os.path.isfile(args.save) and \
+        # Convert to full path
+        if args.save != '':
+            args.save = os.path.abspath(args.save)
+
+        # Check we are not overwriting a checkpoint without resuming from it
+        if args.save  != '' and os.path.isfile(args.save) and \
                 not (args.resume and args.resume == args.save):
             print("E: Don't overwrite a checkpoint without resuming from it. "
                   "Are you sure you want to do that? "
                   "(if you do, remove it manually).")
             exit(1)
-
-        # Convert to full path
-        args.save = os.path.abspath(args.save)
 
         args.cuda = not args.no_cuda and torch.cuda.is_available()
 

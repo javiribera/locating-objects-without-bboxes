@@ -160,7 +160,7 @@ class RandomHorizontalFlipImageAndLabel(object):
 
         if random.random() < self.p:
             transformed_img = hflip(img)
-            width = img.size[1]
+            width = img.size[0]
             for l, loc in enumerate(dictionary['locations']):
                 dictionary['locations'][l][1] = (width - 1) - loc[1]
 
@@ -180,7 +180,7 @@ class RandomVerticalFlipImageAndLabel(object):
 
         if random.random() < self.p:
             transformed_img = vflip(img)
-            height = img.size[0]
+            height = img.size[1]
             for l, loc in enumerate(dictionary['locations']):
                 dictionary['locations'][l][0] = (height - 1) - loc[0]
 

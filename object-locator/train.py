@@ -24,9 +24,11 @@ from . import losses
 from .models import unet_model
 from .eval_precision_recall import Judge
 from .data import CSVDataset
+from .data import XMLDataset
 from .data import csv_collator
 from .data import RandomHorizontalFlipImageAndLabel
 from .data import RandomVerticalFlipImageAndLabel
+from .data import ScaleImageAndLabel
 from . import logger
 from . import argparser
 
@@ -56,10 +58,11 @@ training_transforms = []
 if not args.no_data_augm:
     training_transforms += [RandomHorizontalFlipImageAndLabel(p=0.5)]
     training_transforms += [RandomVerticalFlipImageAndLabel(p=0.5)]
+training_transforms += [ScaleImageAndLabel(size=(args.height, args.width))]
 training_transforms += [transforms.ToTensor()]
 training_transforms += [transforms.Normalize((0.5, 0.5, 0.5),
                                              (0.5, 0.5, 0.5))]
-trainset = CSVDataset(args.train_dir,
+trainset = XMLDataset(args.train_dir,
                       transforms=transforms.Compose(training_transforms),
                       max_dataset_size=args.max_trainset_size,
                       tensortype=tensortype_cpu)
@@ -70,8 +73,9 @@ trainset_loader = DataLoader(trainset,
                              num_workers=args.nThreads,
                              collate_fn=csv_collator)
 if args.val_dir:
-    valset = CSVDataset(args.val_dir,
+    valset = XMLDataset(args.val_dir,
                         transforms=transforms.Compose([
+                            ScaleImageAndLabel(),
                             transforms.ToTensor(),
                             transforms.Normalize((0.5, 0.5, 0.5),
                                                  (0.5, 0.5, 0.5)),

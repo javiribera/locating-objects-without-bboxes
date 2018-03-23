@@ -1,7 +1,6 @@
 import os
-# 
-import inspect
 import random
+from collections import OrderedDict
 
 from PIL import Image
 import skimage
@@ -10,6 +9,8 @@ import torch
 from torch.utils import data
 from torchvision import datasets
 from torchvision import transforms
+import xmltodict
+from parse import parse
 
 
 class CSVDataset(data.Dataset):
@@ -22,7 +23,7 @@ class CSVDataset(data.Dataset):
         The sample images of this dataset must be all inside one directory.
         Inside the same directory, there must be one CSV file.
         This file must contain one row per image.
-        It can containas many columns as wanted, i.e, filename, count...
+        It can contain as many columns as wanted, i.e, filename, count...
 
         :param directory: Directory with all the images and the CSV file.
         :param transform: Transform to be applied to each image.
@@ -187,6 +188,42 @@ class RandomVerticalFlipImageAndLabel(object):
         return transformed_img, transformed_dictionary
 
 
+class ScaleImageAndLabel(transforms.Scale):
+    """
+    Scale a PIL Image and the GT to a given size.
+
+    Args:
+        size: Desired output size (h, w).
+        interpolation (int, optional): Desired interpolation.
+                                       Default is ``PIL.Image.BILINEAR``.
+    """
+
+    def __init__(self, size, interpolation=Image.BILINEAR):
+        self.modifies_label = True
+        self.size = size
+        super(ScaleImageAndLabel, self).__init__(size, interpolation)
+
+    def __call__(self, img, dictionary):
+
+        old_width, old_height = img.size
+        scale_h = self.size[0]/old_height
+        scale_w = self.size[1]/old_width
+
+        # Scale image to new size
+        img = super(ScaleImageAndLabel, self).__call__(img)
+
+        # Scale GT
+        dictionary['locations'] *= torch.FloatTensor([scale_h, scale_w])
+        dictionary['locations'] = torch.round(dictionary['locations'])
+        ys = torch.clamp(dictionary['locations'][:, 0], 0, self.size[0])
+        xs = torch.clamp(dictionary['locations'][:, 1], 0, self.size[1])
+        dictionary['locations'] = torch.cat((ys.view(-1, 1),
+                                             xs.view(-1, 1)),
+                                            1)
+
+        return img, dictionary
+
+
 def hflip(img):
     """Horizontally flip the given PIL Image.
     Args:
@@ -215,3 +252,159 @@ def vflip(img):
 
 def _is_pil_image(img):
     return isinstance(img, Image.Image)
+
+
+class XMLDataset(data.Dataset):
+    def __init__(self,
+                 directory,
+                 transforms=None,
+                 max_dataset_size=float('inf'),
+                 tensortype=torch.FloatTensor):
+        """XMLDataset.
+        The sample images of this dataset must be all inside one directory.
+        Inside the same directory, there must be one XML file as described by
+         https://communityhub.purdue.edu/groups/phenosorg/wiki/APIspecs
+        (minimum XML API version is v.0.2.0)
+
+        :param directory: Directory with all the images and the XML file.
+        :param transform: Transform to be applied to each image.
+        :param max_dataset_size: Only use the first N images in the directory.
+        :param tensortype: The data and labels will be returned in this type format.
+        """
+
+        self.root_dir = directory
+        self.transforms = transforms
+
+        # Type of tensor the output will be
+        self.tensortype = tensortype
+
+        # Get groundtruth from XML file
+        listfiles = os.listdir(directory)
+        xml_filename = None
+        for filename in listfiles:
+            if filename.endswith('.xml'):
+                xml_filename = filename
+                break
+
+        self.there_is_gt = xml_filename is not None
+
+        # XML does not exist (no GT available)
+        if not self.there_is_gt:
+            print('W: The dataset directory %s does not contain a XML file with groundtruth. \n'
+                  '   Metrics will not be evaluated. Only estimations will be returned.' % directory)
+            self.dict = None
+            self.listfiles = listfiles
+
+            # Make dataset smaller
+            self.listfiles = self.listfiles[0:min(len(self.listfiles),
+                                                  max_dataset_size)]
+
+        # XML does exist (GT is available)
+        else:
+
+            # Read all XML as a string
+            with open(os.path.join(directory, xml_filename), 'r') as fd:
+                xml_str = fd.read()
+
+            # Convert to dictionary
+            # (some elements we expect to have multiple repetitions, so put them in a list)
+            xml_dict = xmltodict.parse(
+                xml_str, force_list=['field', 'panel', 'plot', 'plant'])
+
+            # Check API version number
+            try:
+                api_version = xml_dict['fields']['@apiversion']
+            except:
+                # An unknown version number means it's the very first one
+                # when we did not have api version numbers
+                api_version = '0.1.0'
+            major_version, minor_version, addendum_version = \
+                parse('{}.{}.{}', api_version)
+            major_version = int(major_version)
+            minor_version = int(minor_version)
+            addendum_version = int(addendum_version)
+            if not(major_version == 0 and
+                   minor_version == 2 and
+                   addendum_version >= 1):
+                raise ValueError('An XML with API v0.2.1 is required.')
+
+            # Create the dictionary with the entire dataset
+            self.dict = {}
+            for field in xml_dict['fields']['field']:
+                for panel in field['panels']['panel']:
+                    for plot in panel['plots']['plot']:
+                        filename = plot['orthophoto_chop_filename']
+                        count = int(plot['plant_count'])
+                        if 'plot_number' in plot:
+                            plot_number = plot['plot_number']
+                        else:
+                            plot_number = 'unknown'
+                        if 'cigar_grid_location_yx' in plot:
+                            cigar = plot['cigar_grid_location_yx']
+                        else:
+                            plot_number = 'unknown'
+                        locations = []
+                        for plant in plot['plants']['plant']:
+                            locations.append(eval(plant['location_wrt_plot']))
+                        self.dict[filename] = {'count': count,
+                                               'locations': locations}
+
+            # Use an Ordered Dictionary to allow random access
+            self.dict = OrderedDict(self.dict.items())
+            self.dict_list = list(self.dict.items())
+
+            # Make dataset smaller
+            new_dataset_length = min(len(self.dict), max_dataset_size)
+            self.dict = {key: elem_dict
+                         for key, elem_dict in
+                         self.dict_list[:new_dataset_length]}
+            self.dict_list = list(self.dict.items())
+
+    def __len__(self):
+        if self.there_is_gt:
+            return len(self.dict)
+        else:
+            return len(self.listfiles)
+
+    def __getitem__(self, idx):
+        """Get one element of the dataset.
+        Returns a tuple. The first element is the image.
+        The second element is a dictionary containing the labels of that image.
+        If the XML did not exist in the dataset directory,
+         the dictionary will only contain the filename of the image.
+
+        :param idx: Index of the image in the dataset to get.
+        """
+
+        if self.there_is_gt:
+            filename, dictionary = self.dict_list[idx]
+        else:
+            filename = self.listfiles[idx]
+            dictionary = {'filename': self.listfiles[idx]}
+        img_abspath = os.path.join(self.root_dir, filename)
+
+        img = Image.open(img_abspath)
+
+        # list --> Tensors
+        dictionary['locations'] = self.tensortype(
+            dictionary['locations'])
+        dictionary['count'] = self.tensortype(
+            [dictionary['count']])
+
+        img_transformed = img
+        transformed_dictionary = dictionary
+
+        # Apply all transformations provided
+        if self.transforms is not None:
+            for transform in self.transforms.transforms:
+                if hasattr(transform, 'modifies_label'):
+                    img_transformed, transformed_dictionary = \
+                        transform(img_transformed, transformed_dictionary)
+                else:
+                    img_transformed = transform(img_transformed)
+
+        # Prevents crash when making a batch out of an empty tensor
+        if dictionary['count'][0] == 0:
+            dictionary['locations'] = self.tensortype([-1, -1])
+
+        return (img_transformed, transformed_dictionary)

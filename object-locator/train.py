@@ -75,7 +75,7 @@ trainset_loader = DataLoader(trainset,
 if args.val_dir:
     valset = XMLDataset(args.val_dir,
                         transforms=transforms.Compose([
-                            ScaleImageAndLabel(),
+                            ScaleImageAndLabel(size=(args.height, args.width)),
                             transforms.ToTensor(),
                             transforms.Normalize((0.5, 0.5, 0.5),
                                                  (0.5, 0.5, 0.5)),

@@ -103,10 +103,10 @@ if args.cuda:
 
 # Loss function
 loss_regress = nn.SmoothL1Loss()
-loss_loc = losses.WeightedHausdorffDistance(height=args.height,
-                                            width=args.width,
-                                                      return_2_terms=True,
-                                                      tensortype=tensortype)
+loss_loc = losses.WeightedHausdorffDistance(resized_height=args.height,
+                                            resized_width=args.width,
+                                            return_2_terms=True,
+                                            tensortype=tensortype)
 l1_loss = nn.L1Loss(size_average=False)
 mse_loss = nn.MSELoss(reduce=False)
 
@@ -160,16 +160,21 @@ while epoch < args.epochs:
         target_locations = [dictt['locations'] for dictt in dictionaries]
         target_count = torch.stack([dictt['count']
                                     for dictt in dictionaries])
+        target_orig_heights = [dictt['orig_height'] for dictt in dictionaries]
+        target_orig_widths = [dictt['orig_width'] for dictt in dictionaries]
 
         imgs = Variable(imgs.type(tensortype))
         target_locations = [Variable(t.type(tensortype))
                             for t in target_locations]
         target_count = Variable(target_count.type(tensortype))
+        target_orig_heights = Variable(tensortype(target_orig_heights))
+        target_orig_widths = Variable(tensortype(target_orig_widths))
+        target_orig_sizes = torch.stack((target_orig_heights, target_orig_widths)).transpose(0, 1)
 
         # One training step
         optimizer.zero_grad()
         est_map, est_count = model.forward(imgs)
-        term1, term2 = loss_loc.forward(est_map, target_locations)
+        term1, term2 = loss_loc.forward(est_map, target_locations, target_orig_sizes)
         term3 = loss_regress.forward(est_count, target_count) #\
             # / torch.sum(target_count)
         term3 *= args.lambdaa
@@ -254,6 +259,8 @@ while epoch < args.epochs:
         target_locations = [dictt['locations'] for dictt in dictionaries]
         target_count = torch.stack([dictt['count']
                                     for dictt in dictionaries])
+        target_orig_heights = [dictt['orig_height'] for dictt in dictionaries]
+        target_orig_widths = [dictt['orig_width'] for dictt in dictionaries]
 
         if bool((target_count==0).cpu().numpy()[0]):
             continue
@@ -262,12 +269,15 @@ while epoch < args.epochs:
         target_locations = [Variable(t.type(tensortype), volatile=True)
                             for t in target_locations]
         target_count = Variable(target_count.type(tensortype), volatile=True)
+        target_orig_heights = Variable(tensortype(target_orig_heights))
+        target_orig_widths = Variable(tensortype(target_orig_widths))
+        target_orig_sizes = torch.stack((target_orig_heights, target_orig_widths)).transpose(0, 1)
 
         # Feed-forward
         est_map, est_count = model.forward(imgs)
 
         # The 3 terms
-        term1, term2 = loss_loc.forward(est_map, target_locations)
+        term1, term2 = loss_loc.forward(est_map, target_locations, target_orig_sizes)
         # if bool((torch.sum(target_count)==0).data.cpu().numpy()[0]):
         term3 = loss_regress.forward(est_count, target_count)
                 # / torch.sum(target_count)

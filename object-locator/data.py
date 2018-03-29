@@ -11,6 +11,7 @@ from torchvision import datasets
 from torchvision import transforms
 import xmltodict
 from parse import parse
+from . import get_image_size
 
 
 class CSVDataset(data.Dataset):
@@ -221,6 +222,10 @@ class ScaleImageAndLabel(transforms.Scale):
                                              xs.view(-1, 1)),
                                             1)
 
+        # Indicate new size in dictionary
+        dictionary['resized_height'] = self.size[0]
+        dictionary['resized_width'] = self.size[1]
+
         return img, dictionary
 
 
@@ -346,8 +351,13 @@ class XMLDataset(data.Dataset):
                         locations = []
                         for plant in plot['plants']['plant']:
                             locations.append(eval(plant['location_wrt_plot']))
+                        img_abspath = os.path.join(self.root_dir, filename)
+                        orig_width, orig_height = \
+                            get_image_size.get_image_size(img_abspath)
                         self.dict[filename] = {'count': count,
-                                               'locations': locations}
+                                               'locations': locations,
+                                               'orig_width': orig_width,
+                                               'orig_height': orig_height}
 
             # Use an Ordered Dictionary to allow random access
             self.dict = OrderedDict(self.dict.items())
@@ -380,7 +390,11 @@ class XMLDataset(data.Dataset):
             filename, dictionary = self.dict_list[idx]
         else:
             filename = self.listfiles[idx]
-            dictionary = {'filename': self.listfiles[idx]}
+            orig_width, orig_height = \
+                get_image_size.get_image_size(img_abspath)
+            dictionary = {'filename': self.listfiles[idx],
+                          'orig_width': orig_width,
+                          'orig_height': orig_height}
         img_abspath = os.path.join(self.root_dir, filename)
 
         img = Image.open(img_abspath)

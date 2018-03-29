@@ -95,12 +95,12 @@ class AveragedHausdorffLoss(nn.Module):
 
 class WeightedHausdorffDistance(nn.Module):
     def __init__(self,
-                 height, width,
+                 resized_height, resized_width,
                  return_2_terms=False,
                  tensortype=torch.FloatTensor):
         """
-        :param height: Number of rows in the image.
-        :param width: Number of columns in the image.
+        :param resized_height: Number of rows in the image.
+        :param resized_width: Number of columns in the image.
         :param return_2_terms: Whether to return the 2 terms of the CD instead of their sum. Default: False.
         :param tensortype: The result will be in this Tensor type.
         """
@@ -109,17 +109,18 @@ class WeightedHausdorffDistance(nn.Module):
         self.tensortype = tensortype
 
         # Prepare all possible (row, col) locations in the image
-        self.height, self.width = height, width
-        self.max_dist = math.sqrt(height**2 + width**2)
-        self.n_pixels = height * width
-        self.all_img_locations = torch.from_numpy(cartesian([np.arange(height),
-                                                             np.arange(width)]))
+        self.height, self.width = resized_height, resized_width
+        self.resized_size = Variable(tensortype([resized_height, resized_width]))
+        self.max_dist = math.sqrt(resized_height**2 + resized_width**2)
+        self.n_pixels = resized_height * resized_width
+        self.all_img_locations = torch.from_numpy(cartesian([np.arange(resized_height),
+                                                             np.arange(resized_width)]))
         self.all_img_locations = self.all_img_locations.type(tensortype)
         self.all_img_locations = Variable(self.all_img_locations)
 
         self.return_2_terms = return_2_terms
 
-    def forward(self, prob_map, gt):
+    def forward(self, prob_map, gt, orig_sizes):
         """
         Compute the Weighted Hausdorff Distance function
          between the estimated probability map and ground truth points.
@@ -132,6 +133,9 @@ class WeightedHausdorffDistance(nn.Module):
                    Must be of size B as in prob_map.
                    Each element in the list must be a 2D Tensor,
                    where each row is the (y, x), i.e, (row, col) of a GT point.
+        :param orig_sizes: Bx2 Tensor containing the size of the original images.
+                           B is batch size. The size must be in (height, width) format.
+        :param orig_widths: List of the original width for each image in the batch.
         :return: Single-scalar Tensor with the Weighted Hausdorff Distance.
                  If self.return_2_terms=True, then return a tuple containing
                  the two terms of the Weighted Hausdorff Distance. 
@@ -155,10 +159,14 @@ class WeightedHausdorffDistance(nn.Module):
             # One by one
             prob_map_b = prob_map[b, :, :]
             gt_b = gt[b] 
+            orig_size_b = orig_sizes[b, :]
+            norm_factor = (orig_size_b/self.resized_size).unsqueeze(0)
 
             # Pairwise distances between all possible locations and the GTed locations
             n_gt_pts = gt_b.size()[0]
-            d_matrix = cdist(self.all_img_locations, gt_b)
+            normalized_x = norm_factor.repeat(self.n_pixels, 1)*self.all_img_locations
+            normalized_y = norm_factor.repeat(len(gt_b), 1)*gt_b
+            d_matrix = cdist(normalized_x, normalized_y)
 
             # Reshape probability map as a long column vector,
             # and prepare it for multiplication

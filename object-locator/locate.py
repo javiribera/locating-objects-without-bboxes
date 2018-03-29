@@ -66,8 +66,8 @@ testset_loader = data.DataLoader(testset,
 # Loss function
 l1_loss = nn.L1Loss(reduce=False)
 mse_loss = nn.MSELoss(reduce=False)
-criterion_training = losses.WeightedHausdorffDistance(height=args.height,
-                                                      width=args.width,
+criterion_training = losses.WeightedHausdorffDistance(resized_height=args.height,
+                                                      resized_width=args.width,
                                                       return_2_terms=True,
                                                       tensortype=tensortype)
 

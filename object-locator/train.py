@@ -19,6 +19,7 @@ from torchvision.models import inception_v3
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from sklearn import mixture
+import skimage.transform
 
 from . import losses
 from .models import unet_model
@@ -199,9 +200,18 @@ while epoch < args.epochs:
                                             'Term3*%s' % args.lambdaa,
                                             'Sum/3'])
 
-            # Send input and output images (first one in the batch)
-            log.image(imgs=[((imgs[0, :, :].data + 1) / 2.0 * 255.0).squeeze().cpu().numpy(),
-                            est_map[0, :, :].data.unsqueeze(0).cpu().numpy()],
+            # Send input and output images (first one in the batch).
+            # Resize to original size
+            orig_shape = target_orig_sizes[0].data.cpu().numpy().tolist()
+            orig_img_origsize = ((skimage.transform.resize(imgs[0].data.squeeze().cpu().numpy().transpose((1, 2, 0)),
+                                                           output_shape=orig_shape,
+                                                           mode='constant') + 1) / 2.0 * 255.0).\
+                astype(np.float32).transpose((2, 0, 1))
+            est_map_origsize = skimage.transform.resize(est_map[0].data.unsqueeze(0).cpu().numpy().transpose((1, 2, 0)),
+                                                        output_shape=orig_shape,
+                                                        mode='constant').\
+                astype(np.float32).transpose((2, 0, 1))
+            log.image(imgs=[orig_img_origsize, est_map_origsize],
                       titles=['(Training) Input',
                               '(Training) U-Net output'],
                       windows=[1, 2])
@@ -335,8 +345,18 @@ while epoch < args.epochs:
         if time.time() > tic_val + args.log_interval:
             tic_val = time.time()
 
-            log.image(imgs=[((imgs.data[0, :, :] + 1) / 2.0 * 255.0).squeeze().cpu().numpy(),
-                            est_map[0, :, :].data.unsqueeze(0).cpu().numpy()],
+            # Send input and output images (first one in the batch).
+            # Resize to original size
+            orig_shape = target_orig_sizes[0].data.cpu().numpy().tolist()
+            orig_img_origsize = ((skimage.transform.resize(imgs[0].data.squeeze().cpu().numpy().transpose((1, 2, 0)),
+                                                           output_shape=orig_shape,
+                                                           mode='constant') + 1) / 2.0 * 255.0).\
+                astype(np.float32).transpose((2, 0, 1))
+            est_map_origsize = skimage.transform.resize(est_map[0].data.unsqueeze(0).cpu().numpy().transpose((1, 2, 0)),
+                                                        output_shape=orig_shape,
+                                                        mode='constant').\
+                astype(np.float32).transpose((2, 0, 1))
+            log.image(imgs=[orig_img_origsize, est_map_origsize],
                       titles=['(Validation) Input',
                               '(Validation) U-Net output'],
                       windows=[5, 6])

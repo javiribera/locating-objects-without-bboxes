@@ -22,8 +22,10 @@ from torchvision import transforms
 import torchvision as tv
 from torchvision.models import inception_v3
 from sklearn import mixture
-from .data import CSVDataset
+import skimage.transform
+from .data import XMLDataset
 from .data import csv_collator
+from .data import ScaleImageAndLabel
 
 from . import losses
 from . import argparser
@@ -41,17 +43,19 @@ if args.cuda:
     torch.cuda.manual_seed_all(args.seed)
 
 # Create output directories
-os.makedirs(os.path.join(args.out_dir, 'painted'), exist_ok=True)
 os.makedirs(os.path.join(args.out_dir, 'est_map'), exist_ok=True)
 os.makedirs(os.path.join(args.out_dir, 'est_map_thresholded'), exist_ok=True)
+if args.paint:
+    os.makedirs(os.path.join(args.out_dir, 'painted'), exist_ok=True)
 
 # Tensor type to use, select CUDA or not
 tensortype = torch.cuda.FloatTensor if args.cuda else torch.FloatTensor
 tensortype_cpu = torch.FloatTensor
 
 # Data loading code
-testset = CSVDataset(args.dataset,
+testset = XMLDataset(args.dataset,
                      transforms=transforms.Compose([
+                         ScaleImageAndLabel(size=(args.height, args.width)),
                          transforms.ToTensor(),
                          transforms.Normalize((0.5, 0.5, 0.5),
                                               (0.5, 0.5, 0.5)),
@@ -62,6 +66,9 @@ testset_loader = data.DataLoader(testset,
                                  batch_size=1,
                                  num_workers=args.nThreads,
                                  collate_fn=csv_collator)
+
+# Array with [height, width] of the new size
+resized_size = np.array([args.height, args.width])
 
 # Loss function
 l1_loss = nn.L1Loss(reduce=False)
@@ -144,24 +151,37 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
         target_locations = [dictt['locations'] for dictt in dictionaries]
         target_count = torch.stack([dictt['count']
                                     for dictt in dictionaries])
-
         # Prepare targets
         target_locations = [Variable(t.type(tensortype), volatile=True)
                             for t in target_locations]
         target_count = Variable(target_count.type(tensortype), volatile=True)
 
+    # Original size
+    target_orig_heights = [dictt['orig_height'] for dictt in dictionaries]
+    target_orig_widths = [dictt['orig_width'] for dictt in dictionaries]
+    target_orig_heights = tensortype(target_orig_heights)
+    target_orig_widths = tensortype(target_orig_widths)
+    target_orig_sizes = torch.stack(
+        (target_orig_heights, target_orig_widths)).transpose(0, 1)
+    origsize = (dictionaries[0]['orig_height'],
+                dictionaries[0]['orig_width'])
+
     # Feed forward
     est_map, est_count = model.forward(imgs)
 
     # Save estimated map to disk
-    tv.utils.save_image(est_map.data[0, :, :],
-                        os.path.join(args.out_dir,
-                                     'est_map',
-                                     dictionaries[0]['filename']))
+    est_map_numpy = est_map.data[0, :, :].cpu().numpy()
+    est_map_numpy_origsize = \
+        skimage.transform.resize(est_map_numpy,
+                                 output_shape=origsize,
+                                 mode='constant')
+    cv2.imwrite(os.path.join(args.out_dir,
+                             'est_map',
+                             dictionaries[0]['filename']),
+                est_map_numpy_origsize)
 
     # The estimated map must be thresholded to obtain estimated points
-    est_map_numpy = est_map.data[0, :, :].cpu().numpy()
-    mask = cv2.inRange(est_map_numpy, 2 / 255, 1)
+    mask = cv2.inRange(est_map_numpy_origsize, 2 / 255, 1)
     coord = np.where(mask > 0)
     y = coord[0].reshape((-1, 1))
     x = coord[1].reshape((-1, 1))
@@ -188,11 +208,12 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
     # Paint red dots if user asked for it
     if args.paint:
         # Paint a circle in the original image at the estimated location
-        image_with_x = tensortype(imgs.data[0, :, :].squeeze().size()).\
-            copy_(imgs.data[0, :, :].squeeze())
+        image_with_x = np.moveaxis(imgs.data[0].cpu().numpy(), 0, 2).copy()
+        image_with_x = \
+            skimage.transform.resize(image_with_x,
+                                     output_shape=origsize,
+                                     mode='constant')
         image_with_x = ((image_with_x + 1) / 2.0 * 255.0)
-        image_with_x = image_with_x.cpu().numpy()
-        image_with_x = np.moveaxis(image_with_x, 0, 2).copy()
         for y, x in centroids:
             image_with_x = cv2.circle(image_with_x, (x, y), 3, [255, 0, 0], -1)
         # Save original image with circle to disk
@@ -223,14 +244,18 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
         # Evaluation using the Averaged Hausdorff Distance
         target_locations = \
             target_locations[0].data.cpu().numpy().reshape(-1, 2)
+        norm_factor = target_orig_sizes[0].unsqueeze(0).cpu().numpy() \
+            / resized_size
+        norm_factor = norm_factor.repeat(len(target_locations), axis=0)
+        target_locations_wrt_orig = norm_factor*target_locations
         ahd = losses.averaged_hausdorff_distance(centroids,
-                                                 target_locations)
+                                                 target_locations_wrt_orig)
 
         sum_ahd += ahd
 
         # Validation using Precision and Recall
         for judge in judges:
-            judge.evaluate_sample(centroids, target_locations)
+            judge.evaluate_sample(centroids, target_locations_wrt_orig)
 
     df = pd.DataFrame(data=[est_count.data[0, 0]],
                       index=[dictionaries[0]['filename']],

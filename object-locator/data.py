@@ -354,7 +354,8 @@ class XMLDataset(data.Dataset):
                         img_abspath = os.path.join(self.root_dir, filename)
                         orig_width, orig_height = \
                             get_image_size.get_image_size(img_abspath)
-                        self.dict[filename] = {'count': count,
+                        self.dict[filename] = {'filename': filename,
+                                               'count': count,
                                                'locations': locations,
                                                'orig_width': orig_width,
                                                'orig_height': orig_height}

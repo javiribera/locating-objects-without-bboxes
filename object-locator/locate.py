@@ -273,7 +273,6 @@ if testset.there_is_gt:
     # the precision as a function of r
     df_prec_n_rec = pd.DataFrame(columns=['precision', 'recall'])
 
-
     print(f'\__ Average AHD for all the testing set: {avg_ahd:.3f}')
     print('\__  Accuracy for all the testing set, r=0, ..., 15')
     for judge in judges:

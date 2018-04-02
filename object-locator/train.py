@@ -116,7 +116,6 @@ if args.optimizer == 'sgd':
     optimizer = optim.SGD(model.parameters(),
                           lr=args.lr,
                           momentum=0.9)
-                          # nesterov=True)
 elif args.optimizer == 'adam':
     optimizer = optim.Adam(model.parameters(),
                            lr=args.lr)
@@ -170,14 +169,15 @@ while epoch < args.epochs:
         target_count = Variable(target_count.type(tensortype))
         target_orig_heights = Variable(tensortype(target_orig_heights))
         target_orig_widths = Variable(tensortype(target_orig_widths))
-        target_orig_sizes = torch.stack((target_orig_heights, target_orig_widths)).transpose(0, 1)
+        target_orig_sizes = torch.stack((target_orig_heights,
+                                         target_orig_widths)).transpose(0, 1)
 
         # One training step
         optimizer.zero_grad()
         est_map, est_count = model.forward(imgs)
-        term1, term2 = loss_loc.forward(est_map, target_locations, target_orig_sizes)
-        term3 = loss_regress.forward(est_count, target_count) #\
-            # / torch.sum(target_count)
+        term1, term2 = loss_loc.forward(
+            est_map, target_locations, target_orig_sizes)
+        term3 = loss_regress.forward(est_count, target_count)
         term3 *= args.lambdaa
         loss = term1 + term2 + term3
         loss.backward()
@@ -186,7 +186,8 @@ while epoch < args.epochs:
         # Update progress bar
         loss_avg_this_epoch = (1/(batch_idx + 1))*(batch_idx * loss_avg_this_epoch +
                                                    loss.data[0])
-        iter_train.set_postfix(avg_train_loss_this_epoch=f'{loss_avg_this_epoch:.1f}')
+        iter_train.set_postfix(
+            avg_train_loss_this_epoch=f'{loss_avg_this_epoch:.1f}')
 
         # Log training error
         if time.time() > tic_train + args.log_interval:
@@ -194,7 +195,8 @@ while epoch < args.epochs:
 
             # Log training losses
             log.train_losses(terms=[term1, term2, term3, loss / 3],
-                             iteration_number=epoch + batch_idx/len(trainset_loader),
+                             iteration_number=epoch +
+                             batch_idx/len(trainset_loader),
                              terms_legends=['Term1',
                                             'Term2',
                                             'Term3*%s' % args.lambdaa,
@@ -262,7 +264,7 @@ while epoch < args.epochs:
     sum_se = 0
     sum_ape = 0
     iter_val = tqdm(valset_loader,
-                      desc=f'Validating Epoch {epoch} ({len(valset)} images)')
+                    desc=f'Validating Epoch {epoch} ({len(valset)} images)')
     for batch_idx, (imgs, dictionaries) in enumerate(iter_val):
 
         # Pull info from this batch
@@ -272,7 +274,7 @@ while epoch < args.epochs:
         target_orig_heights = [dictt['orig_height'] for dictt in dictionaries]
         target_orig_widths = [dictt['orig_width'] for dictt in dictionaries]
 
-        if bool((target_count==0).cpu().numpy()[0]):
+        if bool((target_count == 0).cpu().numpy()[0]):
             continue
 
         imgs = Variable(imgs.type(tensortype), volatile=True)
@@ -281,16 +283,16 @@ while epoch < args.epochs:
         target_count = Variable(target_count.type(tensortype), volatile=True)
         target_orig_heights = Variable(tensortype(target_orig_heights))
         target_orig_widths = Variable(tensortype(target_orig_widths))
-        target_orig_sizes = torch.stack((target_orig_heights, target_orig_widths)).transpose(0, 1)
+        target_orig_sizes = torch.stack((target_orig_heights,
+                                         target_orig_widths)).transpose(0, 1)
 
         # Feed-forward
         est_map, est_count = model.forward(imgs)
 
         # The 3 terms
-        term1, term2 = loss_loc.forward(est_map, target_locations, target_orig_sizes)
-        # if bool((torch.sum(target_count)==0).data.cpu().numpy()[0]):
+        term1, term2 = loss_loc.forward(
+            est_map, target_locations, target_orig_sizes)
         term3 = loss_regress.forward(est_count, target_count)
-                # / torch.sum(target_count)
         term3 *= args.lambdaa
         sum_term1 += term1
         sum_term2 += term2
@@ -299,8 +301,8 @@ while epoch < args.epochs:
 
         # Update progress bar
         loss_avg_this_epoch = sum_loss.data[0] / (batch_idx + 1)
-        iter_val.set_postfix(avg_val_loss_this_epoch=f'{loss_avg_this_epoch:.1f}-----')
-
+        iter_val.set_postfix(
+            avg_val_loss_this_epoch=f'{loss_avg_this_epoch:.1f}-----')
 
         # Validation using the Averaged Hausdorff Distance
         # __on the first image of the batch__
@@ -338,7 +340,7 @@ while epoch < args.epochs:
         sum_ae += ae
         sum_se += se
         sum_ape += ape
-    
+
         # Validation using Precision and Recall
         judge.evaluate_sample(centroids, target_locations)
 
@@ -360,6 +362,7 @@ while epoch < args.epochs:
                       titles=['(Validation) Input',
                               '(Validation) U-Net output'],
                       windows=[5, 6])
+
             # # Read image with GT dots from disk
             # gt_img_numpy = skimage.io.imread(
             #     os.path.join('/home/jprat/projects/phenosorg/data/plant_counts_dots/20160613_F54_validation_256x256_white_bigdots',
@@ -439,4 +442,3 @@ while epoch < args.epochs:
             print("Saved best checkpoint so far in %s " % args.save)
 
     epoch += 1
-

@@ -110,7 +110,8 @@ class WeightedHausdorffDistance(nn.Module):
 
         # Prepare all possible (row, col) locations in the image
         self.height, self.width = resized_height, resized_width
-        self.resized_size = Variable(tensortype([resized_height, resized_width]))
+        self.resized_size = Variable(tensortype([resized_height,
+                                                 resized_width]))
         self.max_dist = math.sqrt(resized_height**2 + resized_width**2)
         self.n_pixels = resized_height * resized_width
         self.all_img_locations = torch.from_numpy(cartesian([np.arange(resized_height),
@@ -152,19 +153,20 @@ class WeightedHausdorffDistance(nn.Module):
         batch_size = prob_map.shape[0]
         assert batch_size == len(gt)
 
-        terms_1 = []#Variable(self.tensortype(batch_size))
-        terms_2 = []#Variable(self.tensortype(batch_size))
+        terms_1 = []  # Variable(self.tensortype(batch_size))
+        terms_2 = []  # Variable(self.tensortype(batch_size))
         for b in range(batch_size):
 
             # One by one
             prob_map_b = prob_map[b, :, :]
-            gt_b = gt[b] 
+            gt_b = gt[b]
             orig_size_b = orig_sizes[b, :]
             norm_factor = (orig_size_b/self.resized_size).unsqueeze(0)
 
             # Pairwise distances between all possible locations and the GTed locations
             n_gt_pts = gt_b.size()[0]
-            normalized_x = norm_factor.repeat(self.n_pixels, 1)*self.all_img_locations
+            normalized_x = norm_factor.repeat(self.n_pixels, 1)*\
+                self.all_img_locations
             normalized_y = norm_factor.repeat(len(gt_b), 1)*gt_b
             d_matrix = cdist(normalized_x, normalized_y)
 

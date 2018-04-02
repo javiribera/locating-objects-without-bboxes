@@ -142,7 +142,7 @@ def parse_command_args(training_or_testing):
             args.save = os.path.abspath(args.save)
 
         # Check we are not overwriting a checkpoint without resuming from it
-        if args.save  != '' and os.path.isfile(args.save) and \
+        if args.save != '' and os.path.isfile(args.save) and \
                 not (args.resume and args.resume == args.save):
             print("E: Don't overwrite a checkpoint without resuming from it. "
                   "Are you sure you want to do that? "

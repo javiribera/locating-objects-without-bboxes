@@ -180,7 +180,7 @@ def parse_command_args(training_or_testing):
                             metavar='R',
                             help='Detections at dist <= R to a GT pt are True Positives.')
         parser.add_argument('--no-paint',
-                            default=True,
+                            default=False,
                             action="store_true",
                             help='Don\'t paint a red circle at each estimated location.')
         parser.add_argument('--nThreads', '-j',

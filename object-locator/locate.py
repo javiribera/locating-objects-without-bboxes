@@ -129,7 +129,8 @@ tic = time.time()
 
 
 # Empty output CSV
-df_out = pd.DataFrame(columns=['count'])
+df_out = pd.DataFrame(columns=['count', 'locations'])
+df_out.index.name = 'filename'
 
 # Set the module in evaluation mode
 model.eval()
@@ -257,9 +258,10 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
         for judge in judges:
             judge.evaluate_sample(centroids, target_locations_wrt_orig)
 
-    df = pd.DataFrame(data=[est_count.data[0, 0]],
-                      index=[dictionaries[0]['filename']],
-                      columns=['count'])
+    df = pd.DataFrame(data={'count': est_count.data[0, 0],
+                            'locations': str(centroids.tolist())},
+                      index=[dictionaries[0]['filename']])
+    df.index.name = 'filename'
     df_out = df_out.append(df)
 
 if testset.there_is_gt:

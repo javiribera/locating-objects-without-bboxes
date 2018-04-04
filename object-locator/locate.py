@@ -274,6 +274,7 @@ if testset.there_is_gt:
     # Output CSV where we will put
     # the precision as a function of r
     df_prec_n_rec = pd.DataFrame(columns=['precision', 'recall'])
+    df_prec_n_rec.index.name = 'r'
 
     print(f'\__ Average AHD for all the testing set: {avg_ahd:.3f}')
     print('\__  Accuracy for all the testing set, r=0, ..., 15')
@@ -285,6 +286,7 @@ if testset.there_is_gt:
         df = pd.DataFrame(data=[[prec, rec]],
                           index=[judge.r],
                           columns=['precision', 'recall'])
+        df.index.name = 'r'
         df_prec_n_rec = df_prec_n_rec.append(df)
     print(f'\__  MAPE for all the testing set: {mape:.3f} %')
     print(f'\__  MAE for all the testing set: {mae:.3f}')

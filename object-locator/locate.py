@@ -71,8 +71,6 @@ testset_loader = data.DataLoader(testset,
 resized_size = np.array([args.height, args.width])
 
 # Loss function
-l1_loss = nn.L1Loss(reduce=False)
-mse_loss = nn.MSELoss(reduce=False)
 criterion_training = losses.WeightedHausdorffDistance(resized_height=args.height,
                                                       resized_width=args.width,
                                                       return_2_terms=True,
@@ -138,6 +136,8 @@ model.eval()
 if testset.there_is_gt:
     judges = [Judge(r) for r in range(0, 16)]
     sum_ahd = 0
+    sum_e = 0
+    sum_pe = 0
     sum_ae = 0
     sum_se = 0
     sum_ape = 0
@@ -225,19 +225,25 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                     image_with_x)
 
     if testset.there_is_gt:
-        # Evaluate Average Percent Error for this image
+        # Evaluate regression errors for this image
+        e = est_count - target_count
+        ae = torch.abs(e)
         if bool((target_count == 0).data.cpu().numpy()[0][0]):
-            ape = 100 * l1_loss.forward(est_count, target_count)
+            ape = 100 * ae
+            pe = 100 * e
         else:
-            ape = 100 * l1_loss.forward(est_count,
-                                        target_count) / target_count
-        ae = l1_loss.forward(est_count, target_count)
-        se = mse_loss.forward(est_count, target_count)
+            ape = 100 * ae / target_count
+            pe = 100 * e / target_count
+        se = e**2
 
+        e = e.data.cpu().numpy()[0][0]
+        pe = pe.data.cpu().numpy()[0][0]
         ape = ape.data.cpu().numpy()[0][0]
         ae = ae.data.cpu().numpy()[0][0]
         se = se.data.cpu().numpy()[0][0]
 
+        sum_e += e
+        sum_pe += pe
         sum_ae += ae
         sum_se += se
         sum_ape += ape
@@ -265,6 +271,8 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
     df_out = df_out.append(df)
 
 if testset.there_is_gt:
+    me = sum_e / len(testset_loader)
+    mpe = sum_pe / len(testset_loader)
     avg_ahd = sum_ahd / len(testset_loader)
     mae = sum_ae / len(testset_loader)
     mse = sum_se / len(testset_loader)
@@ -289,6 +297,8 @@ if testset.there_is_gt:
         df.index.name = 'r'
         df_prec_n_rec = df_prec_n_rec.append(df)
     print(f'\__  MAPE for all the testing set: {mape:.3f} %')
+    print(f'\__  ME for all the testing set: {me:+.3f}')
+    print(f'\__  MPE for all the testing set: {mpe:+.3f} %')
     print(f'\__  MAE for all the testing set: {mae:.3f}')
     print(f'\__  MSE for all the testing set: {mse:.3f}')
     print(f'\__  RMSE for all the testing set: {rmse:.3f}')

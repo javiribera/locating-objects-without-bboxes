@@ -270,6 +270,9 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
     df.index.name = 'filename'
     df_out = df_out.append(df)
 
+# Write CSV to disk
+df_out.to_csv(os.path.join(args.out_dir, 'estimations.csv'))
+
 if testset.there_is_gt:
     me = sum_e / len(testset_loader)
     mpe = sum_pe / len(testset_loader)
@@ -303,10 +306,9 @@ if testset.there_is_gt:
     print(f'\__  MSE for all the testing set: {mse:.3f}')
     print(f'\__  RMSE for all the testing set: {rmse:.3f}')
 
+    # Write CSV to disk
+    df_prec_n_rec.to_csv(os.path.join(args.out_dir, 'precision_and_recall.csv'))
+
 print('It took %s seconds to evaluate all the testing set.' %
       int(time.time() - tic))
-
-# Write CSV to disk
-df_out.to_csv(os.path.join(args.out_dir, 'estimations.csv'))
-df_prec_n_rec.to_csv(os.path.join(args.out_dir, 'precision_and_recall.csv'))
 

@@ -192,6 +192,7 @@ class RandomVerticalFlipImageAndLabel(object):
 class ScaleImageAndLabel(transforms.Scale):
     """
     Scale a PIL Image and the GT to a given size.
+     If there is no GT, then only scale the PIL Image.
 
     Args:
         size: Desired output size (h, w).
@@ -214,13 +215,14 @@ class ScaleImageAndLabel(transforms.Scale):
         img = super(ScaleImageAndLabel, self).__call__(img)
 
         # Scale GT
-        dictionary['locations'] *= torch.FloatTensor([scale_h, scale_w])
-        dictionary['locations'] = torch.round(dictionary['locations'])
-        ys = torch.clamp(dictionary['locations'][:, 0], 0, self.size[0])
-        xs = torch.clamp(dictionary['locations'][:, 1], 0, self.size[1])
-        dictionary['locations'] = torch.cat((ys.view(-1, 1),
-                                             xs.view(-1, 1)),
-                                            1)
+        if 'locations' in dictionary:
+            dictionary['locations'] *= torch.FloatTensor([scale_h, scale_w])
+            dictionary['locations'] = torch.round(dictionary['locations'])
+            ys = torch.clamp(dictionary['locations'][:, 0], 0, self.size[0])
+            xs = torch.clamp(dictionary['locations'][:, 1], 0, self.size[1])
+            dictionary['locations'] = torch.cat((ys.view(-1, 1),
+                                                 xs.view(-1, 1)),
+                                                1)
 
         # Indicate new size in dictionary
         dictionary['resized_height'] = self.size[0]
@@ -382,29 +384,30 @@ class XMLDataset(data.Dataset):
         Returns a tuple. The first element is the image.
         The second element is a dictionary containing the labels of that image.
         If the XML did not exist in the dataset directory,
-         the dictionary will only contain the filename of the image.
+         the dictionary will only contain the filename and size of the image.
 
         :param idx: Index of the image in the dataset to get.
         """
 
         if self.there_is_gt:
             filename, dictionary = self.dict_list[idx]
+            img_abspath = os.path.join(self.root_dir, filename)
+
+            # list --> Tensors
+            dictionary['locations'] = self.tensortype(
+                dictionary['locations'])
+            dictionary['count'] = self.tensortype(
+                [dictionary['count']])
         else:
             filename = self.listfiles[idx]
+            img_abspath = os.path.join(self.root_dir, filename)
             orig_width, orig_height = \
                 get_image_size.get_image_size(img_abspath)
             dictionary = {'filename': self.listfiles[idx],
                           'orig_width': orig_width,
                           'orig_height': orig_height}
-        img_abspath = os.path.join(self.root_dir, filename)
 
         img = Image.open(img_abspath)
-
-        # list --> Tensors
-        dictionary['locations'] = self.tensortype(
-            dictionary['locations'])
-        dictionary['count'] = self.tensortype(
-            [dictionary['count']])
 
         img_transformed = img
         transformed_dictionary = dictionary
@@ -419,7 +422,7 @@ class XMLDataset(data.Dataset):
                     img_transformed = transform(img_transformed)
 
         # Prevents crash when making a batch out of an empty tensor
-        if dictionary['count'][0] == 0:
+        if self.there_is_gt and dictionary['count'][0] == 0:
             dictionary['locations'] = self.tensortype([-1, -1])
 
         return (img_transformed, transformed_dictionary)

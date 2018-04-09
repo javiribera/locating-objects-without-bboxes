@@ -30,7 +30,7 @@ from .data import ScaleImageAndLabel
 from . import losses
 from . import argparser
 from .models import unet_model
-from .eval_precision_recall import Judge
+from .metrics import Judge
 
 
 # Parse command line arguments
@@ -135,12 +135,6 @@ model.eval()
 
 if testset.there_is_gt:
     judges = [Judge(r) for r in range(0, 16)]
-    sum_ahd = 0
-    sum_e = 0
-    sum_pe = 0
-    sum_ae = 0
-    sum_se = 0
-    sum_ape = 0
 
 for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                                             total=len(testset_loader)):
@@ -224,47 +218,27 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                                  dictionaries[0]['filename']),
                     image_with_x)
 
+    # Convert to numpy
+    est_count = est_count.data.cpu().numpy()[0][0]
+
     if testset.there_is_gt:
-        # Evaluate regression errors for this image
-        e = est_count - target_count
-        ae = torch.abs(e)
-        if bool((target_count == 0).data.cpu().numpy()[0][0]):
-            ape = 100 * ae
-            pe = 100 * e
-        else:
-            ape = 100 * ae / target_count
-            pe = 100 * e / target_count
-        se = e**2
-
-        e = e.data.cpu().numpy()[0][0]
-        pe = pe.data.cpu().numpy()[0][0]
-        ape = ape.data.cpu().numpy()[0][0]
-        ae = ae.data.cpu().numpy()[0][0]
-        se = se.data.cpu().numpy()[0][0]
-
-        sum_e += e
-        sum_pe += pe
-        sum_ae += ae
-        sum_se += se
-        sum_ape += ape
-
-        # Evaluation using the Averaged Hausdorff Distance
+        # Convert to numpy
+        target_count = target_count.data.cpu().numpy()[0][0]
         target_locations = \
             target_locations[0].data.cpu().numpy().reshape(-1, 2)
+
+        # Normalize to use locations in the original image
         norm_factor = target_orig_sizes[0].unsqueeze(0).cpu().numpy() \
             / resized_size
         norm_factor = norm_factor.repeat(len(target_locations), axis=0)
         target_locations_wrt_orig = norm_factor*target_locations
-        ahd = losses.averaged_hausdorff_distance(centroids,
-                                                 target_locations_wrt_orig)
 
-        sum_ahd += ahd
-
-        # Validation using Precision and Recall
+        # Compute metrics for each value of r (for each Judge)
         for judge in judges:
-            judge.evaluate_sample(centroids, target_locations_wrt_orig)
+            judge.feed_points(centroids, target_locations_wrt_orig)
+            judge.feed_count(est_count, target_count)
 
-    df = pd.DataFrame(data={'count': est_count.data[0, 0],
+    df = pd.DataFrame(data={'count': est_count,
                             'locations': str(centroids.tolist())},
                       index=[dictionaries[0]['filename']])
     df.index.name = 'filename'
@@ -274,37 +248,33 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
 df_out.to_csv(os.path.join(args.out_dir, 'estimations.csv'))
 
 if testset.there_is_gt:
-    me = sum_e / len(testset_loader)
-    mpe = sum_pe / len(testset_loader)
-    avg_ahd = sum_ahd / len(testset_loader)
-    mae = sum_ae / len(testset_loader)
-    mse = sum_se / len(testset_loader)
-    rmse = math.sqrt(sum_se / len(testset_loader))
-    mape = sum_ape / len(testset_loader)
 
     # Output CSV where we will put
     # the precision as a function of r
     df_prec_n_rec = pd.DataFrame(columns=['precision', 'recall', 'fscore'])
     df_prec_n_rec.index.name = 'r'
 
-    print(f'\__ Average AHD for all the testing set: {avg_ahd:.3f}')
-    print('\__  Accuracy for all the testing set, r=0, ..., 15')
+    print('\__  Location metrics for all the testing set, r=0, ..., 15')
     for judge in judges:
-        prec, rec, fscore = judge.get_p_n_r()
-        print(f'r={judge.r} => Precision: {prec:.3f}, Recall: {rec:.3f}, F-score: {fscore:.3f}')
+        print(f'r={judge.r} => Precision: {judge.precision:.3f}, '\
+              f'Recall: {judge.recall:.3f}, F-score: {judge.fscore:.3f}')
 
         # Accumulate precision and recall in the CSV dataframe
-        df = pd.DataFrame(data=[[prec, rec, fscore]],
+        df = pd.DataFrame(data=[[judge.precision, judge.recall, judge.fscore]],
                           index=[judge.r],
                           columns=['precision', 'recall', 'fscore'])
         df.index.name = 'r'
         df_prec_n_rec = df_prec_n_rec.append(df)
-    print(f'\__  MAPE for all the testing set: {mape:.3f} %')
-    print(f'\__  ME for all the testing set: {me:+.3f}')
-    print(f'\__  MPE for all the testing set: {mpe:+.3f} %')
-    print(f'\__  MAE for all the testing set: {mae:.3f}')
-    print(f'\__  MSE for all the testing set: {mse:.3f}')
-    print(f'\__  RMSE for all the testing set: {rmse:.3f}')
+    print(f'\__ Average AHD for all the testing set: {judge.mahd:.3f}')
+
+    # Regression metrics
+    # (any judge will do as regression metrics don't depend on r)
+    print(f'\__  MAPE for all the testing set: {judge.mape:.3f} %')
+    print(f'\__  ME for all the testing set: {judge.me:+.3f}')
+    print(f'\__  MPE for all the testing set: {judge.mpe:+.3f} %')
+    print(f'\__  MAE for all the testing set: {judge.mae:.3f}')
+    print(f'\__  MSE for all the testing set: {judge.mse:.3f}')
+    print(f'\__  RMSE for all the testing set: {judge.rmse:.3f}')
 
     # Write CSV to disk
     df_prec_n_rec.to_csv(os.path.join(args.out_dir, 'precision_and_recall.csv'))

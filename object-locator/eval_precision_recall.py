@@ -41,8 +41,9 @@ class Judge():
     def get_p_n_r(self):
         precision = 100*self.tp / (self.tp + self.fp)
         recall = 100*self.tp / (self.tp + self.fn)
+        fscore = 2 * (precision*recall/(precision+recall))
 
-        return precision, recall
+        return precision, recall, fscore
 
 
 #tests

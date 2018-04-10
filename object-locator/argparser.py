@@ -208,6 +208,10 @@ def parse_command_args(training_or_testing):
                             metavar='N',
                             help='If you know the exact number of points in the image, then set it. '
                                  'Otherwise it will be estimated by adding a L1 cost term.')
+        parser.add_argument('--evaluate',
+                            action='store_true',
+                            default=False,
+                            help='Evaluate metrics (Precision/Recall, RMSE, MAPE, etc.)')
 
         args = parser.parse_args()
 

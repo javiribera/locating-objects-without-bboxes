@@ -60,6 +60,7 @@ testset = XMLDataset(args.dataset,
                          transforms.Normalize((0.5, 0.5, 0.5),
                                               (0.5, 0.5, 0.5)),
                      ]),
+                     ignore_gt=not args.evaluate,
                      max_dataset_size=args.max_testset_size,
                      tensortype=tensortype_cpu)
 testset_loader = data.DataLoader(testset,
@@ -221,7 +222,7 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
     # Convert to numpy
     est_count = est_count.data.cpu().numpy()[0][0]
 
-    if testset.there_is_gt:
+    if args.evaluate:
         # Convert to numpy
         target_count = target_count.data.cpu().numpy()[0][0]
         target_locations = \
@@ -247,7 +248,7 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
 # Write CSV to disk
 df_out.to_csv(os.path.join(args.out_dir, 'estimations.csv'))
 
-if testset.there_is_gt:
+if args.evaluate:
 
     # Output CSV where we will put
     # the precision as a function of r

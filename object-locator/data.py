@@ -13,6 +13,7 @@ import xmltodict
 from parse import parse
 from . import get_image_size
 
+IMG_EXTENSIONS = ['.png', '.jpeg', '.jpg', '.tiff']
 
 class CSVDataset(data.Dataset):
     def __init__(self,
@@ -266,16 +267,20 @@ class XMLDataset(data.Dataset):
                  directory,
                  transforms=None,
                  max_dataset_size=float('inf'),
+                 ignore_gt=False,
                  tensortype=torch.FloatTensor):
         """XMLDataset.
         The sample images of this dataset must be all inside one directory.
-        Inside the same directory, there must be one XML file as described by
+         Inside the same directory, there must be one XML file as described by
          https://communityhub.purdue.edu/groups/phenosorg/wiki/APIspecs
-        (minimum XML API version is v.0.2.0)
-
+         (minimum xml api version is v.0.2.0)
+         if the xml file is not present, then samples do not contain plant location
+         or plant count information.
         :param directory: Directory with all the images and the XML file.
         :param transform: Transform to be applied to each image.
         :param max_dataset_size: Only use the first N images in the directory.
+        :param ignore_gt: Ignore the GT in the XML file,
+                          i.e, provide samples without plant locations or counts.
         :param tensortype: The data and labels will be returned in this type format.
         """
 
@@ -285,7 +290,8 @@ class XMLDataset(data.Dataset):
         # Type of tensor the output will be
         self.tensortype = tensortype
 
-        # Get groundtruth from XML file
+        # Get list of files in the dataset directory,
+        # and the filename of the XML
         listfiles = os.listdir(directory)
         xml_filename = None
         for filename in listfiles:
@@ -293,12 +299,19 @@ class XMLDataset(data.Dataset):
                 xml_filename = filename
                 break
 
-        self.there_is_gt = xml_filename is not None
+        if xml_filename is None:
+            print('W: The dataset directory %s does not contain '
+                  'a XML file with groundtruth. Metrics will not be evaluated.'
+                  'Only estimations will be returned.' % directory)
+
+        self.there_is_gt = (xml_filename is not None) and (not ignore_gt)
+
+        # Ignore files that are not images
+        listfiles = [f for f in listfiles 
+                     if any(f.lower().endswith(ext) for ext in IMG_EXTENSIONS)] 
 
         # XML does not exist (no GT available)
         if not self.there_is_gt:
-            print('W: The dataset directory %s does not contain a XML file with groundtruth. \n'
-                  '   Metrics will not be evaluated. Only estimations will be returned.' % directory)
             self.dict = None
             self.listfiles = listfiles
 

@@ -183,9 +183,8 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
     x = coord[1].reshape((-1, 1))
     c = np.concatenate((y, x), axis=1)
     if len(c) == 0:
-        continue
         ahd = criterion_training.max_dist
-        centroids = []
+        centroids = np.array([])
     else:
         n_components = int(torch.round(est_count[0]).data.cpu().numpy()[0])
         # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples

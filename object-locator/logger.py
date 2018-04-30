@@ -2,6 +2,7 @@ import visdom
 import torch
 import numbers
 
+from torch.autograd import Variable
 
 class Logger():
     def __init__(self, env_name='Logger Env'):
@@ -103,7 +104,20 @@ class Logger():
             raise ValueError('iteration_number must be a number, got %s'
                              % iteration_number)
 
-        y = torch.stack(terms).view(1, -1).data.cpu()
+        # Make terms Tensors
+        curated_terms = []
+        for term in terms:
+            if isinstance(term, Variable):
+                curated_terms.append(term.data.cpu())
+            elif isinstance(term, numbers.Number):
+                curated_terms.append(torch.Tensor([term]))
+            elif isinstance(term, tensor.Tensor):
+                curated_terms.append(term)
+            else:
+                raise ValueError('there is a term with an unsupported type'
+                                 f'({type(term)}')
+
+        y = torch.stack(curated_terms).view(1, -1).cpu()
         x = torch.Tensor([iteration_number]).repeat(1, len(terms))
         if terms_legends is None:
             terms_legends = ['Term %s' % t for t in range(1, len(terms) + 1)]

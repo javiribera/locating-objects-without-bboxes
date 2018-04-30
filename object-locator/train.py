@@ -23,7 +23,7 @@ import skimage.transform
 
 from . import losses
 from .models import unet_model
-from .eval_precision_recall import Judge
+from .metrics import Judge
 from .data import CSVDataset
 from .data import XMLDataset
 from .data import csv_collator
@@ -121,7 +121,7 @@ elif args.optimizer == 'adam':
                            lr=args.lr)
 
 start_epoch = 0
-lowest_avg_ahd_val = np.infty
+lowest_mahd = np.infty
 
 # Restore saved checkpoint (model weights + epoch + optimizer state)
 if args.resume:
@@ -129,7 +129,7 @@ if args.resume:
     if os.path.isfile(args.resume):
         checkpoint = torch.load(args.resume)
         start_epoch = checkpoint['epoch']
-        lowest_avg_ahd_val = checkpoint['lowest_avg_ahd_val']
+        lowest_mahd = checkpoint['mahd']
         model.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
         print("\__ loaded checkpoint '{}' (now on epoch {})"
@@ -259,10 +259,6 @@ while epoch < args.epochs:
     sum_term2 = 0
     sum_term3 = 0
     sum_loss = 0
-    sum_ahd = 0
-    sum_ae = 0
-    sum_se = 0
-    sum_ape = 0
     iter_val = tqdm(valset_loader,
                     desc=f'Validating Epoch {epoch} ({len(valset)} images)')
     for batch_idx, (imgs, dictionaries) in enumerate(iter_val):
@@ -289,6 +285,10 @@ while epoch < args.epochs:
         # Feed-forward
         est_map, est_count = model.forward(imgs)
 
+        # Tensor -> int
+        est_count_int = int(torch.round(est_count).data.cpu().numpy()[0])
+        target_count_int = int(torch.round(target_count).data.cpu().numpy()[0])
+
         # The 3 terms
         term1, term2 = loss_loc.forward(
             est_map, target_locations, target_orig_sizes)
@@ -304,8 +304,7 @@ while epoch < args.epochs:
         iter_val.set_postfix(
             avg_val_loss_this_epoch=f'{loss_avg_this_epoch:.1f}-----')
 
-        # Validation using the Averaged Hausdorff Distance
-        # __on the first image of the batch__
+        # Validation metrics
         # The estimated map must be thresholed to obtain estimated points
         est_map_numpy = est_map[0, :, :].data.cpu().numpy()
         mask = cv2.inRange(est_map_numpy, 4 / 255, 1)
@@ -316,11 +315,11 @@ while epoch < args.epochs:
         if len(c) == 0:
             ahd = loss_loc.max_dist
             centroids = []
+            est_count = 0
             print('len(c) == 0')
         else:
-            n_components = int(torch.round(est_count).data.cpu().numpy()[0])
             # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples
-            n_components = max(min(n_components, x.size), 1)
+            n_components = max(min(est_count_int, x.size), 1)
             centroids = mixture.GaussianMixture(n_components=n_components,
                                                 n_init=1,
                                                 covariance_type='full').\
@@ -328,21 +327,8 @@ while epoch < args.epochs:
 
             target_locations = \
                 target_locations[0].data.cpu().numpy().reshape(-1, 2)
-            ahd = losses.averaged_hausdorff_distance(
-                centroids, target_locations)
-        ahd = Variable(tensortype([ahd]), volatile=True)
-        sum_ahd += ahd
-
-        # Validation using MAE, MSE, MAPE
-        ae = l1_loss.forward(est_count, target_count)
-        se = mse_loss.forward(est_count, target_count)
-        ape = torch.abs(target_count - est_count)/target_count
-        sum_ae += ae
-        sum_se += se
-        sum_ape += ape
-
-        # Validation using Precision and Recall
-        judge.evaluate_sample(centroids, target_locations)
+        judge.feed_points(centroids, target_locations)
+        judge.feed_count(est_count_int, target_count_int)
 
         if time.time() > tic_val + args.log_interval:
             tic_val = time.time()
@@ -393,28 +379,18 @@ while epoch < args.epochs:
     avg_term2_val = sum_term2 / len(valset_loader)
     avg_term3_val = sum_term3 / len(valset_loader)
     avg_loss_val = sum_loss / len(valset_loader)
-    avg_ahd_val = sum_ahd / len(valset_loader)
-    mae = sum_ae / len(valset_loader)
-    rmse = torch.sqrt(sum_se / len(valset_loader))
-    mape = sum_ape/len(valset_loader)
-    mae = mae.squeeze()
-    rmse = rmse.squeeze()
-    mape = mape.squeeze()
-    prec, rec = judge.get_p_n_r()
-    prec = Variable(tensortype([prec]), volatile=True)
-    rec = Variable(tensortype([rec]), volatile=True)
 
     # Log validation metrics
     log.val_losses(terms=(avg_term1_val,
                           avg_term2_val,
                           avg_term3_val,
                           avg_loss_val / 3,
-                          avg_ahd_val,
-                          mae,
-                          rmse,
-                          mape*100,
-                          prec,
-                          rec),
+                          judge.mahd,
+                          judge.mae,
+                          judge.rmse,
+                          judge.mape,
+                          judge.precision,
+                          judge.recall),
                    iteration_number=epoch,
                    terms_legends=['Term 1',
                                   'Term 2',
@@ -428,14 +404,13 @@ while epoch < args.epochs:
                                   f'r{args.radius}-Recall (%)'])
 
     # If this is the best epoch (in terms of validation error)
-    avg_ahd_val_float = avg_ahd_val.data.cpu().numpy()[0]
-    if avg_ahd_val_float < lowest_avg_ahd_val:
+    if judge.mahd < lowest_mahd:
         # Keep the best model
-        lowest_avg_ahd_val = avg_ahd_val_float
+        lowest_mahd = judge.mahd
         if args.save:
             torch.save({'epoch': epoch + 1,  # when resuming, we will start at the next epoch
                         'model': model.state_dict(),
-                        'lowest_avg_ahd_val': avg_ahd_val_float,
+                        'mahd': lowest_mahd,
                         'optimizer': optimizer.state_dict(),
                         'n_points': args.n_points,
                         }, args.save)

@@ -140,6 +140,8 @@ def parse_command_args(training_or_testing):
         # Convert to full path
         if args.save != '':
             args.save = os.path.abspath(args.save)
+        if args.resume != '':
+            args.resume = os.path.abspath(args.resume)
 
         # Check we are not overwriting a checkpoint without resuming from it
         if args.save != '' and os.path.isfile(args.save) and \

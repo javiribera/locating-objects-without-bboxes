@@ -120,51 +120,54 @@ class Judge():
 
     @property
     def me(self):
-        """ Mean Error """
-        return self._sum_e / self._n_calls_to_feed_count
+        """ Mean Error (float) """
+        return float(self._sum_e / self._n_calls_to_feed_count)
 
     @property
     def mae(self):
-        """ Mean Absolute Error """
-        return self._sum_ae / self._n_calls_to_feed_count
+        """ Mean Absolute Error (positive float) """
+        return float(self._sum_ae / self._n_calls_to_feed_count)
 
     @property
     def mpe(self):
-        """ Mean Percent Error """
-        return self._sum_pe / self._n_calls_to_feed_count
+        """ Mean Percent Error (float) """
+        return float(self._sum_pe / self._n_calls_to_feed_count)
 
     @property
     def mape(self):
-        """ Mean Absolute Percent Error """
-        return self._sum_ape / self._n_calls_to_feed_count
+        """ Mean Absolute Percent Error (positive float) """
+        return float(self._sum_ape / self._n_calls_to_feed_count)
 
     @property
     def mse(self):
-        """ Mean Squared Error """
-        return self._sum_se / self._n_calls_to_feed_count
+        """ Mean Squared Error (positive float)"""
+        return float(self._sum_se / self._n_calls_to_feed_count)
 
     @property
     def rmse(self):
-        """ Root Mean Squared Error """
-        return math.sqrt(self.mse)
+        """ Root Mean Squared Error (positive float)"""
+        return float(math.sqrt(self.mse))
 
     @property
     def mahd(self):
-        """ Mean Average Hausdorff Distance """
-        return self._sum_ahd / self._n_calls_to_feed_points
+        """ Mean Average Hausdorff Distance (positive float)"""
+        return float(self._sum_ahd / self._n_calls_to_feed_points)
 
     @property
     def precision(self):
-        """ Precision """
-        return 100*self.tp / (self.tp + self.fp)
+        """ Precision (positive float) """
+        return float(100*self.tp / (self.tp + self.fp)) \
+            if self.tp > 0 else 0
 
     @property
     def recall(self):
-        """ Recall """
-        return 100*self.tp / (self.tp + self.fn)
+        """ Recall (positive float) """
+        return float(100*self.tp / (self.tp + self.fn)) \
+            if self.tp > 0 else 0
 
     @property
     def fscore(self):
-        """ F-score """
-        return 2 * (self.precision*self.recall /
-                    (self.precision+self.recall))
+        """ F-score (positive float) """
+        return float(2 * (self.precision*self.recall /
+                          (self.precision+self.recall))) \
+            if self.tp > 0 else 0

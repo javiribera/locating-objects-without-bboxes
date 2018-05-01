@@ -20,6 +20,9 @@ class Logger():
         self.viz_val_gt_win = None
         self.viz_val_est_win = None
 
+        # Visdom only supports CPU Tensors
+        self.device = torch.device("cpu")
+
     def train_losses(self, terms, iteration_number, terms_legends=None):
         """Plot a new point of the training losses (scalars) to Visdom.
         All losses will be plotted in the same figure/window.
@@ -39,7 +42,21 @@ class Logger():
             raise ValueError('iteration_number must be a number, got %s'
                              % iteration_number)
 
-        y = torch.cat(terms).view(1, -1).data.cpu()
+        # Make terms CPU Tensors
+        curated_terms = []
+        for term in terms:
+            if isinstance(term, numbers.Number):
+                curated_term = torch.tensor([term])
+            elif isinstance(term, torch.Tensor):
+                curated_term = term
+            else:
+                raise ValueError('there is a term with an unsupported type'
+                                 f'({type(term)}')
+            curated_term = term.to(self.device)
+            curated_term = curated_term.view(1)
+            curated_terms.append(curated_term)
+
+        y = torch.cat(curated_terms).view(1, -1).data
         x = torch.Tensor([iteration_number]).repeat(1, len(terms))
         if terms_legends is None:
             terms_legends = ['Term %s' % t
@@ -104,20 +121,21 @@ class Logger():
             raise ValueError('iteration_number must be a number, got %s'
                              % iteration_number)
 
-        # Make terms Tensors
+        # Make terms CPU Tensors
         curated_terms = []
         for term in terms:
-            if isinstance(term, Variable):
-                curated_terms.append(term.data.cpu())
-            elif isinstance(term, numbers.Number):
-                curated_terms.append(torch.Tensor([term]))
-            elif isinstance(term, tensor.Tensor):
-                curated_terms.append(term)
+            if isinstance(term, numbers.Number):
+                curated_term = torch.tensor([term])
+            elif isinstance(term, torch.Tensor):
+                curated_term = term
             else:
                 raise ValueError('there is a term with an unsupported type'
                                  f'({type(term)}')
+            curated_term = curated_term.to(self.device)
+            curated_term = curated_term.view(1)
+            curated_terms.append(curated_term)
 
-        y = torch.stack(curated_terms).view(1, -1).cpu()
+        y = torch.stack(curated_terms).view(1, -1)
         x = torch.Tensor([iteration_number]).repeat(1, len(terms))
         if terms_legends is None:
             terms_legends = ['Term %s' % t for t in range(1, len(terms) + 1)]

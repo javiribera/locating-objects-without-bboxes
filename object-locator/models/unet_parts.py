@@ -55,7 +55,9 @@ class down(nn.Module):
 class up(nn.Module):
     def __init__(self, in_ch, out_ch):
         super(up, self).__init__()
-        self.up = nn.Upsample(scale_factor=2, mode='bilinear')
+        self.up = nn.Upsample(scale_factor=2,
+                              mode='bilinear',
+                              align_corners=True)
         # self.up = nn.ConvTranspose2d(in_ch, out_ch, 2, stride=2)
         self.conv = double_conv(in_ch, out_ch)
 

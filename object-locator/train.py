@@ -38,15 +38,16 @@ from . import argparser
 args = argparser.parse_command_args('training')
 
 # Tensor type to use, select CUDA or not
-tensortype = torch.cuda.FloatTensor if args.cuda else torch.FloatTensor
-tensortype_cpu = torch.FloatTensor
+torch.set_default_dtype(torch.float32)
+device_cpu = torch.device('cpu')
+device = torch.device('cuda') if args.cuda else device_cpu
 
 # Create directory for checkpoint to be saved
 if args.save:
     os.makedirs(os.path.split(args.save)[0], exist_ok=True)
 
 # Set seeds
-np.random.seed(0)
+np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed_all(args.seed)
@@ -65,8 +66,7 @@ training_transforms += [transforms.Normalize((0.5, 0.5, 0.5),
                                              (0.5, 0.5, 0.5))]
 trainset = XMLDataset(args.train_dir,
                       transforms=transforms.Compose(training_transforms),
-                      max_dataset_size=args.max_trainset_size,
-                      tensortype=tensortype_cpu)
+                      max_dataset_size=args.max_trainset_size)
 trainset_loader = DataLoader(trainset,
                              batch_size=args.batch_size,
                              drop_last=args.drop_last_batch,
@@ -81,8 +81,7 @@ if args.val_dir:
                             transforms.Normalize((0.5, 0.5, 0.5),
                                                  (0.5, 0.5, 0.5)),
                         ]),
-                        max_dataset_size=args.max_valset_size,
-                        tensortype=tensortype_cpu)
+                        max_dataset_size=args.max_valset_size)
     valset_loader = DataLoader(valset,
                                batch_size=args.eval_batch_size,
                                shuffle=True,
@@ -94,20 +93,18 @@ print('Building network... ', end='')
 model = unet_model.UNet(3, 1,
                         height=args.height,
                         width=args.width,
-                        known_n_points=args.n_points,
-                        tensortype=tensortype)
+                        known_n_points=args.n_points)
 print('DONE')
 print(model)
 model = nn.DataParallel(model)
-if args.cuda:
-    model.cuda()
+model.to(device)
 
 # Loss function
 loss_regress = nn.SmoothL1Loss()
 loss_loc = losses.WeightedHausdorffDistance(resized_height=args.height,
                                             resized_width=args.width,
                                             return_2_terms=True,
-                                            tensortype=tensortype)
+                                            device=device)
 l1_loss = nn.L1Loss(size_average=False)
 mse_loss = nn.MSELoss(reduce=False)
 
@@ -156,27 +153,31 @@ while epoch < args.epochs:
         # Set the module in training mode
         model.train()
 
-        # Pull info from this batch
-        target_locations = [dictt['locations'] for dictt in dictionaries]
-        target_count = torch.stack([dictt['count']
-                                    for dictt in dictionaries])
-        target_orig_heights = [dictt['orig_height'] for dictt in dictionaries]
-        target_orig_widths = [dictt['orig_width'] for dictt in dictionaries]
+        # Pull info from this batch and move to device
+        imgs = imgs.to(device)
+        target_locations = [dictt['locations'].to(device)
+                            for dictt in dictionaries]
+        target_count = [dictt['count'].to(device)
+                        for dictt in dictionaries]
+        target_orig_heights = [dictt['orig_height'].to(device)
+                               for dictt in dictionaries]
+        target_orig_widths = [dictt['orig_width'].to(device)
+                              for dictt in dictionaries]
 
-        imgs = Variable(imgs.type(tensortype))
-        target_locations = [Variable(t.type(tensortype))
-                            for t in target_locations]
-        target_count = Variable(target_count.type(tensortype))
-        target_orig_heights = Variable(tensortype(target_orig_heights))
-        target_orig_widths = Variable(tensortype(target_orig_widths))
+        # Lists -> Tensor batches
+        target_count = torch.stack(target_count)
+        target_orig_heights = torch.stack(target_orig_heights)
+        target_orig_widths = torch.stack(target_orig_widths)
         target_orig_sizes = torch.stack((target_orig_heights,
                                          target_orig_widths)).transpose(0, 1)
 
         # One training step
         optimizer.zero_grad()
         est_map, est_count = model.forward(imgs)
-        term1, term2 = loss_loc.forward(
-            est_map, target_locations, target_orig_sizes)
+        term1, term2 = loss_loc.forward(est_map,
+                                        target_locations,
+                                        target_orig_sizes)
+        est_count = est_count.view(-1)
         term3 = loss_regress.forward(est_count, target_count)
         term3 *= args.lambdaa
         loss = term1 + term2 + term3
@@ -185,7 +186,7 @@ while epoch < args.epochs:
 
         # Update progress bar
         loss_avg_this_epoch = (1/(batch_idx + 1))*(batch_idx * loss_avg_this_epoch +
-                                                   loss.data[0])
+                                                   loss.item())
         iter_train.set_postfix(
             avg_train_loss_this_epoch=f'{loss_avg_this_epoch:.1f}')
 
@@ -263,44 +264,49 @@ while epoch < args.epochs:
                     desc=f'Validating Epoch {epoch} ({len(valset)} images)')
     for batch_idx, (imgs, dictionaries) in enumerate(iter_val):
 
-        # Pull info from this batch
-        target_locations = [dictt['locations'] for dictt in dictionaries]
-        target_count = torch.stack([dictt['count']
-                                    for dictt in dictionaries])
-        target_orig_heights = [dictt['orig_height'] for dictt in dictionaries]
-        target_orig_widths = [dictt['orig_width'] for dictt in dictionaries]
+        # Pull info from this batch and move to device
+        imgs = imgs.to(device)
+        target_locations = [dictt['locations'].to(device)
+                            for dictt in dictionaries]
+        target_count = [dictt['count'].to(device)
+                        for dictt in dictionaries]
+        target_orig_heights = [dictt['orig_height'].to(device)
+                               for dictt in dictionaries]
+        target_orig_widths = [dictt['orig_width'].to(device)
+                              for dictt in dictionaries]
+
+        with torch.no_grad():
+            target_count = torch.stack(target_count)
+            target_orig_heights = torch.stack(target_orig_heights)
+            target_orig_widths = torch.stack(target_orig_widths)
+            target_orig_sizes = torch.stack((target_orig_heights,
+                                             target_orig_widths)).transpose(0, 1)
 
         if bool((target_count == 0).cpu().numpy()[0]):
             continue
 
-        imgs = Variable(imgs.type(tensortype), volatile=True)
-        target_locations = [Variable(t.type(tensortype), volatile=True)
-                            for t in target_locations]
-        target_count = Variable(target_count.type(tensortype), volatile=True)
-        target_orig_heights = Variable(tensortype(target_orig_heights))
-        target_orig_widths = Variable(tensortype(target_orig_widths))
-        target_orig_sizes = torch.stack((target_orig_heights,
-                                         target_orig_widths)).transpose(0, 1)
-
         # Feed-forward
-        est_map, est_count = model.forward(imgs)
+        with torch.no_grad():
+            est_map, est_count = model.forward(imgs)
 
         # Tensor -> int
         est_count_int = int(torch.round(est_count).data.cpu().numpy()[0])
         target_count_int = int(torch.round(target_count).data.cpu().numpy()[0])
 
         # The 3 terms
-        term1, term2 = loss_loc.forward(
-            est_map, target_locations, target_orig_sizes)
-        term3 = loss_regress.forward(est_count, target_count)
-        term3 *= args.lambdaa
-        sum_term1 += term1
-        sum_term2 += term2
-        sum_term3 += term3
+        with torch.no_grad():
+            term1, term2 = loss_loc.forward(
+                est_map, target_locations, target_orig_sizes)
+            est_count = est_count.view(-1)
+            term3 = loss_regress.forward(est_count, target_count)
+            term3 *= args.lambdaa
+        sum_term1 += term1.item()
+        sum_term2 += term2.item()
+        sum_term3 += term3.item()
         sum_loss += term1 + term2 + term3
 
         # Update progress bar
-        loss_avg_this_epoch = sum_loss.data[0] / (batch_idx + 1)
+        loss_avg_this_epoch = sum_loss.item() / (batch_idx + 1)
         iter_val.set_postfix(
             avg_val_loss_this_epoch=f'{loss_avg_this_epoch:.1f}-----')
 
@@ -326,7 +332,7 @@ while epoch < args.epochs:
                 fit(c).means_.astype(np.int)
 
             target_locations = \
-                target_locations[0].data.cpu().numpy().reshape(-1, 2)
+                target_locations[0].to(device_cpu).numpy().reshape(-1, 2)
         judge.feed_points(centroids, target_locations)
         judge.feed_count(est_count_int, target_count_int)
 
@@ -335,12 +341,12 @@ while epoch < args.epochs:
 
             # Send input and output images (first one in the batch).
             # Resize to original size
-            orig_shape = target_orig_sizes[0].data.cpu().numpy().tolist()
-            orig_img_origsize = ((skimage.transform.resize(imgs[0].data.squeeze().cpu().numpy().transpose((1, 2, 0)),
+            orig_shape = target_orig_sizes[0].to(device_cpu).numpy().tolist()
+            orig_img_origsize = ((skimage.transform.resize(imgs[0].to(device_cpu).squeeze().numpy().transpose((1, 2, 0)),
                                                            output_shape=orig_shape,
                                                            mode='constant') + 1) / 2.0 * 255.0).\
                 astype(np.float32).transpose((2, 0, 1))
-            est_map_origsize = skimage.transform.resize(est_map[0].data.unsqueeze(0).cpu().numpy().transpose((1, 2, 0)),
+            est_map_origsize = skimage.transform.resize(est_map[0].to(device_cpu).unsqueeze(0).numpy().transpose((1, 2, 0)),
                                                         output_shape=orig_shape,
                                                         mode='constant').\
                 astype(np.float32).transpose((2, 0, 1))
@@ -361,8 +367,8 @@ while epoch < args.epochs:
             #           win=7)
             if args.paint:
                 # Send original image with a cross at the estimated centroids to Visdom
-                image_with_x = tensortype(imgs.data[0, :, :].squeeze().size()).\
-                    copy_(imgs.data[0, :, :].squeeze())
+                image_with_x = tensortype(imgs[0, :, :].squeeze().size()).\
+                    copy_(imgs[0, :, :].squeeze())
                 image_with_x = ((image_with_x + 1) / 2.0 * 255.0)
                 image_with_x = image_with_x.cpu().numpy()
                 image_with_x = np.moveaxis(image_with_x, 0, 2).copy()

@@ -9,17 +9,13 @@ from .unet_parts import *
 class UNet(nn.Module):
     def __init__(self, n_channels, n_classes,
                  height, width,
-                 known_n_points=None,
-                 tensortype=torch.FloatTensor):
+                 known_n_points=None):
         super(UNet, self).__init__()
 
         # With this network depth, there is a minimum image size
         if height < 256 or width < 256:
             raise ValueError('Minimum input image size is 256x256, got {}x{}'.\
                              format(height, width))
-
-        # Type of tensor the output will be
-        self.tensortype = tensortype
 
         self.inc = inconv(n_channels, 64)
         self.down1 = down(64, 128)
@@ -84,9 +80,10 @@ class UNet(nn.Module):
             regression_features = torch.cat((x_flat, x9_flat), dim=1)
             regression = self.regressor(regression_features)
             regression = self.regressor_nonlin(regression)
+
             return x, regression
         else:
-            n_pts = Variable(self.tensortype([self.known_n_points]*batch_size))
+            n_pts = torch.tensor([self.known_n_points]*batch_size)
             return x, n_pts
         # summ = torch.sum(x)
         # count = self.lin(summ)

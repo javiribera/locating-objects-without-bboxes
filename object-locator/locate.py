@@ -36,8 +36,13 @@ from .metrics import Judge
 # Parse command line arguments
 args = argparser.parse_command_args('testing')
 
+# Tensor type to use, select CUDA or not
+torch.set_default_dtype(torch.float32)
+device_cpu = torch.device('cpu')
+device = torch.device('cuda') if args.cuda else device_cpu
+
 # Set seeds
-np.random.seed(0)
+np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed_all(args.seed)
@@ -48,10 +53,6 @@ os.makedirs(os.path.join(args.out_dir, 'est_map_thresholded'), exist_ok=True)
 if args.paint:
     os.makedirs(os.path.join(args.out_dir, 'painted'), exist_ok=True)
 
-# Tensor type to use, select CUDA or not
-tensortype = torch.cuda.FloatTensor if args.cuda else torch.FloatTensor
-tensortype_cpu = torch.FloatTensor
-
 # Data loading code
 testset = XMLDataset(args.dataset,
                      transforms=transforms.Compose([
@@ -61,8 +62,7 @@ testset = XMLDataset(args.dataset,
                                               (0.5, 0.5, 0.5)),
                      ]),
                      ignore_gt=not args.evaluate,
-                     max_dataset_size=args.max_testset_size,
-                     tensortype=tensortype_cpu)
+                     max_dataset_size=args.max_testset_size)
 testset_loader = data.DataLoader(testset,
                                  batch_size=1,
                                  num_workers=args.nThreads,
@@ -75,7 +75,7 @@ resized_size = np.array([args.height, args.width])
 criterion_training = losses.WeightedHausdorffDistance(resized_height=args.height,
                                                       resized_width=args.width,
                                                       return_2_terms=True,
-                                                      tensortype=tensortype)
+                                                      device=device)
 
 # Restore saved checkpoint (model weights)
 print("Loading checkpoint '{}' ...".format(args.model))
@@ -94,27 +94,23 @@ if os.path.isfile(args.model):
             model = unet_model.UNet(3, 1,
                                     known_n_points=None,
                                     height=args.height,
-                                    width=args.width,
-                                    tensortype=tensortype)
+                                    width=args.width)
         else:
             # The checkpoint tells us the # of points to estimate
             model = unet_model.UNet(3, 1,
                                     known_n_points=checkpoint['n_points'],
                                     height=args.height,
-                                    width=args.width,
-                                    tensortype=tensortype)
+                                    width=args.width)
     else:
         # The user tells us the # of points to estimate
         model = unet_model.UNet(3, 1,
                                 known_n_points=args.n_points,
                                 height=args.height,
-                                width=args.width,
-                                tensortype=tensortype)
+                                width=args.width)
 
     # Parallelize
     model = nn.DataParallel(model)
-    if args.cuda:
-        model.cuda()
+    model = model.to(device)
 
     # Load model in checkpoint
     model.load_state_dict(checkpoint['model'])
@@ -140,33 +136,36 @@ if testset.there_is_gt:
 for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                                             total=len(testset_loader)):
 
-    imgs = Variable(imgs.type(tensortype), volatile=True)
+    # Move to device
+    imgs = imgs.to(device)
 
     if testset.there_is_gt:
-        # Pull info from this batch
-        target_locations = [dictt['locations'] for dictt in dictionaries]
-        target_count = torch.stack([dictt['count']
-                                    for dictt in dictionaries])
-        # Prepare targets
-        target_locations = [Variable(t.type(tensortype), volatile=True)
-                            for t in target_locations]
-        target_count = Variable(target_count.type(tensortype), volatile=True)
+        # Pull info from this batch and move to device
+        target_locations = [dictt['locations'].to(device)
+                            for dictt in dictionaries]
+        target_count = [dictt['count'].to(device)
+                        for dictt in dictionaries]
+        target_orig_heights = [dictt['orig_height'].to(device)
+                               for dictt in dictionaries]
+        target_orig_widths = [dictt['orig_width'].to(device)
+                              for dictt in dictionaries]
 
-    # Original size
-    target_orig_heights = [dictt['orig_height'] for dictt in dictionaries]
-    target_orig_widths = [dictt['orig_width'] for dictt in dictionaries]
-    target_orig_heights = tensortype(target_orig_heights)
-    target_orig_widths = tensortype(target_orig_widths)
-    target_orig_sizes = torch.stack(
-        (target_orig_heights, target_orig_widths)).transpose(0, 1)
-    origsize = (dictionaries[0]['orig_height'],
-                dictionaries[0]['orig_width'])
+    # Lists -> Tensor batches
+    if testset.there_is_gt:
+        target_count = torch.stack(target_count)
+    target_orig_heights = torch.stack(target_orig_heights)
+    target_orig_widths = torch.stack(target_orig_widths)
+    target_orig_sizes = torch.stack((target_orig_heights,
+                                     target_orig_widths)).transpose(0, 1)
+    origsize = (dictionaries[0]['orig_height'].item(),
+                dictionaries[0]['orig_width'].item())
 
     # Feed forward
-    est_map, est_count = model.forward(imgs)
+    with torch.no_grad():
+        est_map, est_count = model.forward(imgs)
 
     # Save estimated map to disk
-    est_map_numpy = est_map.data[0, :, :].cpu().numpy()
+    est_map_numpy = est_map[0, :, :].to(device_cpu).numpy()
     est_map_numpy_origsize = \
         skimage.transform.resize(est_map_numpy,
                                  output_shape=origsize,
@@ -186,7 +185,7 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
         ahd = criterion_training.max_dist
         centroids = np.array([])
     else:
-        n_components = int(torch.round(est_count[0]).data.cpu().numpy()[0])
+        n_components = int(torch.round(est_count[0]).to(device_cpu).numpy()[0])
         # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples
         n_components = max(min(n_components, x.size), 1)
         centroids = mixture.GaussianMixture(n_components=n_components,
@@ -203,7 +202,8 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
     # Paint red dots if user asked for it
     if args.paint:
         # Paint a circle in the original image at the estimated location
-        image_with_x = np.moveaxis(imgs.data[0].cpu().numpy(), 0, 2).copy()
+        image_with_x = np.moveaxis(imgs[0, :, :].to(device_cpu).numpy(),
+                                   0, 2).copy()
         image_with_x = \
             skimage.transform.resize(image_with_x,
                                      output_shape=origsize,
@@ -211,6 +211,7 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
         image_with_x = ((image_with_x + 1) / 2.0 * 255.0)
         for y, x in centroids:
             image_with_x = cv2.circle(image_with_x, (x, y), 3, [255, 0, 0], -1)
+            pass
         # Save original image with circle to disk
         image_with_x = image_with_x[:, :, ::-1]
         cv2.imwrite(os.path.join(args.out_dir,
@@ -219,13 +220,13 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                     image_with_x)
 
     # Convert to numpy
-    est_count = est_count.data.cpu().numpy()[0][0]
+    est_count = est_count.to(device_cpu).numpy()[0][0]
 
     if args.evaluate:
         # Convert to numpy
-        target_count = target_count.data.cpu().numpy()[0][0]
+        target_count = target_count.item()
         target_locations = \
-            target_locations[0].data.cpu().numpy().reshape(-1, 2)
+            target_locations[0].to(device_cpu).numpy().reshape(-1, 2)
 
         # Normalize to use locations in the original image
         norm_factor = target_orig_sizes[0].unsqueeze(0).cpu().numpy() \

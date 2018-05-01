@@ -10,7 +10,9 @@ from sklearn.neighbors.kde import KernelDensity
 import skimage.io
 from matplotlib import pyplot as plt
 from torch import nn
-from torch.autograd import Variable
+
+
+torch.set_default_dtype(torch.float32)
 
 
 def _assert_no_grad(variables):
@@ -97,27 +99,30 @@ class WeightedHausdorffDistance(nn.Module):
     def __init__(self,
                  resized_height, resized_width,
                  return_2_terms=False,
-                 tensortype=torch.FloatTensor):
+                 device=torch.device('cpu')):
         """
         :param resized_height: Number of rows in the image.
         :param resized_width: Number of columns in the image.
-        :param return_2_terms: Whether to return the 2 terms of the CD instead of their sum. Default: False.
-        :param tensortype: The result will be in this Tensor type.
+        :param return_2_terms: Whether to return the 2 terms
+                               of the WHD instead of their sum.
+                               Default: False.
+        :param device: Device where all Tensors will reside.
         """
         super(nn.Module, self).__init__()
 
-        self.tensortype = tensortype
-
         # Prepare all possible (row, col) locations in the image
         self.height, self.width = resized_height, resized_width
-        self.resized_size = Variable(tensortype([resized_height,
-                                                 resized_width]))
+        self.resized_size = torch.tensor([resized_height,
+                                          resized_width],
+                                         dtype=torch.get_default_dtype(),
+                                         device=device)
         self.max_dist = math.sqrt(resized_height**2 + resized_width**2)
         self.n_pixels = resized_height * resized_width
         self.all_img_locations = torch.from_numpy(cartesian([np.arange(resized_height),
                                                              np.arange(resized_width)]))
-        self.all_img_locations = self.all_img_locations.type(tensortype)
-        self.all_img_locations = Variable(self.all_img_locations)
+        # Convert to appropiate type
+        self.all_img_locations = torch.tensor(self.all_img_locations,
+                                              dtype=torch.get_default_dtype()).to(device)
 
         self.return_2_terms = return_2_terms
 
@@ -153,8 +158,8 @@ class WeightedHausdorffDistance(nn.Module):
         batch_size = prob_map.shape[0]
         assert batch_size == len(gt)
 
-        terms_1 = []  # Variable(self.tensortype(batch_size))
-        terms_2 = []  # Variable(self.tensortype(batch_size))
+        terms_1 = []
+        terms_2 = []
         for b in range(batch_size):
 
             # One by one
@@ -165,7 +170,7 @@ class WeightedHausdorffDistance(nn.Module):
 
             # Pairwise distances between all possible locations and the GTed locations
             n_gt_pts = gt_b.size()[0]
-            normalized_x = norm_factor.repeat(self.n_pixels, 1)*\
+            normalized_x = norm_factor.repeat(self.n_pixels, 1) *\
                 self.all_img_locations
             normalized_y = norm_factor.repeat(len(gt_b), 1)*gt_b
             d_matrix = cdist(normalized_x, normalized_y)
@@ -185,7 +190,7 @@ class WeightedHausdorffDistance(nn.Module):
             d_div_p = torch.min((d_matrix + eps) /
                                 (p_replicated**alpha + eps / self.max_dist), 0)[0]
             d_div_p = torch.clamp(d_div_p, 0, self.max_dist)
-            term_2 = torch.mean(d_div_p, 0)[0]
+            term_2 = torch.mean(d_div_p, 0)
 
             # terms_1[b] = term_1
             # terms_2[b] = term_2

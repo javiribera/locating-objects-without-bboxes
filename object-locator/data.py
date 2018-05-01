@@ -15,12 +15,14 @@ from . import get_image_size
 
 IMG_EXTENSIONS = ['.png', '.jpeg', '.jpg', '.tiff']
 
+torch.set_default_dtype(torch.float32)
+
+
 class CSVDataset(data.Dataset):
     def __init__(self,
                  directory,
                  transforms=None,
-                 max_dataset_size=float('inf'),
-                 tensortype=torch.FloatTensor):
+                 max_dataset_size=float('inf')):
         """CSVDataset.
         The sample images of this dataset must be all inside one directory.
         Inside the same directory, there must be one CSV file.
@@ -30,14 +32,10 @@ class CSVDataset(data.Dataset):
         :param directory: Directory with all the images and the CSV file.
         :param transform: Transform to be applied to each image.
         :param max_dataset_size: Only use the first N images in the directory.
-        :param tensortype: The data and labels will be returned in this type format.
         """
 
         self.root_dir = directory
         self.transforms = transforms
-
-        # Type of tensor the output will be
-        self.tensortype = tensortype
 
         # Get groundtruth from CSV file
         listfiles = os.listdir(directory)
@@ -99,10 +97,11 @@ class CSVDataset(data.Dataset):
             list(loc) for loc in dictionary['locations']]
 
         # list --> Tensors
-        dictionary['locations'] = self.tensortype(
-            dictionary['locations'])
-        dictionary['count'] = self.tensortype(
-            [dictionary['count']])
+        with torch.no_grad():
+            dictionary['locations'] = torch.tensor(
+                dictionary['locations'], dtype=torch.get_default_dtype())
+            dictionary['count'] = torch.tensor(
+                [dictionary['count']], dtype=torch.get_default_dtype())
 
         img_transformed = img
         transformed_dictionary = dictionary
@@ -118,7 +117,8 @@ class CSVDataset(data.Dataset):
 
         # Prevents crash when making a batch out of an empty tensor
         if dictionary['count'][0] == 0:
-            dictionary['locations'] = self.tensortype([-1, -1])
+            with torch.no_grad():
+                dictionary['locations'] = torch.tensor([-1, -1])
 
         return (img_transformed, transformed_dictionary)
 
@@ -217,17 +217,21 @@ class ScaleImageAndLabel(transforms.Scale):
 
         # Scale GT
         if 'locations' in dictionary:
-            dictionary['locations'] *= torch.FloatTensor([scale_h, scale_w])
-            dictionary['locations'] = torch.round(dictionary['locations'])
-            ys = torch.clamp(dictionary['locations'][:, 0], 0, self.size[0])
-            xs = torch.clamp(dictionary['locations'][:, 1], 0, self.size[1])
-            dictionary['locations'] = torch.cat((ys.view(-1, 1),
-                                                 xs.view(-1, 1)),
-                                                1)
+            # print(dictionary['locations'].type())
+            # print(torch.tensor([scale_h, scale_w]).type())
+            with torch.no_grad():
+                dictionary['locations'] *= torch.tensor([scale_h, scale_w])
+                dictionary['locations'] = torch.round(dictionary['locations'])
+                ys = torch.clamp(dictionary['locations'][:, 0], 0, self.size[0])
+                xs = torch.clamp(dictionary['locations'][:, 1], 0, self.size[1])
+                dictionary['locations'] = torch.cat((ys.view(-1, 1),
+                                                     xs.view(-1, 1)),
+                                                    1)
 
         # Indicate new size in dictionary
-        dictionary['resized_height'] = self.size[0]
-        dictionary['resized_width'] = self.size[1]
+        with torch.no_grad():
+            dictionary['resized_height'] = self.size[0]
+            dictionary['resized_width'] = self.size[1]
 
         return img, dictionary
 
@@ -267,8 +271,7 @@ class XMLDataset(data.Dataset):
                  directory,
                  transforms=None,
                  max_dataset_size=float('inf'),
-                 ignore_gt=False,
-                 tensortype=torch.FloatTensor):
+                 ignore_gt=False):
         """XMLDataset.
         The sample images of this dataset must be all inside one directory.
          Inside the same directory, there must be one XML file as described by
@@ -281,14 +284,10 @@ class XMLDataset(data.Dataset):
         :param max_dataset_size: Only use the first N images in the directory.
         :param ignore_gt: Ignore the GT in the XML file,
                           i.e, provide samples without plant locations or counts.
-        :param tensortype: The data and labels will be returned in this type format.
         """
 
         self.root_dir = directory
         self.transforms = transforms
-
-        # Type of tensor the output will be
-        self.tensortype = tensortype
 
         # Get list of files in the dataset directory,
         # and the filename of the XML
@@ -307,8 +306,8 @@ class XMLDataset(data.Dataset):
         self.there_is_gt = (xml_filename is not None) and (not ignore_gt)
 
         # Ignore files that are not images
-        listfiles = [f for f in listfiles 
-                     if any(f.lower().endswith(ext) for ext in IMG_EXTENSIONS)] 
+        listfiles = [f for f in listfiles
+                     if any(f.lower().endswith(ext) for ext in IMG_EXTENSIONS)]
 
         # XML does not exist (no GT available)
         if not self.there_is_gt:
@@ -369,6 +368,9 @@ class XMLDataset(data.Dataset):
                         img_abspath = os.path.join(self.root_dir, filename)
                         orig_width, orig_height = \
                             get_image_size.get_image_size(img_abspath)
+                        with torch.no_grad():
+                            orig_height = torch.tensor(orig_height, dtype=torch.get_default_dtype())
+                            orig_width = torch.tensor(orig_width, dtype=torch.get_default_dtype())
                         self.dict[filename] = {'filename': filename,
                                                'count': count,
                                                'locations': locations,
@@ -407,15 +409,21 @@ class XMLDataset(data.Dataset):
             img_abspath = os.path.join(self.root_dir, filename)
 
             # list --> Tensors
-            dictionary['locations'] = self.tensortype(
-                dictionary['locations'])
-            dictionary['count'] = self.tensortype(
-                [dictionary['count']])
+            with torch.no_grad():
+                dictionary['locations'] = torch.tensor(
+                    dictionary['locations'],
+                    dtype=torch.get_default_dtype())
+                dictionary['count'] = torch.tensor(
+                    dictionary['count'],
+                    dtype=torch.get_default_dtype())
         else:
             filename = self.listfiles[idx]
             img_abspath = os.path.join(self.root_dir, filename)
             orig_width, orig_height = \
                 get_image_size.get_image_size(img_abspath)
+            with torch.no_grad():
+                orig_height = torch.tensor(orig_height, dtype=torch.get_default_dtype())
+                orig_width = torch.tensor(orig_width, dtype=torch.get_default_dtype())
             dictionary = {'filename': self.listfiles[idx],
                           'orig_width': orig_width,
                           'orig_height': orig_height}
@@ -435,7 +443,9 @@ class XMLDataset(data.Dataset):
                     img_transformed = transform(img_transformed)
 
         # Prevents crash when making a batch out of an empty tensor
-        if self.there_is_gt and dictionary['count'][0] == 0:
-            dictionary['locations'] = self.tensortype([-1, -1])
+        if self.there_is_gt and dictionary['count'].item() == 0:
+            with torch.no_grad():
+                dictionary['locations'] = torch.tensor([-1, -1])
 
         return (img_transformed, transformed_dictionary)
+

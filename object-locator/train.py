@@ -20,6 +20,7 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 from sklearn import mixture
 import skimage.transform
+from peterpy import peter
 
 from . import losses
 from .models import unet_model
@@ -89,13 +90,11 @@ if args.val_dir:
                                collate_fn=csv_collator)
 
 # Model
-print('Building network... ', end='')
-model = unet_model.UNet(3, 1,
-                        height=args.height,
-                        width=args.width,
-                        known_n_points=args.n_points)
-print('DONE')
-print(model)
+with peter('Building network'):
+    model = unet_model.UNet(3, 1,
+                            height=args.height,
+                            width=args.width,
+                            known_n_points=args.n_points)
 model = nn.DataParallel(model)
 model.to(device)
 
@@ -122,18 +121,18 @@ lowest_mahd = np.infty
 
 # Restore saved checkpoint (model weights + epoch + optimizer state)
 if args.resume:
-    print("Loading checkpoint '{}' ...".format(args.resume))
-    if os.path.isfile(args.resume):
-        checkpoint = torch.load(args.resume)
-        start_epoch = checkpoint['epoch']
-        lowest_mahd = checkpoint['mahd']
-        model.load_state_dict(checkpoint['model'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        print("\__ loaded checkpoint '{}' (now on epoch {})"
-              .format(args.resume, checkpoint['epoch']))
-    else:
-        print("\__ E: no checkpoint found at '{}'".format(args.resume))
-        exit(-1)
+    with peter('Loading checkpoint'):
+        if os.path.isfile(args.resume):
+            checkpoint = torch.load(args.resume)
+            start_epoch = checkpoint['epoch']
+            lowest_mahd = checkpoint['mahd']
+            model.load_state_dict(checkpoint['model'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            print(f"\n\__ loaded checkpoint '{args.resume}'" 
+                  "(now on epoch {checkpoint['epoch']})")
+        else:
+            print(f"\n\__ E: no checkpoint found at '{args.resume}'")
+            exit(-1)
 
 # Time at the last evaluation
 tic_train = -np.infty

@@ -26,6 +26,7 @@ import skimage.transform
 from .data import XMLDataset
 from .data import csv_collator
 from .data import ScaleImageAndLabel
+from peterpy import peter
 
 from . import losses
 from . import argparser
@@ -78,49 +79,49 @@ criterion_training = losses.WeightedHausdorffDistance(resized_height=args.height
                                                       device=device)
 
 # Restore saved checkpoint (model weights)
-print("Loading checkpoint '{}' ...".format(args.model))
+with peter("Loading checkpoint"):
 
-# Pretrained models that come with this package
-if args.model == 'unet_256x256_sorghum':
-    args.model = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                              'models',
-                              'unet_256x256_sorghum.ckpt')
-if os.path.isfile(args.model):
-    checkpoint = torch.load(args.model)
-    # Model
-    if args.n_points is None:
-        if 'n_points' not in checkpoint:
-            # Model will also estimate # of points
-            model = unet_model.UNet(3, 1,
-                                    known_n_points=None,
-                                    height=args.height,
-                                    width=args.width)
+    # Pretrained models that come with this package
+    if args.model == 'unet_256x256_sorghum':
+        args.model = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                  'models',
+                                  'unet_256x256_sorghum.ckpt')
+    if os.path.isfile(args.model):
+        checkpoint = torch.load(args.model)
+        # Model
+        if args.n_points is None:
+            if 'n_points' not in checkpoint:
+                # Model will also estimate # of points
+                model = unet_model.UNet(3, 1,
+                                        known_n_points=None,
+                                        height=args.height,
+                                        width=args.width)
+            else:
+                # The checkpoint tells us the # of points to estimate
+                model = unet_model.UNet(3, 1,
+                                        known_n_points=checkpoint['n_points'],
+                                        height=args.height,
+                                        width=args.width)
         else:
-            # The checkpoint tells us the # of points to estimate
+            # The user tells us the # of points to estimate
             model = unet_model.UNet(3, 1,
-                                    known_n_points=checkpoint['n_points'],
+                                    known_n_points=args.n_points,
                                     height=args.height,
                                     width=args.width)
+
+        # Parallelize
+        model = nn.DataParallel(model)
+        model = model.to(device)
+
+        # Load model in checkpoint
+        model.load_state_dict(checkpoint['model'])
+        print(f"\n\__ loaded checkpoint '{args.model}'")
+        # print(model)
     else:
-        # The user tells us the # of points to estimate
-        model = unet_model.UNet(3, 1,
-                                known_n_points=args.n_points,
-                                height=args.height,
-                                width=args.width)
+        print(f"\n\__  E: no checkpoint found at '{args.model}'")
+        exit(-1)
 
-    # Parallelize
-    model = nn.DataParallel(model)
-    model = model.to(device)
-
-    # Load model in checkpoint
-    model.load_state_dict(checkpoint['model'])
-    print("\__ loaded checkpoint '{}'".format(args.model))
-    # print(model)
-else:
-    print("\__  E: no checkpoint found at '{}'".format(args.model))
-    exit(-1)
-
-tic = time.time()
+    tic = time.time()
 
 
 # Empty output CSV

@@ -217,10 +217,9 @@ def parse_command_args(training_or_testing):
 
         args = parser.parse_args()
 
+        if not args.no_cuda and not torch.cuda.is_available():
+            print('W: No GPU (CUDA) devices detected in your system, running with --no-gpu option...') 
         args.cuda = not args.no_cuda and torch.cuda.is_available()
-        # For now we cannot use models trained on GPU to do inference with CPU
-        if not args.cuda:
-            raise NotImplementedError('You must have and use a GPU with CUDA.')
 
         args.paint = not args.no_paint
 

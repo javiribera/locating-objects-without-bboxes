@@ -87,7 +87,10 @@ with peter("Loading checkpoint"):
                                   'models',
                                   'unet_256x256_sorghum.ckpt')
     if os.path.isfile(args.model):
-        checkpoint = torch.load(args.model)
+        if args.cuda:
+            checkpoint = torch.load(args.model)
+        else:
+            checkpoint = torch.load(args.model, map_location=lambda storage, loc: storage)
         # Model
         if args.n_points is None:
             if 'n_points' not in checkpoint:

@@ -22,6 +22,11 @@ if __name__ == '__main__':
     parser.add_argument('--hist',
                         metavar='DIR',
                         help='Directory with histograms.')
+    parser.add_argument('--res',
+                        metavar='DIR',
+                        type=float,
+                        default=1,
+                        help='Resolution in centimeters.')
     args = parser.parse_args()
 
     # Import GT from CSV
@@ -39,7 +44,10 @@ if __name__ == '__main__':
         # 2. Compute distances (chain-like) between plants
         dists = list(map(distance, locs[:-1], locs[1:]))
 
-        # 3. Statistics!
+        # 3. pixels -> centimeters
+        dists = [d*args.res for d in dists]
+
+        # 4. Statistics!
         mean = statistics.mean(dists)
         median = statistics.median(dists)
         std = statistics.stdev(dists)
@@ -47,10 +55,10 @@ if __name__ == '__main__':
         medians.append(median)
         stds.append(std)
 
-        # 4. Put in CSV
-        df.loc[idx, 'mean_intrarow_spacing'] = mean
-        df.loc[idx, 'median_intrarow_spacing'] = median
-        df.loc[idx, 'stdev_intrarow_spacing'] = std
+        # 5. Put in CSV
+        df.loc[idx, 'mean_intrarow_spacing_in_cm'] = mean
+        df.loc[idx, 'median_intrarow_spacing_in_cm'] = median
+        df.loc[idx, 'stdev_intrarow_spacing_in_cm'] = std
 
     # Save to disk as CSV
     df.to_csv(args.out_csv)
@@ -58,7 +66,7 @@ if __name__ == '__main__':
     if args.hist is not None:
         os.makedirs(args.hist, exist_ok=True)
 
-        # 5. Generate nice graphs for presentation
+        # 6. Generate nice graphs for presentation
         # Means
         fig = plt.figure()
         n, bins, patches = plt.hist(
@@ -69,7 +77,7 @@ if __name__ == '__main__':
         plt.xlabel('Average intra-row spacing [cm]')
         plt.ylabel('Probability')
         plt.title('Histogram of average intra-row spacing')
-        plt.axis([10, 30, 0, 0.3])
+        plt.axis([5, 30, 0, 0.3])
         plt.grid(True)
         plt.legend()
         fig.savefig(os.path.join(
@@ -86,7 +94,7 @@ if __name__ == '__main__':
         plt.xlabel('Median of intra-row spacing [cm]')
         plt.ylabel('Probability')
         plt.title('Histogram of medians intra-row spacing')
-        plt.axis([10, 30, 0, 0.3])
+        plt.axis([5, 30, 0, 0.3])
         plt.grid(True)
         plt.legend()
         fig.savefig(os.path.join(

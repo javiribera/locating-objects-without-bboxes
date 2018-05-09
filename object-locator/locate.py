@@ -7,6 +7,7 @@ import time
 import shutil
 from parse import parse
 import math
+from collections import OrderedDict
 
 import cv2
 from tqdm import tqdm
@@ -90,7 +91,8 @@ with peter("Loading checkpoint"):
         if args.cuda:
             checkpoint = torch.load(args.model)
         else:
-            checkpoint = torch.load(args.model, map_location=lambda storage, loc: storage)
+            checkpoint = torch.load(
+                args.model, map_location=lambda storage, loc: storage)
         # Model
         if args.n_points is None:
             if 'n_points' not in checkpoint:
@@ -113,11 +115,20 @@ with peter("Loading checkpoint"):
                                     width=args.width)
 
         # Parallelize
-        model = nn.DataParallel(model)
+        if args.cuda:
+            model = nn.DataParallel(model)
         model = model.to(device)
 
         # Load model in checkpoint
-        model.load_state_dict(checkpoint['model'])
+        if args.cuda:
+            state_dict = checkpoint['model']
+        else:
+            # remove 'module.' of DataParallel
+            state_dict = OrderedDict()
+            for k, v in checkpoint['model'].items():
+                name = k[7:]
+                state_dict[name] = v
+        model.load_state_dict(state_dict)
         print(f"\n\__ loaded checkpoint '{args.model}'")
         # print(model)
     else:
@@ -262,7 +273,7 @@ if args.evaluate:
 
     print('\__  Location metrics for all the testing set, r=0, ..., 15')
     for judge in judges:
-        print(f'r={judge.r} => Precision: {judge.precision:.3f}, '\
+        print(f'r={judge.r} => Precision: {judge.precision:.3f}, '
               f'Recall: {judge.recall:.3f}, F-score: {judge.fscore:.3f}')
 
         # Accumulate precision and recall in the CSV dataframe
@@ -283,8 +294,8 @@ if args.evaluate:
     print(f'\__  RMSE for all the testing set: {judge.rmse:.3f}')
 
     # Write CSV to disk
-    df_prec_n_rec.to_csv(os.path.join(args.out_dir, 'precision_and_recall.csv'))
+    df_prec_n_rec.to_csv(os.path.join(
+        args.out_dir, 'precision_and_recall.csv'))
 
 print('It took %s seconds to evaluate all the testing set.' %
       int(time.time() - tic))
-

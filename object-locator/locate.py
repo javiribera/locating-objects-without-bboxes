@@ -240,7 +240,8 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
 
         # Compute metrics for each value of r (for each Judge)
         for judge in judges:
-            judge.feed_points(centroids, target_locations_wrt_orig)
+            judge.feed_points(centroids, target_locations_wrt_orig,
+                              max_ahd=math.sqrt(origsize[0]**2 + origsize[1]**2))
             judge.feed_count(est_count, target_count)
 
     df = pd.DataFrame(data={'count': est_count,

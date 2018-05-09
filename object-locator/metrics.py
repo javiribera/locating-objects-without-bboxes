@@ -46,7 +46,7 @@ class Judge():
         self._n_calls_to_feed_points = 0
         self._n_calls_to_feed_count = 0
 
-    def feed_points(self, pts, gt):
+    def feed_points(self, pts, gt, max_ahd=np.inf):
         """
         Evaluate the location metrics of one set of estimations.
          This set can correspond to the estimated points and
@@ -56,6 +56,7 @@ class Judge():
 
         :param pts: List of estmated points.
         :param gt: List of ground truth points.
+        :param max_ahd: Maximum AHD possible to return if any set is empty. Default: inf.
         """
 
         if len(pts) == 0:
@@ -80,7 +81,8 @@ class Judge():
         self.fn += fn
 
         # Evaluation using the Averaged Hausdorff Distance
-        ahd = losses.averaged_hausdorff_distance(pts, gt)
+        ahd = losses.averaged_hausdorff_distance(pts, gt,
+                                                 max_ahd=max_ahd)
         self._sum_ahd += ahd
         self._n_calls_to_feed_points += 1
 

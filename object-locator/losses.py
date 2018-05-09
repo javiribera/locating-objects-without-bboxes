@@ -35,15 +35,19 @@ def cdist(x, y):
     return distances
 
 
-def averaged_hausdorff_distance(set1, set2):
+def averaged_hausdorff_distance(set1, set2, max_ahd=np.inf):
     """
     Compute the Averaged Hausdorff Distance function
      between two unordered sets of points (the function is symmetric).
      Batches are not supported, so squeeze your inputs first!
     :param set1: Array/list where each row/element is an N-dimensional point.
     :param set2: Array/list where each row/element is an N-dimensional point.
+    :param max_ahd: Maximum AHD possible to return if any set is empty. Default: inf.
     :return: The Averaged Hausdorff Distance between set1 and set2.
     """
+
+    if len(set1) == 0 or len(set2) == 0:
+        return max_ahd
 
     set1 = np.array(set1)
     set2 = np.array(set2)

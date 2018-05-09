@@ -143,16 +143,16 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
     # Move to device
     imgs = imgs.to(device)
 
+    # Pull info from this batch and move to device
     if testset.there_is_gt:
-        # Pull info from this batch and move to device
         target_locations = [dictt['locations'].to(device)
                             for dictt in dictionaries]
         target_count = [dictt['count'].to(device)
                         for dictt in dictionaries]
-        target_orig_heights = [dictt['orig_height'].to(device)
-                               for dictt in dictionaries]
-        target_orig_widths = [dictt['orig_width'].to(device)
-                              for dictt in dictionaries]
+    target_orig_heights = [dictt['orig_height'].to(device)
+                           for dictt in dictionaries]
+    target_orig_widths = [dictt['orig_width'].to(device)
+                          for dictt in dictionaries]
 
     # Lists -> Tensor batches
     if testset.there_is_gt:

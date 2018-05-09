@@ -159,66 +159,69 @@ def parse_command_args(training_or_testing):
         parser = argparse.ArgumentParser(
             description='BoundingBox-less Location with PyTorch (inference/test only)',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-        parser.add_argument('--dataset',
-                            required=True,
-                            help='REQUIRED. Directory with test images.\n')
-        parser.add_argument('--model',
-                            type=str,
-                            metavar='PATH',
-                            default='unet_256x256_sorghum',
-                            help='Checkpoint with the CNN model.\n')
-        parser.add_argument('--out-dir',
-                            type=str,
-                            required=True,
-                            help='REQUIRED. Directory where results will be stored (images+CSV).')
-        parser.add_argument('--imgsize',
-                            type=str,
-                            default='256x256',
-                            metavar='HxW',
-                            help='Size of the input images (heightxwidth).')
-        parser.add_argument('--radius',
-                            type=int,
-                            default=5,
-                            metavar='R',
-                            help='Detections at dist <= R to a GT pt are True Positives.')
-        parser.add_argument('--no-paint',
-                            default=False,
-                            action="store_true",
-                            help='Don\'t paint a red circle at each estimated location.')
-        parser.add_argument('--nThreads', '-j',
-                            default=4,
-                            type=int,
-                            metavar='N',
-                            help='Number of data loading threads.')
-        parser.add_argument('--no-cuda', '--no-gpu',
-                            action='store_true',
-                            default=False,
-                            help='Use CPU only, no GPU.')
-        parser.add_argument('--seed',
-                            type=int,
-                            default=1,
-                            metavar='S',
-                            help='Random seed.')
-        parser.add_argument('--max-testset-size',
-                            type=int,
-                            default=np.inf,
-                            metavar='N',
-                            help='Only use the first N images of the testing dataset.')
-        parser.add_argument('--n-points',
-                            type=int,
-                            default=None,
-                            metavar='N',
-                            help='If you know the exact number of points in the image, then set it. '
-                                 'Otherwise it will be estimated by adding a L1 cost term.')
-        parser.add_argument('--evaluate',
-                            action='store_true',
-                            default=False,
-                            help='Evaluate metrics (Precision/Recall, RMSE, MAPE, etc.)')
-
+        optional_args = parser._action_groups.pop()
+        required_args = parser.add_argument_group('MANDATORY arguments')
+        required_args.add_argument('--dataset',
+                                   required=True,
+                                   help='Directory with test images.\n')
+        required_args.add_argument('--out-dir',
+                                   type=str,
+                                   required=True,
+                                   help='Directory where results will be stored (images+CSV).')
+        optional_args.add_argument('--model',
+                                   type=str,
+                                   metavar='PATH',
+                                   default='unet_256x256_sorghum',
+                                   help='Checkpoint with the CNN model.\n')
+        optional_args.add_argument('--evaluate',
+                                   action='store_true',
+                                   default=False,
+                                   help='Evaluate metrics (Precision/Recall, RMSE, MAPE, etc.)')
+        optional_args.add_argument('--no-cuda', '--no-gpu',
+                                   action='store_true',
+                                   default=False,
+                                   help='Use CPU only, no GPU.')
+        optional_args.add_argument('--imgsize',
+                                   type=str,
+                                   default='256x256',
+                                   metavar='HxW',
+                                   help='Size of the input images (heightxwidth).')
+        optional_args.add_argument('--radius',
+                                   type=int,
+                                   default=5,
+                                   metavar='R',
+                                   help='Detections at dist <= R to a GT pt are True Positives.')
+        optional_args.add_argument('--n-points',
+                                   type=int,
+                                   default=None,
+                                   metavar='N',
+                                   help='If you know the exact number of points in the image, then set it. '
+                                   'Otherwise it will be estimated by adding a L1 cost term.')
+        optional_args.add_argument('--no-paint',
+                                   default=False,
+                                   action="store_true",
+                                   help='Don\'t paint a red circle at each estimated location.')
+        optional_args.add_argument('--seed',
+                                   type=int,
+                                   default=1,
+                                   metavar='S',
+                                   help='Random seed.')
+        optional_args.add_argument('--max-testset-size',
+                                   type=int,
+                                   default=np.inf,
+                                   metavar='N',
+                                   help='Only use the first N images of the testing dataset.')
+        optional_args.add_argument('--nThreads', '-j',
+                                   default=4,
+                                   type=int,
+                                   metavar='N',
+                                   help='Number of data loading threads.')
+        parser._action_groups.append(optional_args)
         args = parser.parse_args()
 
         if not args.no_cuda and not torch.cuda.is_available():
-            print('W: No GPU (CUDA) devices detected in your system, running with --no-gpu option...') 
+            print(
+                'W: No GPU (CUDA) devices detected in your system, running with --no-gpu option...')
         args.cuda = not args.no_cuda and torch.cuda.is_available()
 
         args.paint = not args.no_paint

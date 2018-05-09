@@ -26,5 +26,5 @@ dependencies:
     - pip:
         - visdom==0.1.7
         - peterpy
-        - torchvision=0.2.1
+        - torchvision==0.2.1
 

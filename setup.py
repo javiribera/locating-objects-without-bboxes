@@ -32,7 +32,9 @@ setup(
     packages=['object-locator', 'object-locator.models'],
     package_dir={'object-locator': 'object-locator'},
     
-    package_data={'object-locator': ['checkpoints/*.ckpt']},
+    package_data={'object-locator': ['checkpoints/*.ckpt',
+                                     '../COPYRIGHT.txt',
+                                     '../README.md']},
     include_package_data=True,
 
     # List run-time dependencies here.  These will be installed by pip when

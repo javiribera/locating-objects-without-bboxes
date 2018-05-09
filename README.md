@@ -19,9 +19,9 @@
 <li>Open the terminal in Linux/MacOS. In Windows, open the Anaconda prompt.</li>
 <li>"cd" into the decompressed directory</li>
 <li>Download all files from <a href="https://lorenz.ecn.purdue.edu/~jprat/plant_locator/checkpoints">here</a> and put them in 
-<pre>object-location-whd/object-locator/checkpoints</pre>
+<pre>object-location-whd-1.3.0/object-locator/checkpoints</pre>
 
-<li>Install the dependencies using the environment.yml file:</li>
+<li>Install the dependencies:</li>
 <pre>
 conda env create
 </pre>

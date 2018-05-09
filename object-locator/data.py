@@ -190,7 +190,7 @@ class RandomVerticalFlipImageAndLabel(object):
         return transformed_img, transformed_dictionary
 
 
-class ScaleImageAndLabel(transforms.Scale):
+class ScaleImageAndLabel(transforms.Resize):
     """
     Scale a PIL Image and the GT to a given size.
      If there is no GT, then only scale the PIL Image.

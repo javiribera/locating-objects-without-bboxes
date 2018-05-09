@@ -64,11 +64,11 @@ Example:
 <pre>
 python -m object-locator.locate \
        --dataset DIRECTORY \
-       --out DIRECTORY
+       --out DIRECTORY \
        --model CHECKPOINTS \
        --evaluate
        --no-cpu \
-       --radius 5 \
+       --radius 5
 </pre>
 
 

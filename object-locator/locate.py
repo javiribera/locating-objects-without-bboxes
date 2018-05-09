@@ -84,7 +84,7 @@ with peter("Loading checkpoint"):
     # Pretrained models that come with this package
     if args.model == 'unet_256x256_sorghum':
         args.model = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                  'models',
+                                  'checkpoints',
                                   'unet_256x256_sorghum.ckpt')
     if os.path.isfile(args.model):
         if args.cuda:

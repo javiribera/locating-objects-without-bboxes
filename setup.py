@@ -6,7 +6,7 @@ setup(
     description='Object Location using PyTorch (inference/testing only).',
 
     # The project's main homepage.
-    url='https://viperlab.org',
+    url='https://engineering.purdue.edu/~sorghum',
 
     # Author details
     author='Javier Ribera, Yuhao Chen, and Edward Delp',
@@ -25,19 +25,22 @@ setup(
     ],
     python_requires='~=3.6',
     # What does your project relate to?
-    keywords='object localization purdue',
+    keywords='object localization location purdue',
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages(),
+    packages=['object-locator', 'object-locator.models'],
+    package_dir={'object-locator': 'object-locator'},
     
-    package_data={'object-locator': ['models/*.ckpt']},
+    package_data={'object-locator': ['checkpoints/*.ckpt']},
+    include_package_data=True,
 
     # List run-time dependencies here.  These will be installed by pip when
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['matplotlib', 'numpy',
-                      'scikit-image', 'tqdm', 'argparse', 'parse',
-                      'scikit-learn', 'pandas'],
+    # (We actually use conda for dependency management)
+    # install_requires=['matplotlib', 'numpy',
+    #                   'scikit-image', 'tqdm', 'argparse', 'parse',
+    #                   'scikit-learn', 'pandas'],
 )

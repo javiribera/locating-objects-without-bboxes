@@ -222,8 +222,10 @@ class ScaleImageAndLabel(transforms.Scale):
             with torch.no_grad():
                 dictionary['locations'] *= torch.tensor([scale_h, scale_w])
                 dictionary['locations'] = torch.round(dictionary['locations'])
-                ys = torch.clamp(dictionary['locations'][:, 0], 0, self.size[0])
-                xs = torch.clamp(dictionary['locations'][:, 1], 0, self.size[1])
+                ys = torch.clamp(
+                    dictionary['locations'][:, 0], 0, self.size[0])
+                xs = torch.clamp(
+                    dictionary['locations'][:, 1], 0, self.size[1])
                 dictionary['locations'] = torch.cat((ys.view(-1, 1),
                                                      xs.view(-1, 1)),
                                                     1)
@@ -342,10 +344,11 @@ class XMLDataset(data.Dataset):
             major_version = int(major_version)
             minor_version = int(minor_version)
             addendum_version = int(addendum_version)
-            if not(major_version == 0 and
-                   minor_version == 2 and
-                   addendum_version >= 1):
-                raise ValueError('An XML with API v0.2.1 is required.')
+            if not((major_version == 0 and
+                    minor_version == 2 and
+                    addendum_version >= 1) or
+                   (major_version, minor_version) == (0, 3)):
+                raise ValueError('An XML with API v0.2.1 or v0.3 is required.')
 
             # Create the dictionary with the entire dataset
             self.dict = {}
@@ -369,8 +372,10 @@ class XMLDataset(data.Dataset):
                         orig_width, orig_height = \
                             get_image_size.get_image_size(img_abspath)
                         with torch.no_grad():
-                            orig_height = torch.tensor(orig_height, dtype=torch.get_default_dtype())
-                            orig_width = torch.tensor(orig_width, dtype=torch.get_default_dtype())
+                            orig_height = torch.tensor(
+                                orig_height, dtype=torch.get_default_dtype())
+                            orig_width = torch.tensor(
+                                orig_width, dtype=torch.get_default_dtype())
                         self.dict[filename] = {'filename': filename,
                                                'count': count,
                                                'locations': locations,
@@ -422,8 +427,10 @@ class XMLDataset(data.Dataset):
             orig_width, orig_height = \
                 get_image_size.get_image_size(img_abspath)
             with torch.no_grad():
-                orig_height = torch.tensor(orig_height, dtype=torch.get_default_dtype())
-                orig_width = torch.tensor(orig_width, dtype=torch.get_default_dtype())
+                orig_height = torch.tensor(
+                    orig_height, dtype=torch.get_default_dtype())
+                orig_width = torch.tensor(
+                    orig_width, dtype=torch.get_default_dtype())
             dictionary = {'filename': self.listfiles[idx],
                           'orig_width': orig_width,
                           'orig_height': orig_height}
@@ -448,4 +455,3 @@ class XMLDataset(data.Dataset):
                 dictionary['locations'] = torch.tensor([-1, -1])
 
         return (img_transformed, transformed_dictionary)
-

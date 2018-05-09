@@ -63,11 +63,12 @@ Example:
 
 <pre>
 python -m object-locator.locate \
-       --model ~/checkpoints/unet_model.ckpt \
-       --dataset ~/data/20160613_F54_testing_256x256 \
+       --dataset DIRECTORY \
+       --out DIRECTORY
+       --model CHECKPOINTS \
+       --evaluate
+       --no-cpu \
        --radius 5 \
-       --out results
-       
 </pre>
 
 

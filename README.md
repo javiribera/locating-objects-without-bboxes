@@ -15,7 +15,7 @@
 
 <ol>
 <li>Download and install Anaconda as described in <a href="https://docs.anaconda.com/anaconda/install/">https://docs.anaconda.com/anaconda/install</a></li>
-<li>Download the object location tool from <a href="https://github.rcac.purdue.edu/jprat/object-location-whd/archive/v1.2.0.zip">this link</a>, and decompress the zip.
+<li>Download the object location tool from <a href="https://github.rcac.purdue.edu/jprat/object-location-whd/archive/v1.3.0.zip">this link</a>, and decompress the zip.
 <li>Open the terminal in Linux/MacOS. In Windows, open the Anaconda prompt.</li>
 <li>"cd" into the decompressed directory</li>
 <li>Download all files from <a href="https://lorenz.ecn.purdue.edu/~jprat/plant_locator/checkpoints">here</a> and put them in 

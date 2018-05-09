@@ -18,7 +18,7 @@
 <li>Download the object location tool from <a href="https://github.rcac.purdue.edu/jprat/object-location-whd/archive/v1.2.0.zip">this link</a>, and decompress the zip.
 <li>Open the terminal in Linux/MacOS. In Windows, open the Anaconda prompt.</li>
 <li>"cd" into the decompressed directory</li>
-<li>Download <a href="https://lorenz.ecn.purdue.edu/~jprat/plant_locator/unet_256x256_sorghum.ckpt">this file</a> and put it in 
+<li>Download all files from <a href="https://lorenz.ecn.purdue.edu/~jprat/plant_locator/checkpoints">here</a> and put them in 
 <pre>object-location-whd/object-locator/checkpoints</pre>
 
 <li>Install the dependencies using the environment.yml file:</li>

@@ -300,6 +300,13 @@ class XMLDataset(data.Dataset):
                 xml_filename = filename
                 break
 
+        # Ignore files that are not images
+        listfiles = [f for f in listfiles
+                     if any(f.lower().endswith(ext) for ext in IMG_EXTENSIONS)]
+
+        if len(listfiles) == 0:
+            raise ValueError(f"There are no images in '{directory}'")
+
         if xml_filename is None:
             print('W: The dataset directory %s does not contain '
                   'a XML file with groundtruth. Metrics will not be evaluated.'
@@ -307,9 +314,6 @@ class XMLDataset(data.Dataset):
 
         self.there_is_gt = (xml_filename is not None) and (not ignore_gt)
 
-        # Ignore files that are not images
-        listfiles = [f for f in listfiles
-                     if any(f.lower().endswith(ext) for ext in IMG_EXTENSIONS)]
 
         # XML does not exist (no GT available)
         if not self.there_is_gt:

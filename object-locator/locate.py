@@ -56,15 +56,19 @@ if args.paint:
     os.makedirs(os.path.join(args.out_dir, 'painted'), exist_ok=True)
 
 # Data loading code
-testset = XMLDataset(args.dataset,
-                     transforms=transforms.Compose([
-                         ScaleImageAndLabel(size=(args.height, args.width)),
-                         transforms.ToTensor(),
-                         transforms.Normalize((0.5, 0.5, 0.5),
-                                              (0.5, 0.5, 0.5)),
-                     ]),
-                     ignore_gt=not args.evaluate,
-                     max_dataset_size=args.max_testset_size)
+try:
+    testset = XMLDataset(args.dataset,
+                         transforms=transforms.Compose([
+                             ScaleImageAndLabel(size=(args.height, args.width)),
+                             transforms.ToTensor(),
+                             transforms.Normalize((0.5, 0.5, 0.5),
+                                                  (0.5, 0.5, 0.5)),
+                         ]),
+                         ignore_gt=not args.evaluate,
+                         max_dataset_size=args.max_testset_size)
+except ValueError as e:
+    print(f'E: {e}')
+    exit(-1)
 testset_loader = data.DataLoader(testset,
                                  batch_size=1,
                                  num_workers=args.nThreads,

@@ -20,7 +20,7 @@ WORKDIR /object_locator
 RUN [ "conda", "env", "create", "--file", "environment.yml" ]
 
 # Install object-locator python package inside the conda environment
-RUN [ "/bin/bash", "-c", "source activate object-location && python setup.py install" ]
+RUN [ "/bin/bash", "-c", "source activate object-locator && python setup.py install" ]
 
 # Prepare entrypoint, which just calls the object-locator
 RUN echo '#!/bin/bash \n source activate object \n python -m object-locator "$@"' > /object_locator/entrypoint.bash

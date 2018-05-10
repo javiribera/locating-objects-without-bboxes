@@ -1,4 +1,4 @@
-name: object-location-whd
+name: object-locator
 channels:
     - pytorch
     - conda-forge

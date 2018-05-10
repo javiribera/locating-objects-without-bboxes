@@ -6,6 +6,7 @@
     2. [Usage](#usage)
         1. [Test/evaluate](#test)
         2. [Train](#train)
+    3. [Uninstall](#uninstall)
 2. [Using Docker](#docker)
 
 
@@ -49,6 +50,7 @@ pip install .
 Download some example data from <a href="https://lorenz.ecn.purdue.edu/~jprat/plant_locator/sorghum_data.zip">here</a> and decompress it wherever you want.
 </li>
 
+
 <a name="usage"></a>
 ### Usage  
 
@@ -64,6 +66,7 @@ source activate object-locator
 <pre>
 activate object-locator
 </pre>
+</ul>
 
 <a name="test"></a>
 #### Test/evaluate
@@ -112,6 +115,23 @@ python -m object-locator.train \
        --save unet_model.ckpt
 </pre>
 
+
+### Uninstall <a name="uninstall"></a>
+
+<ul>
+<li>In Linux/MacOS:</li>
+<pre>
+source deactivate object-locator
+</pre>
+<li>In Windows:</li>
+<pre>
+deactivate object-locator
+</pre>
+</ul>
+
+<pre>
+conda env remove --name object-locator
+</pre>
 
 <a name="docker"></a>
 ## Using Docker 

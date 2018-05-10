@@ -16,9 +16,9 @@
 <ol>
 <li>Download and install Anaconda as described in <a href="https://docs.anaconda.com/anaconda/install/">https://docs.anaconda.com/anaconda/install</a></li>
 <li>Download the tool from <a href="https://github.rcac.purdue.edu/jprat/object-locator/archive/v1.3.0.zip">this link</a>, and decompress the zip.
-<li>Open the terminal in Linux/MacOS. In Windows, open the Anaconda prompt.</li>
+<li>Open the terminal in Linux/MacOS. In Windows, open the Anaconda Prompt.</li>
 <li>"cd" into the decompressed directory</li>
-<li>Download all files from <a href="https://lorenz.ecn.purdue.edu/~jprat/plant_locator/checkpoints">here</a> and put them in 
+<li>Download the trained models from <a href="https://lorenz.ecn.purdue.edu/~jprat/plant_locator/checkpoints">here</a> and put them in 
 <pre>object-locator-1.3.0/object-locator/checkpoints</pre>
 
 <li>Install the dependencies:</li>
@@ -26,28 +26,43 @@
 conda env create
 </pre>
 
-<li>For Linux/MacOS, activate the environment with</li>
-<pre>
-source activate object-locator
-</pre>
+<li>Activate the environment:</li>
 
-<li>For Windows, activate the environment with</li>
+<ul>
+<li>In Linux/MacOS:</li>
 <pre>
 source activate object-locator
 </pre>
+<li>In Windows:</li>
+<pre>
+activate object-locator
+</pre>
+</ul>
+   
 
 <li>Install the tool:</li>
 <pre>
 pip install .
 </pre>
 
+<li>
+Download some example data from <a href="https://lorenz.ecn.purdue.edu/~jprat/plant_locator/sorghum_data.zip">here</a> and decompress it wherever you want.
+</li>
+
 <a name="usage"></a>
 ### Usage  
 
 
 Activate the environment:
+
+<ul>
+<li>In Linux/MacOS:</li>
 <pre>
 source activate object-locator
+</pre>
+<li>In Windows:</li>
+<pre>
+activate object-locator
 </pre>
 
 <a name="test"></a>

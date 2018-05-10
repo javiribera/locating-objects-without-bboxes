@@ -1,4 +1,4 @@
-# Object location
+# Object locator
 
 ## Table of Contents
 1. [Using Conda (recommended)](#conda)
@@ -15,11 +15,11 @@
 
 <ol>
 <li>Download and install Anaconda as described in <a href="https://docs.anaconda.com/anaconda/install/">https://docs.anaconda.com/anaconda/install</a></li>
-<li>Download the object location tool from <a href="https://github.rcac.purdue.edu/jprat/object-location-whd/archive/v1.3.0.zip">this link</a>, and decompress the zip.
+<li>Download the tool from <a href="https://github.rcac.purdue.edu/jprat/object-locator/archive/v1.3.0.zip">this link</a>, and decompress the zip.
 <li>Open the terminal in Linux/MacOS. In Windows, open the Anaconda prompt.</li>
 <li>"cd" into the decompressed directory</li>
 <li>Download all files from <a href="https://lorenz.ecn.purdue.edu/~jprat/plant_locator/checkpoints">here</a> and put them in 
-<pre>object-location-whd-1.3.0/object-locator/checkpoints</pre>
+<pre>object-locator-1.3.0/object-locator/checkpoints</pre>
 
 <li>Install the dependencies:</li>
 <pre>
@@ -36,7 +36,7 @@ source activate object-locator
 source activate object-locator
 </pre>
 
-<li>Install the object-locator:</li>
+<li>Install the tool:</li>
 <pre>
 pip install .
 </pre>
@@ -47,7 +47,7 @@ pip install .
 
 Activate the environment:
 <pre>
-source activate object-location
+source activate object-locator
 </pre>
 
 <a name="test"></a>
@@ -66,8 +66,8 @@ python -m object-locator.locate \
        --dataset DIRECTORY \
        --out DIRECTORY \
        --model CHECKPOINTS \
-       --evaluate
-       --no-cpu \
+       --evaluate \
+       --no-gpu \
        --radius 5
 </pre>
 

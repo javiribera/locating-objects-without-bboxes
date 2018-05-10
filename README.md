@@ -16,11 +16,11 @@
 
 <ol>
 <li>Download and install Anaconda as described in <a href="https://docs.anaconda.com/anaconda/install/">https://docs.anaconda.com/anaconda/install</a></li>
-<li>Download the tool from <a href="https://github.rcac.purdue.edu/jprat/object-locator/archive/v1.3.0.zip">this link</a>, and decompress the zip.
+<li>Download the tool from <a href="https://github.rcac.purdue.edu/jprat/object-locator/archive/v1.3.1.zip">this link</a>, and decompress the zip.
 <li>Open the terminal in Linux/MacOS. In Windows, open the Anaconda Prompt.</li>
 <li>"cd" into the decompressed directory</li>
 <li>Download the trained models from <a href="https://lorenz.ecn.purdue.edu/~jprat/plant_locator/checkpoints">here</a> and put them in 
-<pre>object-locator-1.3.0/object-locator/checkpoints</pre>
+<pre>object-locator-1.3.1/object-locator/checkpoints</pre>
 
 <li>Install the dependencies:</li>
 <pre>

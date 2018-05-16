@@ -143,8 +143,9 @@ with peter("Loading checkpoint"):
 
 
 # Empty output CSV
-df_out = pd.DataFrame(columns=['count', 'locations'])
-df_out.index.name = 'filename'
+df_out = pd.DataFrame()
+# df_out = pd.DataFrame(columns=['count', 'locations'])
+# df_out.index.name = 'filename'
 
 # Set the module in evaluation mode
 model.eval()
@@ -230,7 +231,6 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
         image_with_x = ((image_with_x + 1) / 2.0 * 255.0)
         for y, x in centroids:
             image_with_x = cv2.circle(image_with_x, (x, y), 3, [255, 0, 0], -1)
-            pass
         # Save original image with circle to disk
         image_with_x = image_with_x[:, :, ::-1]
         cv2.imwrite(os.path.join(args.out_dir,
@@ -259,9 +259,15 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                               max_ahd=math.sqrt(origsize[0]**2 + origsize[1]**2))
             judge.feed_count(est_count, target_count)
 
-    df = pd.DataFrame(data={'count': est_count,
-                            'locations': str(centroids.tolist())},
-                      index=[dictionaries[0]['filename']])
+    # Save a new line in the CSV corresonding to the resuls of this img
+    res_dict = dictionaries[0]
+    res_dict['count'] = est_count
+    res_dict['locations'] = str(centroids.tolist())
+    for key, val in res_dict.copy().items():
+        if 'height' in key or 'width' in key:
+            del res_dict[key]
+    df = pd.DataFrame(data=res_dict,
+                      index=[res_dict['filename']])
     df.index.name = 'filename'
     df_out = df_out.append(df)
 

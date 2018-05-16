@@ -314,77 +314,77 @@ class XMLDataset(data.Dataset):
 
         self.there_is_gt = (xml_filename is not None) and (not ignore_gt)
 
+        # Read all XML as a string
+        with open(os.path.join(directory, xml_filename), 'r') as fd:
+            xml_str = fd.read()
 
-        # XML does not exist (no GT available)
-        if not self.there_is_gt:
-            self.dict = None
-            self.listfiles = listfiles
+        # Convert to dictionary
+        # (some elements we expect to have multiple repetitions, so put them in a list)
+        xml_dict = xmltodict.parse(
+            xml_str, force_list=['field', 'panel', 'plot', 'plant'])
 
-            # Make dataset smaller
-            self.listfiles = self.listfiles[0:min(len(self.listfiles),
-                                                  max_dataset_size)]
+        # Check API version number
+        try:
+            api_version = xml_dict['fields']['@apiversion']
+        except:
+            # An unknown version number means it's the very first one
+            # when we did not have api version numbers
+            api_version = '0.1.0'
+        major_version, minor_version, addendum_version = \
+            parse('{}.{}.{}', api_version)
+        major_version = int(major_version)
+        minor_version = int(minor_version)
+        addendum_version = int(addendum_version)
+        if not((major_version == 0 and
+                minor_version == 2 and
+                addendum_version >= 1) or
+               (major_version, minor_version) == (0, 3)):
+            raise ValueError('An XML with API v0.2.1 or v0.3 is required.')
 
-        # XML does exist (GT is available)
-        else:
-
-            # Read all XML as a string
-            with open(os.path.join(directory, xml_filename), 'r') as fd:
-                xml_str = fd.read()
-
-            # Convert to dictionary
-            # (some elements we expect to have multiple repetitions, so put them in a list)
-            xml_dict = xmltodict.parse(
-                xml_str, force_list=['field', 'panel', 'plot', 'plant'])
-
-            # Check API version number
-            try:
-                api_version = xml_dict['fields']['@apiversion']
-            except:
-                # An unknown version number means it's the very first one
-                # when we did not have api version numbers
-                api_version = '0.1.0'
-            major_version, minor_version, addendum_version = \
-                parse('{}.{}.{}', api_version)
-            major_version = int(major_version)
-            minor_version = int(minor_version)
-            addendum_version = int(addendum_version)
-            if not((major_version == 0 and
-                    minor_version == 2 and
-                    addendum_version >= 1) or
-                   (major_version, minor_version) == (0, 3)):
-                raise ValueError('An XML with API v0.2.1 or v0.3 is required.')
-
-            # Create the dictionary with the entire dataset
-            self.dict = {}
-            for field in xml_dict['fields']['field']:
-                for panel in field['panels']['panel']:
-                    for plot in panel['plots']['plot']:
-                        filename = plot['orthophoto_chop_filename']
+        # Create the dictionary with the entire dataset
+        self.dict = {}
+        for field in xml_dict['fields']['field']:
+            for panel in field['panels']['panel']:
+                for plot in panel['plots']['plot']:
+                    filename = plot['orthophoto_chop_filename']
+                    if 'plot_number' in plot:
+                        plot_number = plot['plot_number']
+                    else:
+                        plot_number = 'unknown'
+                    if 'cigar_grid_location_yx' in plot:
+                        cigar = plot['cigar_grid_location_yx']
+                    else:
+                        cigar = 'unknown'
+                    if 'row_number' in plot:
+                        row_number = plot['row_number']
+                    else:
+                        row_number = 'unknown'
+                    if 'range_number' in plot:
+                        range_number = plot['range_number']
+                    else:
+                        range_number = 'unknown'
+                    img_abspath = os.path.join(self.root_dir, filename)
+                    orig_width, orig_height = \
+                        get_image_size.get_image_size(img_abspath)
+                    with torch.no_grad():
+                        orig_height = torch.tensor(
+                            orig_height, dtype=torch.get_default_dtype())
+                        orig_width = torch.tensor(
+                            orig_width, dtype=torch.get_default_dtype())
+                    self.dict[filename] = {'filename': filename,
+                                           'plot_number': plot_number,
+                                           'cigar_grid_location_yx': cigar,
+                                           'row_number': row_number,
+                                           'range_number': range_number,
+                                           'orig_width': orig_width,
+                                           'orig_height': orig_height}
+                    if self.there_is_gt:
                         count = int(plot['plant_count'])
-                        if 'plot_number' in plot:
-                            plot_number = plot['plot_number']
-                        else:
-                            plot_number = 'unknown'
-                        if 'cigar_grid_location_yx' in plot:
-                            cigar = plot['cigar_grid_location_yx']
-                        else:
-                            plot_number = 'unknown'
                         locations = []
                         for plant in plot['plants']['plant']:
                             locations.append(eval(plant['location_wrt_plot']))
-                        img_abspath = os.path.join(self.root_dir, filename)
-                        orig_width, orig_height = \
-                            get_image_size.get_image_size(img_abspath)
-                        with torch.no_grad():
-                            orig_height = torch.tensor(
-                                orig_height, dtype=torch.get_default_dtype())
-                            orig_width = torch.tensor(
-                                orig_width, dtype=torch.get_default_dtype())
-                        self.dict[filename] = {'filename': filename,
-                                               'count': count,
-                                               'locations': locations,
-                                               'orig_width': orig_width,
-                                               'orig_height': orig_height}
+                        self.dict[filename]['count'] = count
+                        self.dict[filename]['locations'] = locations
 
             # Use an Ordered Dictionary to allow random access
             self.dict = OrderedDict(self.dict.items())
@@ -398,25 +398,22 @@ class XMLDataset(data.Dataset):
             self.dict_list = list(self.dict.items())
 
     def __len__(self):
-        if self.there_is_gt:
-            return len(self.dict)
-        else:
-            return len(self.listfiles)
+        return len(self.dict)
 
     def __getitem__(self, idx):
         """Get one element of the dataset.
         Returns a tuple. The first element is the image.
         The second element is a dictionary containing the labels of that image.
-        If the XML did not exist in the dataset directory,
-         the dictionary will only contain the filename and size of the image.
+        The dictionary may not contain the location and count if the original
+         XML did not include it.
 
         :param idx: Index of the image in the dataset to get.
         """
 
-        if self.there_is_gt:
-            filename, dictionary = self.dict_list[idx]
-            img_abspath = os.path.join(self.root_dir, filename)
+        filename, dictionary = self.dict_list[idx]
+        img_abspath = os.path.join(self.root_dir, filename)
 
+        if self.there_is_gt:
             # list --> Tensors
             with torch.no_grad():
                 dictionary['locations'] = torch.tensor(
@@ -425,19 +422,19 @@ class XMLDataset(data.Dataset):
                 dictionary['count'] = torch.tensor(
                     dictionary['count'],
                     dtype=torch.get_default_dtype())
-        else:
-            filename = self.listfiles[idx]
-            img_abspath = os.path.join(self.root_dir, filename)
-            orig_width, orig_height = \
-                get_image_size.get_image_size(img_abspath)
-            with torch.no_grad():
-                orig_height = torch.tensor(
-                    orig_height, dtype=torch.get_default_dtype())
-                orig_width = torch.tensor(
-                    orig_width, dtype=torch.get_default_dtype())
-            dictionary = {'filename': self.listfiles[idx],
-                          'orig_width': orig_width,
-                          'orig_height': orig_height}
+        # else:
+        #     filename = self.listfiles[idx]
+        #     img_abspath = os.path.join(self.root_dir, filename)
+        #     orig_width, orig_height = \
+        #         get_image_size.get_image_size(img_abspath)
+        #     with torch.no_grad():
+        #         orig_height = torch.tensor(
+        #             orig_height, dtype=torch.get_default_dtype())
+        #         orig_width = torch.tensor(
+        #             orig_width, dtype=torch.get_default_dtype())
+        #     dictionary = {'filename': self.listfiles[idx],
+        #                   'orig_width': orig_width,
+        #                   'orig_height': orig_height}
 
         img = Image.open(img_abspath)
 

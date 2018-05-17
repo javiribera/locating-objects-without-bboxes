@@ -6,7 +6,7 @@ from scipy.spatial.distance import euclidean as distance
 import statistics
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
-
+import numpy as np
 
 if __name__ == '__main__':
     # Parse command-line arguments
@@ -36,6 +36,8 @@ if __name__ == '__main__':
     means, medians, stds = [], [], []
 
     for idx, row in tqdm(df.iterrows(), total=len(df.index)):
+        if row['locations_wrt_orthophoto'] is np.nan:
+            continue
         locs = eval(row['locations_wrt_orthophoto'])
 
         # 1. Sort by row coordinate
@@ -45,7 +47,7 @@ if __name__ == '__main__':
         dists = list(map(distance, locs[:-1], locs[1:]))
 
         # 3. pixels -> centimeters
-        dists = [d*args.res for d in dists]
+        dists = [d * args.res for d in dists]
 
         # 4. Statistics!
         mean = statistics.mean(dists)

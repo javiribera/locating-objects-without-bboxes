@@ -103,6 +103,17 @@ class CSVDataset(data.Dataset):
             dictionary['count'] = torch.tensor(
                 [dictionary['count']], dtype=torch.get_default_dtype())
 
+        # Size before resizing
+        orig_width, orig_height = \
+            get_image_size.get_image_size(img_abspath)
+        with torch.no_grad():
+            orig_height = torch.tensor(orig_height,
+                                       dtype=torch.get_default_dtype())
+            orig_width = torch.tensor(orig_width,
+                                      dtype=torch.get_default_dtype())
+            dictionary['orig_width'] = orig_width
+            dictionary['orig_height'] = orig_height
+
         img_transformed = img
         transformed_dictionary = dictionary
 

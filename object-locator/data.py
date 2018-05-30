@@ -22,7 +22,8 @@ class CSVDataset(data.Dataset):
     def __init__(self,
                  directory,
                  transforms=None,
-                 max_dataset_size=float('inf')):
+                 max_dataset_size=float('inf'),
+                 ignore_gt=False):
         """CSVDataset.
         The sample images of this dataset must be all inside one directory.
         Inside the same directory, there must be one CSV file.
@@ -32,6 +33,8 @@ class CSVDataset(data.Dataset):
         :param directory: Directory with all the images and the CSV file.
         :param transform: Transform to be applied to each image.
         :param max_dataset_size: Only use the first N images in the directory.
+        :param ignore_gt: Ignore the GT in the XML file,
+                          i.e, provide samples without plant locations or counts.
         """
 
         self.root_dir = directory
@@ -45,7 +48,14 @@ class CSVDataset(data.Dataset):
                 csv_filename = filename
                 break
 
-        self.there_is_gt = csv_filename is not None
+        # Ignore files that are not images
+        listfiles = [f for f in listfiles
+                     if any(f.lower().endswith(ext) for ext in IMG_EXTENSIONS)]
+
+        if len(listfiles) == 0:
+            raise ValueError(f"There are no images in '{directory}'")
+
+        self.there_is_gt = (csv_filename is not None) and (not ignore_gt)
 
         # CSV does not exist (no GT available)
         if not self.there_is_gt:
@@ -102,6 +112,16 @@ class CSVDataset(data.Dataset):
                 dictionary['locations'], dtype=torch.get_default_dtype())
             dictionary['count'] = torch.tensor(
                 [dictionary['count']], dtype=torch.get_default_dtype())
+
+        # Record original size
+        orig_width, orig_height = get_image_size.get_image_size(img_abspath)
+        with torch.no_grad():
+            orig_height = torch.tensor(orig_height,
+                                       dtype=torch.get_default_dtype())
+            orig_width = torch.tensor(orig_width,
+                                      dtype=torch.get_default_dtype())
+        dictionary['orig_width'] = orig_width
+        dictionary['orig_height'] = orig_height
 
         img_transformed = img
         transformed_dictionary = dictionary

@@ -24,7 +24,7 @@ import torchvision as tv
 from torchvision.models import inception_v3
 from sklearn import mixture
 import skimage.transform
-from .data import XMLDataset
+from .data import CSVDataset
 from .data import csv_collator
 from .data import ScaleImageAndLabel
 from peterpy import peter
@@ -57,9 +57,9 @@ if args.paint:
 
 # Data loading code
 try:
-    testset = XMLDataset(args.dataset,
+    testset = CSVDataset(args.dataset,
                          transforms=transforms.Compose([
-                             ScaleImageAndLabel(size=(args.height, args.width)),
+                             # ScaleImageAndLabel(size=(args.height, args.width)),
                              transforms.ToTensor(),
                              transforms.Normalize((0.5, 0.5, 0.5),
                                                   (0.5, 0.5, 0.5)),

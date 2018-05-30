@@ -196,7 +196,11 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                 est_map_numpy_origsize)
 
     # The estimated map must be thresholded to obtain estimated points
-    mask = cv2.inRange(est_map_numpy_origsize, 2 / 255, 1)
+    # mask = cv2.inRange(est_map_numpy_origsize, 2 / 255, 1)
+    minn, maxx = est_map_numpy_origsize.min(), est_map_numpy_origsize.max()
+    est_map_origsize_scaled = ((est_map_numpy_origsize - minn)/(maxx - minn)*255).round().astype(np.uint8).squeeze()
+    th, mask = cv2.threshold(est_map_origsize_scaled,
+                             0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     coord = np.where(mask > 0)
     y = coord[0].reshape((-1, 1))
     x = coord[1].reshape((-1, 1))

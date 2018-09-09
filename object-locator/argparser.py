@@ -186,11 +186,18 @@ def parse_command_args(training_or_testing):
                                    default='256x256',
                                    metavar='HxW',
                                    help='Size of the input images (heightxwidth).')
-        optional_args.add_argument('--radius',
-                                   type=int,
-                                   default=5,
-                                   metavar='R',
-                                   help='Detections at dist <= R to a GT pt are True Positives.')
+        optional_args.add_argument('--radii',
+                                   type=str,
+                                   default=range(0, 15 + 1),
+                                   metavar='Rs',
+                                   help='Detections at dist <= R to a GT pt are True Positives.'
+                                        'If not selected, R=0, ..., 15 will be tested.')
+        optional_args.add_argument('--taus',
+                                   type=str,
+                                   default=np.linspace(1/255, 1, 200),
+                                   metavar='Ts',
+                                   help='Detection threshold. '
+                                        'If not selected, 200 thresholds in [0, 1] will be tested.')
         optional_args.add_argument('--n-points',
                                    type=int,
                                    default=None,
@@ -225,6 +232,13 @@ def parse_command_args(training_or_testing):
         args.cuda = not args.no_cuda and torch.cuda.is_available()
 
         args.paint = not args.no_paint
+
+        # String -> List
+        if isinstance(args.taus, str):
+            args.taus = [float(tau) for tau in args.taus.split(',')]
+        if isinstance(args.radii, str):
+            args.radii = [int(r) for r in args.radii.split(',')]
+
 
     else:
         raise ValueError('Only \'training\' or \'testing\' allowed, got %s'

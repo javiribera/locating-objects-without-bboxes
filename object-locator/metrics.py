@@ -5,7 +5,9 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
-from sklearn.neighbors import NearestNeighbors
+import sklearn.metrics
+import sklearn.neighbors
+import scipy.stats
 from . import losses
 
 class Judge():
@@ -39,6 +41,10 @@ class Judge():
         self.fp = 0
         self.fn = 0
 
+        # Count data points
+        self._predicted_counts = []
+        self._true_counts = []
+
         # Internal variables
         self._sum_ahd = 0
         self._sum_e = 0
@@ -67,11 +73,11 @@ class Judge():
             fp = 0
             fn = len(gt)
         else:
-            nbr = NearestNeighbors(n_neighbors=1, metric='euclidean').fit(gt)
+            nbr = sklearn.neighbors.NearestNeighbors(n_neighbors=1, metric='euclidean').fit(gt)
             dis, idx = nbr.kneighbors(pts)
             detected_pts = (dis[:, 0] <= self.r).astype(np.uint8)
 
-            nbr = NearestNeighbors(n_neighbors=1, metric='euclidean').fit(pts)
+            nbr = sklearn.neighbors.NearestNeighbors(n_neighbors=1, metric='euclidean').fit(pts)
             dis, idx = nbr.kneighbors(gt)
             detected_gt = (dis[:, 0] <= self.r).astype(np.uint8)
 
@@ -104,6 +110,9 @@ class Judge():
             raise ValueError(f'estim_count < 0, got {estim_count}')
         if gt_count < 0:
             raise ValueError(f'gt_count < 0, got {gt_count}')
+
+        self._predicted_counts.append(estim_count)
+        self._true_counts.append(gt_count)
 
         e = estim_count - gt_count
         ae = abs(e)
@@ -152,6 +161,18 @@ class Judge():
     def rmse(self):
         """ Root Mean Squared Error (positive float)"""
         return float(math.sqrt(self.mse))
+
+    @property
+    def coeff_of_determination(self):
+        """ Coefficient of Determination (-inf, 1]"""
+        return sklearn.metrics.r2_score(self._true_counts,
+                                        self._predicted_counts)
+
+    @property
+    def pearson_corr(self):
+        """ Pearson coefficient of Correlation [-1, 1]"""
+        return scipy.stats.pearsonr(self._true_counts,
+                                    self._predicted_counts)[0]
 
     @property
     def mahd(self):

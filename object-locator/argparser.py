@@ -194,7 +194,7 @@ def parse_command_args(training_or_testing):
                                         'If not selected, R=0, ..., 15 will be tested.')
         optional_args.add_argument('--taus',
                                    type=str,
-                                   default=np.linspace(1/255, 1, 200),
+                                   default=np.linspace(1/255, 1, 20),
                                    metavar='Ts',
                                    help='Detection threshold. '
                                         'If not selected, 200 thresholds in [0, 1] will be tested.')

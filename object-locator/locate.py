@@ -57,7 +57,7 @@ if args.cuda:
 try:
     testset = CSVDataset(args.dataset,
                          transforms=transforms.Compose([
-                             # ScaleImageAndLabel(size=(args.height, args.width)),
+                             ScaleImageAndLabel(size=(args.height, args.width)),
                              transforms.ToTensor(),
                              transforms.Normalize((0.5, 0.5, 0.5),
                                                   (0.5, 0.5, 0.5)),

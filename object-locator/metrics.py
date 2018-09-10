@@ -244,6 +244,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
 
         # Add figure to dictionary
         dic[f'precision_and_recall_vs_r,_tau={tau_selected}'] = fig
+        plt.close(fig)
 
     # ==== Precision vs Recall ====
     colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
@@ -285,6 +286,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
 
     # Add figure to dictionary
     dic['precision_vs_recall'] = fig
+    plt.close(fig)
 
 
     # ==== Precision as a function of tau for all provided R ====
@@ -324,6 +326,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
 
     # Add figure to dictionary
     dic['precision_vs_th'] = fig
+    plt.close(fig)
 
     # ==== Recall as a function of tau for all provided R ====
     # Create figure
@@ -362,6 +365,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
 
     # Add figure to dictionary
     dic['recall_vs_tau'] = fig
+    plt.close(fig)
 
 
     # ==== F-score as a function of tau for all provided R ====
@@ -401,6 +405,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
 
     # Add figure to dictionary
     dic['fscore_vs_tau'] = fig
+    plt.close(fig)
 
     return dic
 

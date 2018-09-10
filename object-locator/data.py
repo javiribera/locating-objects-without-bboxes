@@ -93,7 +93,7 @@ class CSVDataset(data.Dataset):
         """
 
         if self.there_is_gt:
-            img_abspath = os.path.join(self.root_dir, self.csv_df.ix[idx, 0])
+            img_abspath = os.path.join(self.root_dir, self.csv_df.ix[idx].filename)
             dictionary = dict(self.csv_df.ix[idx])
         else:
             img_abspath = os.path.join(self.root_dir, self.listfiles[idx])

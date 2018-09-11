@@ -287,7 +287,7 @@ for df_out, tau in zip(df_outs, args.taus):
 
 if args.evaluate:
 
-    with peter("Computing evaluating metrics"):
+    with peter("Evauating metrics"):
 
         # Output CSV where we will put
         # all our metrics as a function of r and the threshold

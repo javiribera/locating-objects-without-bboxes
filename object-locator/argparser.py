@@ -210,7 +210,7 @@ def parse_command_args(training_or_testing):
                                    help='Don\'t paint a red circle at each estimated location.')
         optional_args.add_argument('--seed',
                                    type=int,
-                                   default=1,
+                                   default=0,
                                    metavar='S',
                                    help='Random seed.')
         optional_args.add_argument('--max-testset-size',

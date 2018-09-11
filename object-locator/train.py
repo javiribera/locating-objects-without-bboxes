@@ -298,7 +298,6 @@ while epoch < args.epochs:
         with torch.no_grad():
             term1, term2 = loss_loc.forward(
                 est_map, target_locations, target_orig_sizes)
-            est_count = est_count.view(-1)
             term3 = loss_regress.forward(est_count, target_count)
             term3 *= args.lambdaa
         sum_term1 += term1.item()

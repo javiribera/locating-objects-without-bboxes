@@ -395,6 +395,8 @@ while epoch < args.epochs:
                           judge.mae,
                           judge.rmse,
                           judge.mape,
+                          judge.coeff_of_determination,
+                          judge.pearson_corr,
                           judge.precision,
                           judge.recall),
                    iteration_number=epoch,
@@ -406,6 +408,8 @@ while epoch < args.epochs:
                                   'MAE',
                                   'RMSE',
                                   'MAPE (%)',
+                                  'R^2',
+                                  'r',
                                   f'r{args.radius}-Precision (%)',
                                   f'r{args.radius}-Recall (%)'])
 

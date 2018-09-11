@@ -138,7 +138,8 @@ class CSVDataset(data.Dataset):
         # Prevents crash when making a batch out of an empty tensor
         if dictionary['count'][0] == 0:
             with torch.no_grad():
-                dictionary['locations'] = torch.tensor([-1, -1])
+                dictionary['locations'] = torch.tensor([-1, -1],
+                                                       dtype=torch.get_default_dtype())
 
         return (img_transformed, transformed_dictionary)
 
@@ -473,6 +474,7 @@ class XMLDataset(data.Dataset):
         # Prevents crash when making a batch out of an empty tensor
         if self.there_is_gt and dictionary['count'].item() == 0:
             with torch.no_grad():
-                dictionary['locations'] = torch.tensor([-1, -1])
+                dictionary['locations'] = torch.tensor([-1, -1],
+                                                       dtype=torch.get_default_dtype())
 
         return (img_transformed, transformed_dictionary)

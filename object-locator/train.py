@@ -19,6 +19,8 @@ from torchvision.models import inception_v3
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from sklearn import mixture
+import matplotlib
+matplotlib.use('Agg')
 import skimage.transform
 from peterpy import peter
 

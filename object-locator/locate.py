@@ -258,9 +258,8 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                 image_with_x = cv2.circle(image_with_x, (x, y), 3, [255, 0, 0], -1)
             # Save original image with circle to disk
             image_with_x = image_with_x[:, :, ::-1]
-            os.makedirs(os.path.join(args.out_dir, 'painted'), exist_ok=True)
-            cv2.imwrite(os.path.join(args.out_dir,
-                                     'painted',
+            os.makedirs(os.path.join(args.out_dir, 'painted', f'tau={tau}'), exist_ok=True)
+            cv2.imwrite(os.path.join(args.out_dir, 'painted', f'tau={tau}',
                                      dictionaries[0]['filename']),
                         image_with_x)
 

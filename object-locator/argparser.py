@@ -105,7 +105,7 @@ def parse_command_args(training_or_testing):
                             help='run validation after F epochs. '
                                  'If 0, no validation will be done')
         parser.add_argument('--env-name',
-                            default='Pure U-Net',
+                            default='default_environment',
                             type=str,
                             metavar='NAME',
                             help='name of the environment in Visdom')

@@ -8,7 +8,8 @@ class Logger():
     def __init__(self, env_name='Logger Env'):
 
         # Visdom setup
-        self.client = visdom.Visdom(env=env_name)
+        self.client = visdom.Visdom(env=env_name,
+                                    port=8989)
 
         # Each of the 'windows' in visdom web panel
         self.viz_train_input_win = None

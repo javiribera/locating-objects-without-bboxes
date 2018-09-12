@@ -209,7 +209,18 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
     
     # The estimated map must be thresholded to obtain estimated points
     for tau, df_out in zip(args.taus, df_outs):
-        mask = cv2.inRange(est_map_numpy_origsize, tau, 1)
+        if tau == -1:
+            # Otsu thresholding
+            minn, maxx = est_map_numpy_origsize.min(), est_map_numpy_origsize.max()
+            est_map_origsize_scaled = ((est_map_numpy_origsize - minn)/(maxx - minn)*255) \
+                .round().astype(np.uint8).squeeze()
+            tau_otsu, mask = cv2.threshold(est_map_origsize_scaled,
+                                           0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            tau_otsu = minn + (tau_otsu/255)*(maxx - minn)
+            # print(f'Otsu selected tau={tau_otsu}')
+        else:
+            # Thresholding with a fixed threshold tau
+            mask = cv2.inRange(est_map_numpy_origsize, tau, 1)
         coord = np.where(mask > 0)
         y = coord[0].reshape((-1, 1))
         x = coord[1].reshape((-1, 1))

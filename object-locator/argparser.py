@@ -194,10 +194,11 @@ def parse_command_args(training_or_testing):
                                         'If not selected, R=0, ..., 15 will be tested.')
         optional_args.add_argument('--taus',
                                    type=str,
-                                   default=np.linspace(1/255, 1, 20),
+                                   default=np.linspace(0, 1, 100).tolist() + [-1],
                                    metavar='Ts',
                                    help='Detection threshold. '
-                                        'If not selected, 200 thresholds in [0, 1] will be tested.')
+                                        'If not selected, 100 thresholds in [0, 1] will be tested. '
+                                        'tau=-1 means dynamic Otsu thresholding.')
         optional_args.add_argument('--n-points',
                                    type=int,
                                    default=None,
@@ -233,11 +234,20 @@ def parse_command_args(training_or_testing):
 
         args.paint = not args.no_paint
 
-        # String -> List
-        if isinstance(args.taus, str):
+        # String/Int -> List
+        if isinstance(args.taus, list):
+            pass
+        elif isinstance(args.taus, str) and ',' in args.taus:
             args.taus = [float(tau) for tau in args.taus.split(',')]
-        if isinstance(args.radii, str):
+        else:
+            args.taus = [int(args.taus)]
+
+        if isinstance(args.radii, list):
+            pass
+        elif isinstance(args.radii, str) and ',' in args.radii:
             args.radii = [int(r) for r in args.radii.split(',')]
+        else:
+            args.radii = [int(args.radii)]
 
 
     else:

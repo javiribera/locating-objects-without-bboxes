@@ -130,7 +130,7 @@ if args.resume:
             model.load_state_dict(checkpoint['model'])
             optimizer.load_state_dict(checkpoint['optimizer'])
             print(f"\n\__ loaded checkpoint '{args.resume}'" 
-                  "(now on epoch {checkpoint['epoch']})")
+                  f"(now on epoch {checkpoint['epoch']})")
         else:
             print(f"\n\__ E: no checkpoint found at '{args.resume}'")
             exit(-1)

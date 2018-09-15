@@ -237,7 +237,7 @@ class ScaleImageAndLabel(transforms.Resize):
         img = super(ScaleImageAndLabel, self).__call__(img)
 
         # Scale GT
-        if 'locations' in dictionary:
+        if 'locations' in dictionary and len(dictionary['locations']) > 0:
             # print(dictionary['locations'].type())
             # print(torch.tensor([scale_h, scale_w]).type())
             with torch.no_grad():

@@ -27,11 +27,12 @@ import torchvision as tv
 from torchvision.models import inception_v3
 from sklearn import mixture
 import skimage.transform
+from peterpy import peter
+from ballpark import ballpark
+
 from .data import CSVDataset
 from .data import csv_collator
 from .data import ScaleImageAndLabel
-from peterpy import peter
-
 from . import losses
 from . import argparser
 from .models import unet_model
@@ -131,7 +132,9 @@ with peter("Loading checkpoint"):
                 name = k[7:]
                 state_dict[name] = v
         model.load_state_dict(state_dict)
-        print(f"\n\__ loaded checkpoint '{args.model}'")
+        num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        print(f"\n\__ loaded checkpoint '{args.model}' "
+              f"with {ballpark(num_params)} trainable parameters")
         # print(model)
     else:
         print(f"\n\__  E: no checkpoint found at '{args.model}'")

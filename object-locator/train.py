@@ -23,6 +23,7 @@ import matplotlib
 matplotlib.use('Agg')
 import skimage.transform
 from peterpy import peter
+from ballpark import ballpark
 
 from . import losses
 from .models import unet_model
@@ -96,8 +97,11 @@ with peter('Building network'):
                             height=args.height,
                             width=args.width,
                             known_n_points=args.n_points)
+    num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f" with {ballpark(num_params)} trainable parameters. ", end='')
 model = nn.DataParallel(model)
 model.to(device)
+
 
 # Loss function
 loss_regress = nn.SmoothL1Loss()

@@ -38,6 +38,7 @@ from . import argparser
 from .models import unet_model
 from .metrics import Judge
 from .metrics import make_metric_plots
+from . import utils
 
 
 # Parse command line arguments

@@ -286,6 +286,8 @@ while epoch < args.epochs:
             target_orig_widths = torch.stack(target_orig_widths)
             target_orig_sizes = torch.stack((target_orig_heights,
                                              target_orig_widths)).transpose(0, 1)
+        origsize = (dictionaries[0]['orig_height'].item(),
+                    dictionaries[0]['orig_width'].item())
 
         if bool((target_count == 0).cpu().numpy()[0]):
             continue
@@ -314,10 +316,21 @@ while epoch < args.epochs:
         iter_val.set_postfix(
             avg_val_loss_this_epoch=f'{loss_avg_this_epoch:.1f}-----')
 
-        # Validation metrics
         # The estimated map must be thresholed to obtain estimated points
-        est_map_numpy = est_map[0, :, :].data.cpu().numpy()
-        mask = cv2.inRange(est_map_numpy, 4 / 255, 1)
+        # Otsu thresholding
+        est_map_numpy = est_map[0, :, :].to(device_cpu).numpy()
+        est_map_numpy_origsize = \
+            skimage.transform.resize(est_map_numpy,
+                                     output_shape=origsize,
+                                     mode='constant')
+        minn, maxx = est_map_numpy_origsize.min(), est_map_numpy_origsize.max()
+        est_map_origsize_scaled = ((est_map_numpy_origsize - minn)/(maxx - minn)*255) \
+            .round().astype(np.uint8).squeeze()
+        tau_otsu, mask = cv2.threshold(est_map_origsize_scaled,
+                                       0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        tau_otsu = minn + (tau_otsu/255)*(maxx - minn)
+
+        # Validation metrics
         coord = np.where(mask > 0)
         y = coord[0].reshape((-1, 1))
         x = coord[1].reshape((-1, 1))

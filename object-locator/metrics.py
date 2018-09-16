@@ -17,14 +17,16 @@ class Judge():
         - Precision
         - Recall
         - Fscore
-        - Mean Average Hausdorff Distance
+        - Mean Average Hausdorff Distance (MAHD)
         (Count metrics)
-        - Mean Error
-        - Mean Absolute Error
-        - Mean Percent Error
-        - Mean Absolute Percent Error
-        - Mean Squared Error
-        - Root Mean Squared Error
+        - Mean Error (ME)
+        - Mean Absolute Error (MAE)
+        - Mean Percent Error (MPE)
+        - Mean Absolute Percent Error (MAPE)
+        - Mean Squared Error (MSE)
+        - Root Mean Squared Error (RMSE)
+        - Pearson correlation (r)
+        - Coefficient of determination (R^2)
     """
 
     def __init__(self, r):

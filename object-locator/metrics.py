@@ -267,22 +267,24 @@ def make_metric_plots(csv_path, taus, radii, title=''):
 
         # Use only a particular r for all thresholds (non-Otsu)
         selection = (df.r.values == r_selected) & (df.th.values >= 0)
-        precision = df.precision.values[selection]
-        recall = df.recall.values[selection]
+        if selection.any():
+            precision = df.precision.values[selection]
+            recall = df.recall.values[selection]
 
-        # Sort by ascending recall
-        idxs = np.argsort(recall)
-        recall = recall[idxs]
-        precision = precision[idxs]
+            # Sort by ascending recall
+            idxs = np.argsort(recall)
+            recall = recall[idxs]
+            precision = precision[idxs]
 
-        # Plot precision vs. recall for this r
-        ax.scatter(recall, precision, c=c, s=2, label=f'r={r}')
+            # Plot precision vs. recall for this r
+            ax.scatter(recall, precision, c=c, s=2, label=f'r={r}')
 
         # Otsu threshold (tau = -1)
         selection = (df.r.values == r_selected) & (df.th.values == -1)
-        precision = df.precision.values[selection]
-        recall = df.recall.values[selection]
-        ax.scatter(recall, precision, c=c, s=2, marker='x')
+        if selection.any():
+            precision = df.precision.values[selection]
+            recall = df.recall.values[selection]
+            ax.scatter(recall, precision, c=c, s=2, marker='x')
 
 
     # Invert legend order
@@ -316,20 +318,24 @@ def make_metric_plots(csv_path, taus, radii, title=''):
 
         # Use only a particular r for all thresholds (non-Otsu)
         selection = (df.r.values == r_selected) & (df.th.values >= 0)
-        precision = df.precision.values[selection]
-        list_of_precisions.append(precision)
-        taus = df.th.values[selection]
+        if selection.any():
+            precision = df.precision.values[selection]
+            list_of_precisions.append(precision)
+            taus = df.th.values[selection]
 
-        # Plot precision vs tau for this r
-        ax.scatter(taus, precision, c=c, s=2, label=f'r={r}')
+            # Plot precision vs tau for this r
+            ax.scatter(taus, precision, c=c, s=2, label=f'r={r}')
 
         # Otsu threshold (tau = -1)
         selection = (df.r.values == r_selected) & (df.th.values == -1)
-        precision = df.precision.values[selection]
-        ax.axhline(y=precision, c=c)
+        if selection.any():
+            precision = df.precision.values[selection]
+            ax.axhline(y=precision, c=c)
 
-    ax.scatter(taus, np.average(np.stack(list_of_precisions), axis=0),
-               c='k', marker='s', label='avg')
+    if len(list_of_precisions) > 0:
+        # Plot average precision for all r's
+        ax.scatter(taus, np.average(np.stack(list_of_precisions), axis=0),
+                   c='k', marker='s', label='avg')
 
     
 
@@ -363,20 +369,23 @@ def make_metric_plots(csv_path, taus, radii, title=''):
 
         # Use only a particular r
         selection = (df.r.values == r_selected) & (df.th.values >= 0)
-        recall = df.recall.values[selection]
-        list_of_recalls.append(recall)
-        taus = df.th.values[selection]
+        if selection.any():
+            recall = df.recall.values[selection]
+            list_of_recalls.append(recall)
+            taus = df.th.values[selection]
 
-        # Plot precision vs tau for this r
-        ax.scatter(taus, recall, c=c, s=2, label=f'r={r}')
+            # Plot precision vs tau for this r
+            ax.scatter(taus, recall, c=c, s=2, label=f'r={r}')
 
         # Otsu threshold (tau = -1)
         selection = (df.r.values == r_selected) & (df.th.values == -1)
-        recall = df.recall.values[selection]
-        ax.axhline(y=recall, c=c)
+        if selection.any():
+            recall = df.recall.values[selection]
+            ax.axhline(y=recall, c=c)
 
-    ax.scatter(taus, np.average(np.stack(list_of_recalls), axis=0),
-               c='k', marker='s', label='avg')
+    if len(list_of_recalls) > 0:
+        ax.scatter(taus, np.average(np.stack(list_of_recalls), axis=0),
+                   c='k', marker='s', label='avg')
 
     # Invert legend order
     handles, labels = ax.get_legend_handles_labels()
@@ -409,20 +418,23 @@ def make_metric_plots(csv_path, taus, radii, title=''):
 
         # Use only a particular r
         selection = (df.r.values == r_selected) & (df.th.values >= 0)
-        fscore = df.fscore.values[selection]
-        list_of_fscores.append(fscore)
-        taus = df.th.values[selection]
+        if selection.any():
+            fscore = df.fscore.values[selection]
+            list_of_fscores.append(fscore)
+            taus = df.th.values[selection]
 
-        # Plot precision vs tau for this r
-        ax.scatter(taus, fscore, c=c, s=2, label=f'r={r}')
+            # Plot precision vs tau for this r
+            ax.scatter(taus, fscore, c=c, s=2, label=f'r={r}')
 
         # Otsu threshold (tau = -1)
         selection = (df.r.values == r_selected) & (df.th.values == -1)
-        fscore = df.fscore.values[selection]
-        ax.axhline(y=fscore, c=c)
+        if selection.any():
+            fscore = df.fscore.values[selection]
+            ax.axhline(y=fscore, c=c)
 
-    ax.scatter(taus, np.average(np.stack(list_of_fscores), axis=0),
-               c='k', marker='s', label='avg')
+    if len(list_of_fscores) > 0:
+        ax.scatter(taus, np.average(np.stack(list_of_fscores), axis=0),
+                   c='k', marker='s', label='avg')
 
     # Invert legend order
     handles, labels = ax.get_legend_handles_labels()

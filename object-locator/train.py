@@ -35,6 +35,7 @@ from .data import RandomVerticalFlipImageAndLabel
 from .data import ScaleImageAndLabel
 from . import logger
 from . import argparser
+from . import utils
 
 
 # Parse command line arguments
@@ -161,7 +162,7 @@ while epoch < args.epochs:
         imgs = imgs.to(device)
         target_locations = [dictt['locations'].to(device)
                             for dictt in dictionaries]
-        target_count = [dictt['count'].to(device)
+        target_counts = [dictt['count'].to(device)
                         for dictt in dictionaries]
         target_orig_heights = [dictt['orig_height'].to(device)
                                for dictt in dictionaries]
@@ -169,7 +170,7 @@ while epoch < args.epochs:
                               for dictt in dictionaries]
 
         # Lists -> Tensor batches
-        target_count = torch.stack(target_count)
+        target_counts = torch.stack(target_counts)
         target_orig_heights = torch.stack(target_orig_heights)
         target_orig_widths = torch.stack(target_orig_widths)
         target_orig_sizes = torch.stack((target_orig_heights,
@@ -177,13 +178,13 @@ while epoch < args.epochs:
 
         # One training step
         optimizer.zero_grad()
-        est_map, est_count = model.forward(imgs)
-        term1, term2 = loss_loc.forward(est_map,
+        est_maps, est_counts = model.forward(imgs)
+        term1, term2 = loss_loc.forward(est_maps,
                                         target_locations,
                                         target_orig_sizes)
-        est_count = est_count.view(-1)
-        target_count = target_count.view(-1)
-        term3 = loss_regress.forward(est_count, target_count)
+        est_counts = est_counts.view(-1)
+        target_counts = target_counts.view(-1)
+        term3 = loss_regress.forward(est_counts, target_counts)
         term3 *= args.lambdaa
         loss = term1 + term2 + term3
         loss.backward()
@@ -210,12 +211,12 @@ while epoch < args.epochs:
 
             # Send input and output images (first one in the batch).
             # Resize to original size
-            orig_shape = target_orig_sizes[0].data.cpu().numpy().tolist()
-            orig_img_origsize = ((skimage.transform.resize(imgs[0].data.squeeze().cpu().numpy().transpose((1, 2, 0)),
+            orig_shape = target_orig_sizes[0].data.to(device_cpu).numpy().tolist()
+            orig_img_origsize = ((skimage.transform.resize(imgs[0].data.squeeze().to(device_cpu).numpy().transpose((1, 2, 0)),
                                                            output_shape=orig_shape,
                                                            mode='constant') + 1) / 2.0 * 255.0).\
                 astype(np.float32).transpose((2, 0, 1))
-            est_map_origsize = skimage.transform.resize(est_map[0].data.unsqueeze(0).cpu().numpy().transpose((1, 2, 0)),
+            est_map_origsize = skimage.transform.resize(est_maps[0].data.unsqueeze(0).to(device_cpu).numpy().transpose((1, 2, 0)),
                                                         output_shape=orig_shape,
                                                         mode='constant').\
                 astype(np.float32).transpose((2, 0, 1))
@@ -273,7 +274,7 @@ while epoch < args.epochs:
         imgs = imgs.to(device)
         target_locations = [dictt['locations'].to(device)
                             for dictt in dictionaries]
-        target_count = [dictt['count'].to(device)
+        target_counts = [dictt['count'].to(device)
                         for dictt in dictionaries]
         target_orig_heights = [dictt['orig_height'].to(device)
                                for dictt in dictionaries]
@@ -281,7 +282,7 @@ while epoch < args.epochs:
                               for dictt in dictionaries]
 
         with torch.no_grad():
-            target_count = torch.stack(target_count)
+            target_counts = torch.stack(target_counts)
             target_orig_heights = torch.stack(target_orig_heights)
             target_orig_widths = torch.stack(target_orig_widths)
             target_orig_sizes = torch.stack((target_orig_heights,
@@ -289,22 +290,31 @@ while epoch < args.epochs:
         origsize = (dictionaries[0]['orig_height'].item(),
                     dictionaries[0]['orig_width'].item())
 
-        if bool((target_count == 0).cpu().numpy()[0]):
+        # Tensor -> float & numpy
+        target_count_int = int(round(target_counts.item()))
+        target_locations_np = \
+            target_locations[0].to(device_cpu).numpy().reshape(-1, 2)
+        target_orig_size_np = \
+            target_orig_sizes[0].to(device_cpu).numpy().reshape(2)
+
+        normalzr = utils.Normalizer(args.height, args.width)
+
+        if target_count_int == 0:
             continue
 
         # Feed-forward
         with torch.no_grad():
-            est_map, est_count = model.forward(imgs)
+            est_maps, est_counts = model.forward(imgs)
 
         # Tensor -> int
-        est_count_int = int(torch.round(est_count).data.cpu().numpy()[0])
-        target_count_int = int(torch.round(target_count).data.cpu().numpy()[0])
+        est_count_int = int(round(est_counts.item()))
 
         # The 3 terms
         with torch.no_grad():
-            term1, term2 = loss_loc.forward(
-                est_map, target_locations, target_orig_sizes)
-            term3 = loss_regress.forward(est_count, target_count)
+            term1, term2 = loss_loc.forward(est_maps,
+                                            target_locations,
+                                            target_orig_sizes)
+            term3 = loss_regress.forward(est_counts, target_counts)
             term3 *= args.lambdaa
         sum_term1 += term1.item()
         sum_term2 += term2.item()
@@ -318,7 +328,7 @@ while epoch < args.epochs:
 
         # The estimated map must be thresholed to obtain estimated points
         # Otsu thresholding
-        est_map_numpy = est_map[0, :, :].to(device_cpu).numpy()
+        est_map_numpy = est_maps[0, :, :].to(device_cpu).numpy()
         est_map_numpy_origsize = \
             skimage.transform.resize(est_map_numpy,
                                      output_shape=origsize,
@@ -337,20 +347,20 @@ while epoch < args.epochs:
         c = np.concatenate((y, x), axis=1)
         if len(c) == 0:
             ahd = loss_loc.max_dist
-            centroids = []
+            centroids_wrt_orig = []
             est_count = 0
             print('len(c) == 0')
         else:
             # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples
             n_components = max(min(est_count_int, x.size), 1)
-            centroids = mixture.GaussianMixture(n_components=n_components,
+            centroids_wrt_orig = mixture.GaussianMixture(n_components=n_components,
                                                 n_init=1,
                                                 covariance_type='full').\
                 fit(c).means_.astype(np.int)
 
-            target_locations = \
-                target_locations[0].to(device_cpu).numpy().reshape(-1, 2)
-        judge.feed_points(centroids, target_locations)
+        target_locations_wrt_orig = normalzr.unnormalize(target_locations_np,
+                                                         orig_img_size=target_orig_size_np)
+        judge.feed_points(centroids_wrt_orig, target_locations_wrt_orig)
         judge.feed_count(est_count_int, target_count_int)
 
         if time.time() > tic_val + args.log_interval:
@@ -358,12 +368,11 @@ while epoch < args.epochs:
 
             # Send input and output images (first one in the batch).
             # Resize to original size
-            orig_shape = target_orig_sizes[0].to(device_cpu).numpy().tolist()
             orig_img_origsize = ((skimage.transform.resize(imgs[0].to(device_cpu).squeeze().numpy().transpose((1, 2, 0)),
-                                                           output_shape=orig_shape,
+                                                           output_shape=target_orig_size_np.tolist(),
                                                            mode='constant') + 1) / 2.0 * 255.0).\
                 astype(np.float32).transpose((2, 0, 1))
-            est_map_origsize = skimage.transform.resize(est_map[0].to(device_cpu).unsqueeze(0).numpy().transpose((1, 2, 0)),
+            est_map_origsize = skimage.transform.resize(est_maps[0].to(device_cpu).unsqueeze(0).numpy().transpose((1, 2, 0)),
                                                         output_shape=orig_shape,
                                                         mode='constant').\
                 astype(np.float32).transpose((2, 0, 1))
@@ -389,7 +398,7 @@ while epoch < args.epochs:
                 image_with_x = ((image_with_x + 1) / 2.0 * 255.0)
                 image_with_x = image_with_x.to(device_cpu).numpy()
                 image_with_x = np.moveaxis(image_with_x, 0, 2).copy()
-                for y, x in centroids:
+                for y, x in centroids_wrt_orig:
                     image_with_x = cv2.circle(
                         image_with_x, (x, y), 3, [255, 0, 0], -1)
 

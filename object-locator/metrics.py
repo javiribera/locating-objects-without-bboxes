@@ -265,9 +265,10 @@ def make_metric_plots(csv_path, taus, radii, title=''):
         # Find closest R
         r_selected = df.r.values[np.argmin(np.abs(df.r.values - r))]
 
-        # Use only a particular r
-        precision = df.precision.values[df.r.values == r_selected]
-        recall = df.recall.values[df.r.values == r_selected]
+        # Use only a particular r for all thresholds (non-Otsu)
+        selection = (df.r.values == r_selected) & (df.th.values >= 0)
+        precision = df.precision.values[selection]
+        recall = df.recall.values[selection]
 
         # Sort by ascending recall
         idxs = np.argsort(recall)
@@ -276,6 +277,13 @@ def make_metric_plots(csv_path, taus, radii, title=''):
 
         # Plot precision vs. recall for this r
         ax.scatter(recall, precision, c=c, s=2, label=f'r={r}')
+
+        # Otsu threshold (tau = -1)
+        selection = (df.r.values == r_selected) & (df.th.values == -1)
+        precision = df.precision.values[selection]
+        recall = df.recall.values[selection]
+        ax.scatter(recall, precision, c=c, s=2, marker='x')
+
 
     # Invert legend order
     handles, labels = ax.get_legend_handles_labels()
@@ -321,7 +329,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
         ax.axhline(y=precision, c=c)
 
     ax.scatter(taus, np.average(np.stack(list_of_precisions), axis=0),
-               c='k', marker='x', label='avg')
+               c='k', marker='s', label='avg')
 
     
 
@@ -368,7 +376,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
         ax.axhline(y=recall, c=c)
 
     ax.scatter(taus, np.average(np.stack(list_of_recalls), axis=0),
-               c='k', marker='x', label='avg')
+               c='k', marker='s', label='avg')
 
     # Invert legend order
     handles, labels = ax.get_legend_handles_labels()
@@ -414,7 +422,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
         ax.axhline(y=fscore, c=c)
 
     ax.scatter(taus, np.average(np.stack(list_of_fscores), axis=0),
-               c='k', marker='x', label='avg')
+               c='k', marker='s', label='avg')
 
     # Invert legend order
     handles, labels = ax.get_legend_handles_labels()

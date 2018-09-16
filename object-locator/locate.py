@@ -322,7 +322,7 @@ if args.evaluate:
                                      judge.mape,
                                      judge.me,
                                      judge.mpe,
-                                     judge.mpe,
+                                     judge.mae,
                                      judge.mse,
                                      judge.rmse,
                                      judge.pearson_corr,

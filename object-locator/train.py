@@ -336,7 +336,6 @@ while epoch < args.epochs:
         x = coord[1].reshape((-1, 1))
         c = np.concatenate((y, x), axis=1)
         if len(c) == 0:
-            ahd = loss_loc.max_dist
             centroids_wrt_orig = []
             est_count = 0
             print('len(c) == 0')
@@ -350,7 +349,8 @@ while epoch < args.epochs:
 
         target_locations_wrt_orig = normalzr.unnormalize(target_locations_np,
                                                          orig_img_size=target_orig_size_np)
-        judge.feed_points(centroids_wrt_orig, target_locations_wrt_orig)
+        judge.feed_points(centroids_wrt_orig, target_locations_wrt_orig,
+                          max_ahd=loss_loc.max_dist)
         judge.feed_count(est_count_int, target_count_int)
 
         if time.time() > tic_val + args.log_interval:

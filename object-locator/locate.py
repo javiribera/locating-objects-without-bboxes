@@ -222,7 +222,6 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
         x = coord[1].reshape((-1, 1))
         c = np.concatenate((y, x), axis=1)
         if len(c) == 0:
-            ahd = criterion_training.max_dist
             centroids_wrt_orig = np.array([])
         else:
             # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples
@@ -269,7 +268,7 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                 if judge.th != tau:
                     continue
                 judge.feed_points(centroids_wrt_orig, target_locations_wrt_orig,
-                                  max_ahd=math.sqrt(origsize[0]**2 + origsize[1]**2))
+                                  max_ahd=criterion_training.max_dist)
                 judge.feed_count(est_count_int, target_count)
 
         # Save a new line in the CSV corresonding to the resuls of this img

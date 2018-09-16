@@ -387,7 +387,7 @@ while epoch < args.epochs:
                 image_with_x = tensortype(imgs[0, :, :].squeeze().size()).\
                     copy_(imgs[0, :, :].squeeze())
                 image_with_x = ((image_with_x + 1) / 2.0 * 255.0)
-                image_with_x = image_with_x.cpu().numpy()
+                image_with_x = image_with_x.to(device_cpu).numpy()
                 image_with_x = np.moveaxis(image_with_x, 0, 2).copy()
                 for y, x in centroids:
                     image_with_x = cv2.circle(

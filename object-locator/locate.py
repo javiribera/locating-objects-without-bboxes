@@ -211,8 +211,8 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                              dictionaries[0]['filename']),
                 est_map_numpy_origsize)
 
-    # Convert to scalar
-    est_count = est_count.to(device_cpu).numpy()[0][0]
+    # Tensor -> int
+    est_count_int = int(round(est_count.item()))
     
     # The estimated map must be thresholded to obtain estimated points
     for tau, df_out in zip(args.taus, df_outs):
@@ -236,9 +236,8 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
             ahd = criterion_training.max_dist
             centroids_wrt_orig = np.array([])
         else:
-            n_components = int(round(est_count))
             # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples
-            n_components = max(min(n_components, x.size), 1)
+            n_components = max(min(est_count_int, x.size), 1)
             centroids_wrt_orig = mixture.GaussianMixture(n_components=n_components,
                                                 n_init=1,
                                                 covariance_type='full').\
@@ -282,7 +281,7 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                     continue
                 judge.feed_points(centroids_wrt_orig, target_locations_wrt_orig,
                                   max_ahd=math.sqrt(origsize[0]**2 + origsize[1]**2))
-                judge.feed_count(est_count, target_count)
+                judge.feed_count(est_count_int, target_count)
 
         # Save a new line in the CSV corresonding to the resuls of this img
         res_dict = dictionaries[0]

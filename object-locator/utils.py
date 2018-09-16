@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import cv2
 
 class Normalizer():
     def __init__(self, new_size_height, new_size_width):
@@ -35,4 +36,33 @@ class Normalizer():
         coordinates_yx_unnormalized = norm_factor*coordinates_yx_normalized
 
         return coordinates_yx_unnormalized
+
+def threshold(array, tau):
+    """
+    Threshold an array using either hard thresholding or Otsu thresholding.
+
+    :param array: Array to threshold.
+    :param tau: (float) Threshold to use.
+                Values above tau become 1, and values below tau become 0.
+                If -1, use Otsu thresholding.
+    :return: Tuple, where first element is the binary mask, and the second one
+             is the threshold used. When using Otsu thresholding, this threshold will be
+             is obtained adaptively according to the values of the input array.
+             
+    """
+    if tau == -1:
+        # Otsu thresholding
+        minn, maxx = array.min(), array.max()
+        array_scaled = ((array - minn)/(maxx - minn)*255) \
+            .round().astype(np.uint8).squeeze()
+        tau, mask = cv2.threshold(array_scaled,
+                                  0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        tau = minn + (tau/255)*(maxx - minn)
+        # print(f'Otsu selected tau={tau_otsu}')
+    else:
+        # Thresholding with a fixed threshold tau
+        mask = cv2.inRange(array, tau, 1)
+
+    return mask, tau
+
 

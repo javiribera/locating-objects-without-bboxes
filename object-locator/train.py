@@ -328,17 +328,7 @@ while epoch < args.epochs:
 
         # The estimated map must be thresholed to obtain estimated points
         # Otsu thresholding
-        est_map_numpy = est_maps[0, :, :].to(device_cpu).numpy()
-        est_map_numpy_origsize = \
-            skimage.transform.resize(est_map_numpy,
-                                     output_shape=origsize,
-                                     mode='constant')
-        minn, maxx = est_map_numpy_origsize.min(), est_map_numpy_origsize.max()
-        est_map_origsize_scaled = ((est_map_numpy_origsize - minn)/(maxx - minn)*255) \
-            .round().astype(np.uint8).squeeze()
-        tau_otsu, mask = cv2.threshold(est_map_origsize_scaled,
-                                       0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        tau_otsu = minn + (tau_otsu/255)*(maxx - minn)
+        mask, _ = utils.threshold(est_map_numpy_origsize, tau=-1)
 
         # Validation metrics
         coord = np.where(mask > 0)

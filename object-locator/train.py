@@ -18,7 +18,6 @@ import torchvision as tv
 from torchvision.models import inception_v3
 from torchvision import transforms
 from torch.utils.data import DataLoader
-from sklearn import mixture
 import matplotlib
 matplotlib.use('Agg')
 import skimage.transform
@@ -333,24 +332,10 @@ while epoch < args.epochs:
                                                           output_shape=origsize,
                                                           mode='constant')
         mask, _ = utils.threshold(est_map_numpy_origsize, tau=-1)
+        # Obtain centroids of the mask
+        centroids_wrt_orig = utils.cluster(mask, est_count_int)
 
         # Validation metrics
-        coord = np.where(mask > 0)
-        y = coord[0].reshape((-1, 1))
-        x = coord[1].reshape((-1, 1))
-        c = np.concatenate((y, x), axis=1)
-        if len(c) == 0:
-            centroids_wrt_orig = []
-            est_count = 0
-            print('len(c) == 0')
-        else:
-            # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples
-            n_components = max(min(est_count_int, x.size), 1)
-            centroids_wrt_orig = mixture.GaussianMixture(n_components=n_components,
-                                                n_init=1,
-                                                covariance_type='full').\
-                fit(c).means_.astype(np.int)
-
         target_locations_wrt_orig = normalzr.unnormalize(target_locations_np,
                                                          orig_img_size=target_orig_size_np)
         judge.feed_points(centroids_wrt_orig, target_locations_wrt_orig,

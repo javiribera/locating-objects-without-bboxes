@@ -25,7 +25,6 @@ from torchvision import datasets
 from torchvision import transforms
 import torchvision as tv
 from torchvision.models import inception_v3
-from sklearn import mixture
 import skimage.transform
 from peterpy import peter
 from ballpark import ballpark
@@ -217,20 +216,7 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
     # The estimated map must be thresholded to obtain estimated points
     for tau, df_out in zip(args.taus, df_outs):
         mask, _ = utils.threshold(est_map_numpy_origsize, tau)
-        coord = np.where(mask > 0)
-        y = coord[0].reshape((-1, 1))
-        x = coord[1].reshape((-1, 1))
-        c = np.concatenate((y, x), axis=1)
-        if len(c) == 0:
-            centroids_wrt_orig = np.array([])
-        else:
-            # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples
-            n_components = max(min(est_count_int, x.size), 1)
-            centroids_wrt_orig = mixture.GaussianMixture(n_components=n_components,
-                                                n_init=1,
-                                                covariance_type='full').\
-                fit(c).means_.astype(np.int)
-
+        centroids_wrt_orig = utils.cluster(mask, est_count_int)
 
         # Save thresholded map to disk
         os.makedirs(os.path.join(args.out_dir, 'estimated_map_thresholded', f'tau={tau}'),

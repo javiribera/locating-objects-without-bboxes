@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import sklearn.mixture
 import cv2
 
 class Normalizer():
@@ -64,5 +65,36 @@ def threshold(array, tau):
         mask = cv2.inRange(array, tau, 1)
 
     return mask, tau
+
+
+def cluster(array, n_clusters):
+    """
+    Cluster a 2-D binary array.
+    Applies a Gaussian Mixture Model on the positive elements of the array,
+    and returns the number of clusters.
+    
+    :param array: Binary array.
+    :return: Centroids in the input array.
+    """
+
+    array = np.array(array)
+    
+    assert array.ndim == 2
+
+    coord = np.where(array > 0)
+    y = coord[0].reshape((-1, 1))
+    x = coord[1].reshape((-1, 1))
+    c = np.concatenate((y, x), axis=1)
+    if len(c) == 0:
+        centroids = np.array([])
+    else:
+        # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples
+        n_components = max(min(n_clusters, x.size), 1)
+        centroids = sklearn.mixture.GaussianMixture(n_components=n_components,
+                                                    n_init=1,
+                                                    covariance_type='full').\
+            fit(c).means_.astype(np.int)
+
+    return centroids
 
 

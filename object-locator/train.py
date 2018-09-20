@@ -56,7 +56,8 @@ if args.cuda:
     torch.cuda.manual_seed_all(args.seed)
 
 # Visdom setup
-log = logger.Logger(env_name=args.env_name)
+log = logger.Logger(env_name=args.visdom_env,
+                    server=args.visdom_server)
 
 # Data loading code
 training_transforms = []

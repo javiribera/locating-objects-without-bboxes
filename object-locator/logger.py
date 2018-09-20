@@ -5,10 +5,13 @@ import numbers
 from torch.autograd import Variable
 
 class Logger():
-    def __init__(self, env_name='Logger Env'):
+    def __init__(self,
+                 env_name='main',
+                 server='http://localhost'):
 
         # Visdom setup
-        self.client = visdom.Visdom(env=env_name,
+        self.client = visdom.Visdom(server=server,
+                                    env=env_name,
                                     port=8989)
 
         # Each of the 'windows' in visdom web panel

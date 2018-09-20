@@ -104,11 +104,16 @@ def parse_command_args(training_or_testing):
                             metavar='F',
                             help='run validation after F epochs. '
                                  'If 0, no validation will be done')
-        parser.add_argument('--env-name',
+        parser.add_argument('--visdom-env',
                             default='default_environment',
                             type=str,
                             metavar='NAME',
                             help='name of the environment in Visdom')
+        parser.add_argument('--visdom-server',
+                            default='http://localhost',
+                            type=str,
+                            metavar='SRV',
+                            help='Hostname of the Visdom server')
         parser.add_argument('--optimizer', '--optim',
                             default='sgd',
                             type=str.lower,

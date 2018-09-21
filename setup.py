@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name='object-locator',
     version='1.3.1',
-    description='Object Location using PyTorch (inference/testing only).',
+    description='Object Location using PyTorch.',
 
     # The project's main homepage.
     url='https://engineering.purdue.edu/~sorghum',

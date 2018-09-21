@@ -1,3 +1,11 @@
+# Copyright &copyright 2018 The Board of Trustees of Purdue University.
+# All rights reserved.
+# 
+# This source code is not to be distributed or modified
+# without the written permission of Edward J. Delp at Purdue University
+# Contact information: ace@ecn.purdue.edu
+# =====================================================================
+
 import numpy as np
 import os
 import argparse
@@ -104,11 +112,16 @@ def parse_command_args(training_or_testing):
                             metavar='F',
                             help='run validation after F epochs. '
                                  'If 0, no validation will be done')
-        parser.add_argument('--env-name',
+        parser.add_argument('--visdom-env',
                             default='default_environment',
                             type=str,
                             metavar='NAME',
                             help='name of the environment in Visdom')
+        parser.add_argument('--visdom-server',
+                            default='http://localhost',
+                            type=str,
+                            metavar='SRV',
+                            help='Hostname of the Visdom server')
         parser.add_argument('--optimizer', '--optim',
                             default='sgd',
                             type=str.lower,

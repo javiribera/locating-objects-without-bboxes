@@ -1,3 +1,11 @@
+# Copyright &copyright 2018 The Board of Trustees of Purdue University.
+# All rights reserved.
+# 
+# This source code is not to be distributed or modified
+# without the written permission of Edward J. Delp at Purdue University
+# Contact information: ace@ecn.purdue.edu
+# =====================================================================
+
 from __future__ import print_function
 
 import math
@@ -56,7 +64,8 @@ if args.cuda:
     torch.cuda.manual_seed_all(args.seed)
 
 # Visdom setup
-log = logger.Logger(env_name=args.env_name)
+log = logger.Logger(env_name=args.visdom_env,
+                    server=args.visdom_server)
 
 # Data loading code
 training_transforms = []

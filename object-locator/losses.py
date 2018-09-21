@@ -1,3 +1,11 @@
+# Copyright &copyright 2018 The Board of Trustees of Purdue University.
+# All rights reserved.
+# 
+# This source code is not to be distributed or modified
+# without the written permission of Edward J. Delp at Purdue University
+# Contact information: ace@ecn.purdue.edu
+# =====================================================================
+
 import math
 import torch
 from sklearn.utils.extmath import cartesian

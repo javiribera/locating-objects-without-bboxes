@@ -335,7 +335,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
     if len(list_of_precisions) > 0:
         # Plot average precision for all r's
         ax.scatter(taus, np.average(np.stack(list_of_precisions), axis=0),
-                   c='k', marker='s', label='avg')
+                   c='k', marker='s', s=1, label='avg')
 
     
 
@@ -385,7 +385,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
 
     if len(list_of_recalls) > 0:
         ax.scatter(taus, np.average(np.stack(list_of_recalls), axis=0),
-                   c='k', marker='s', label='avg')
+                   c='k', marker='s', s=1, label='avg')
 
     # Invert legend order
     handles, labels = ax.get_legend_handles_labels()
@@ -434,7 +434,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
 
     if len(list_of_fscores) > 0:
         ax.scatter(taus, np.average(np.stack(list_of_fscores), axis=0),
-                   c='k', marker='s', label='avg')
+                   c='k', marker='s', s=1, label='avg')
 
     # Invert legend order
     handles, labels = ax.get_legend_handles_labels()

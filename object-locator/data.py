@@ -93,7 +93,7 @@ class CSVDataset(data.Dataset):
         """
 
         if self.there_is_gt:
-            img_abspath = os.path.join(self.root_dir, self.csv_df.ix[idx, 0])
+            img_abspath = os.path.join(self.root_dir, self.csv_df.ix[idx].filename)
             dictionary = dict(self.csv_df.ix[idx])
         else:
             img_abspath = os.path.join(self.root_dir, self.listfiles[idx])
@@ -138,7 +138,8 @@ class CSVDataset(data.Dataset):
         # Prevents crash when making a batch out of an empty tensor
         if dictionary['count'][0] == 0:
             with torch.no_grad():
-                dictionary['locations'] = torch.tensor([-1, -1])
+                dictionary['locations'] = torch.tensor([-1, -1],
+                                                       dtype=torch.get_default_dtype())
 
         return (img_transformed, transformed_dictionary)
 
@@ -236,7 +237,7 @@ class ScaleImageAndLabel(transforms.Resize):
         img = super(ScaleImageAndLabel, self).__call__(img)
 
         # Scale GT
-        if 'locations' in dictionary:
+        if 'locations' in dictionary and len(dictionary['locations']) > 0:
             # print(dictionary['locations'].type())
             # print(torch.tensor([scale_h, scale_w]).type())
             with torch.no_grad():
@@ -473,6 +474,7 @@ class XMLDataset(data.Dataset):
         # Prevents crash when making a batch out of an empty tensor
         if self.there_is_gt and dictionary['count'].item() == 0:
             with torch.no_grad():
-                dictionary['locations'] = torch.tensor([-1, -1])
+                dictionary['locations'] = torch.tensor([-1, -1],
+                                                       dtype=torch.get_default_dtype())
 
         return (img_transformed, transformed_dictionary)

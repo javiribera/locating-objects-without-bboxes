@@ -104,11 +104,16 @@ def parse_command_args(training_or_testing):
                             metavar='F',
                             help='run validation after F epochs. '
                                  'If 0, no validation will be done')
-        parser.add_argument('--env-name',
-                            default='Pure U-Net',
+        parser.add_argument('--visdom-env',
+                            default='default_environment',
                             type=str,
                             metavar='NAME',
                             help='name of the environment in Visdom')
+        parser.add_argument('--visdom-server',
+                            default='http://localhost',
+                            type=str,
+                            metavar='SRV',
+                            help='Hostname of the Visdom server')
         parser.add_argument('--optimizer', '--optim',
                             default='sgd',
                             type=str.lower,
@@ -186,11 +191,19 @@ def parse_command_args(training_or_testing):
                                    default='256x256',
                                    metavar='HxW',
                                    help='Size of the input images (heightxwidth).')
-        optional_args.add_argument('--radius',
-                                   type=int,
-                                   default=5,
-                                   metavar='R',
-                                   help='Detections at dist <= R to a GT pt are True Positives.')
+        optional_args.add_argument('--radii',
+                                   type=str,
+                                   default=range(0, 15 + 1),
+                                   metavar='Rs',
+                                   help='Detections at dist <= R to a GT pt are True Positives.'
+                                        'If not selected, R=0, ..., 15 will be tested.')
+        optional_args.add_argument('--taus',
+                                   type=str,
+                                   default=np.linspace(0, 1, 100).tolist() + [-1],
+                                   metavar='Ts',
+                                   help='Detection threshold. '
+                                        'If not selected, 100 thresholds in [0, 1] will be tested. '
+                                        'tau=-1 means dynamic Otsu thresholding.')
         optional_args.add_argument('--n-points',
                                    type=int,
                                    default=None,
@@ -203,7 +216,7 @@ def parse_command_args(training_or_testing):
                                    help='Don\'t paint a red circle at each estimated location.')
         optional_args.add_argument('--seed',
                                    type=int,
-                                   default=1,
+                                   default=0,
                                    metavar='S',
                                    help='Random seed.')
         optional_args.add_argument('--max-testset-size',
@@ -225,6 +238,22 @@ def parse_command_args(training_or_testing):
         args.cuda = not args.no_cuda and torch.cuda.is_available()
 
         args.paint = not args.no_paint
+
+        # String/Int -> List
+        if isinstance(args.taus, list):
+            pass
+        elif isinstance(args.taus, str) and ',' in args.taus:
+            args.taus = [float(tau) for tau in args.taus.split(',')]
+        else:
+            args.taus = [int(args.taus)]
+
+        if isinstance(args.radii, list):
+            pass
+        elif isinstance(args.radii, str) and ',' in args.radii:
+            args.radii = [int(r) for r in args.radii.split(',')]
+        else:
+            args.radii = [int(args.radii)]
+
 
     else:
         raise ValueError('Only \'training\' or \'testing\' allowed, got %s'

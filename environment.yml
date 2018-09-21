@@ -24,6 +24,7 @@ dependencies:
     - xmltodict=0.11.0
     - pytorch=0.4.0
     - pip:
+        - ballpark==1.4.0
         - visdom==0.1.7
         - peterpy
         - torchvision==0.2.1

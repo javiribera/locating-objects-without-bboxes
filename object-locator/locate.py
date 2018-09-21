@@ -8,7 +8,10 @@ import shutil
 from parse import parse
 import math
 from collections import OrderedDict
+import itertools
 
+import matplotlib
+matplotlib.use('Agg')
 import cv2
 from tqdm import tqdm
 import numpy as np
@@ -22,17 +25,19 @@ from torchvision import datasets
 from torchvision import transforms
 import torchvision as tv
 from torchvision.models import inception_v3
-from sklearn import mixture
 import skimage.transform
+from peterpy import peter
+from ballpark import ballpark
+
 from .data import CSVDataset
 from .data import csv_collator
 from .data import ScaleImageAndLabel
-from peterpy import peter
-
 from . import losses
 from . import argparser
 from .models import unet_model
 from .metrics import Judge
+from .metrics import make_metric_plots
+from . import utils
 
 
 # Parse command line arguments
@@ -49,17 +54,11 @@ torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed_all(args.seed)
 
-# Create output directories
-os.makedirs(os.path.join(args.out_dir, 'est_map'), exist_ok=True)
-os.makedirs(os.path.join(args.out_dir, 'est_map_thresholded'), exist_ok=True)
-if args.paint:
-    os.makedirs(os.path.join(args.out_dir, 'painted'), exist_ok=True)
-
 # Data loading code
 try:
     testset = CSVDataset(args.dataset,
                          transforms=transforms.Compose([
-                             # ScaleImageAndLabel(size=(args.height, args.width)),
+                             ScaleImageAndLabel(size=(args.height, args.width)),
                              transforms.ToTensor(),
                              transforms.Normalize((0.5, 0.5, 0.5),
                                                   (0.5, 0.5, 0.5)),
@@ -133,7 +132,9 @@ with peter("Loading checkpoint"):
                 name = k[7:]
                 state_dict[name] = v
         model.load_state_dict(state_dict)
-        print(f"\n\__ loaded checkpoint '{args.model}'")
+        num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        print(f"\n\__ loaded checkpoint '{args.model}' "
+              f"with {ballpark(num_params)} trainable parameters")
         # print(model)
     else:
         print(f"\n\__  E: no checkpoint found at '{args.model}'")
@@ -142,16 +143,19 @@ with peter("Loading checkpoint"):
     tic = time.time()
 
 
-# Empty output CSV
-df_out = pd.DataFrame()
-# df_out = pd.DataFrame(columns=['count', 'locations'])
-# df_out.index.name = 'filename'
-
 # Set the module in evaluation mode
 model.eval()
 
 if testset.there_is_gt:
-    judges = [Judge(r) for r in range(0, 16)]
+    # Prepare Judges that will compute P/R as fct of r and th
+    judges = []
+    for r, th in itertools.product(args.radii, args.taus):
+        judge = Judge(r=r)
+        judge.th = th
+        judges.append(judge)
+
+# Empty output CSV (one per threshold)
+df_outs = [pd.DataFrame() for _ in args.taus]
 
 for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                                             total=len(testset_loader)):
@@ -165,6 +169,7 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                             for dictt in dictionaries]
         target_count = [dictt['count'].to(device)
                         for dictt in dictionaries]
+
     target_orig_heights = [dictt['orig_height'].to(device)
                            for dictt in dictionaries]
     target_orig_widths = [dictt['orig_width'].to(device)
@@ -180,6 +185,15 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
     origsize = (dictionaries[0]['orig_height'].item(),
                 dictionaries[0]['orig_width'].item())
 
+    # Tensor -> float & numpy
+    target_count = target_count.item()
+    target_locations = \
+        target_locations[0].to(device_cpu).numpy().reshape(-1, 2)
+    target_orig_size = \
+        target_orig_sizes[0].to(device_cpu).numpy().reshape(2)
+
+    normalzr = utils.Normalizer(args.height, args.width)
+
     # Feed forward
     with torch.no_grad():
         est_map, est_count = model.forward(imgs)
@@ -190,126 +204,124 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
         skimage.transform.resize(est_map_numpy,
                                  output_shape=origsize,
                                  mode='constant')
+    os.makedirs(os.path.join(args.out_dir, 'estimated_map'), exist_ok=True)
     cv2.imwrite(os.path.join(args.out_dir,
-                             'est_map',
+                             'estimated_map',
                              dictionaries[0]['filename']),
                 est_map_numpy_origsize)
 
+    # Tensor -> int
+    est_count_int = int(round(est_count.item()))
+    
     # The estimated map must be thresholded to obtain estimated points
-    # mask = cv2.inRange(est_map_numpy_origsize, 2 / 255, 1)
-    minn, maxx = est_map_numpy_origsize.min(), est_map_numpy_origsize.max()
-    est_map_origsize_scaled = ((est_map_numpy_origsize - minn)/(maxx - minn)*255).round().astype(np.uint8).squeeze()
-    th, mask = cv2.threshold(est_map_origsize_scaled,
-                             0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    coord = np.where(mask > 0)
-    y = coord[0].reshape((-1, 1))
-    x = coord[1].reshape((-1, 1))
-    c = np.concatenate((y, x), axis=1)
-    if len(c) == 0:
-        ahd = criterion_training.max_dist
-        centroids = np.array([])
-    else:
-        n_components = int(torch.round(est_count[0]).to(device_cpu).numpy()[0])
-        # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples
-        n_components = max(min(n_components, x.size), 1)
-        centroids = mixture.GaussianMixture(n_components=n_components,
-                                            n_init=1,
-                                            covariance_type='full').\
-            fit(c).means_.astype(np.int)
+    for tau, df_out in zip(args.taus, df_outs):
+        mask, _ = utils.threshold(est_map_numpy_origsize, tau)
+        centroids_wrt_orig = utils.cluster(mask, est_count_int)
 
-    # Save thresholded map to disk
-    cv2.imwrite(os.path.join(args.out_dir,
-                             'est_map_thresholded',
-                             dictionaries[0]['filename']),
-                mask)
-
-    # Paint red dots if user asked for it
-    if args.paint:
-        # Paint a circle in the original image at the estimated location
-        image_with_x = np.moveaxis(imgs[0, :, :].to(device_cpu).numpy(),
-                                   0, 2).copy()
-        image_with_x = \
-            skimage.transform.resize(image_with_x,
-                                     output_shape=origsize,
-                                     mode='constant')
-        image_with_x = ((image_with_x + 1) / 2.0 * 255.0)
-        for y, x in centroids:
-            image_with_x = cv2.circle(image_with_x, (x, y), 3, [255, 0, 0], -1)
-        # Save original image with circle to disk
-        image_with_x = image_with_x[:, :, ::-1]
-        cv2.imwrite(os.path.join(args.out_dir,
-                                 'painted',
+        # Save thresholded map to disk
+        os.makedirs(os.path.join(args.out_dir, 'estimated_map_thresholded', f'tau={tau}'),
+                    exist_ok=True)
+        cv2.imwrite(os.path.join(args.out_dir, 'estimated_map_thresholded', f'tau={tau}',
                                  dictionaries[0]['filename']),
-                    image_with_x)
+                    mask)
 
-    # Convert to numpy
-    est_count = est_count.to(device_cpu).numpy()[0][0]
+        # Paint red dots if user asked for it
+        if args.paint:
+            # Paint a circle in the original image at the estimated location
+            image_with_x = np.moveaxis(imgs[0, :, :].to(device_cpu).numpy(),
+                                       0, 2).copy()
+            image_with_x = \
+                skimage.transform.resize(image_with_x,
+                                         output_shape=origsize,
+                                         mode='constant')
+            image_with_x = ((image_with_x + 1) / 2.0 * 255.0)
+            for y, x in centroids_wrt_orig:
+                image_with_x = cv2.circle(image_with_x, (x, y), 3, [255, 0, 0], -1)
+            # Save original image with circle to disk
+            image_with_x = image_with_x[:, :, ::-1]
+            os.makedirs(os.path.join(args.out_dir, 'painted', f'tau={tau}'), exist_ok=True)
+            cv2.imwrite(os.path.join(args.out_dir, 'painted', f'tau={tau}',
+                                     dictionaries[0]['filename']),
+                        image_with_x)
 
-    if args.evaluate:
-        # Convert to numpy
-        target_count = target_count.item()
-        target_locations = \
-            target_locations[0].to(device_cpu).numpy().reshape(-1, 2)
 
-        # Normalize to use locations in the original image
-        norm_factor = target_orig_sizes[0].unsqueeze(0).cpu().numpy() \
-            / resized_size
-        norm_factor = norm_factor.repeat(len(target_locations), axis=0)
-        target_locations_wrt_orig = norm_factor*target_locations
+        if args.evaluate:
+            target_locations_wrt_orig = normalzr.unnormalize(target_locations,
+                                                             orig_img_size=target_orig_size)
 
-        # Compute metrics for each value of r (for each Judge)
-        for judge in judges:
-            judge.feed_points(centroids, target_locations_wrt_orig,
-                              max_ahd=math.sqrt(origsize[0]**2 + origsize[1]**2))
-            judge.feed_count(est_count, target_count)
+            # Compute metrics for each value of r (for each Judge)
+            for judge in judges:
+                if judge.th != tau:
+                    continue
+                judge.feed_points(centroids_wrt_orig, target_locations_wrt_orig,
+                                  max_ahd=criterion_training.max_dist)
+                judge.feed_count(est_count_int, target_count)
 
-    # Save a new line in the CSV corresonding to the resuls of this img
-    res_dict = dictionaries[0]
-    res_dict['count'] = est_count
-    res_dict['locations'] = str(centroids.tolist())
-    for key, val in res_dict.copy().items():
-        if 'height' in key or 'width' in key:
-            del res_dict[key]
-    df = pd.DataFrame(data=res_dict,
-                      index=[res_dict['filename']])
-    df.index.name = 'filename'
-    df_out = df_out.append(df)
+        # Save a new line in the CSV corresonding to the resuls of this img
+        res_dict = dictionaries[0]
+        res_dict['count'] = est_count
+        res_dict['locations'] = str(centroids_wrt_orig.tolist())
+        for key, val in res_dict.copy().items():
+            if 'height' in key or 'width' in key:
+                del res_dict[key]
+        df = pd.DataFrame(data=res_dict,
+                          index=[res_dict['filename']])
+        df.index.name = 'filename'
+        df_out = df_out.append(df)
 
-# Write CSV to disk
-df_out.to_csv(os.path.join(args.out_dir, 'estimations.csv'))
+# Write CSVs to disk
+for df_out, tau in zip(df_outs, args.taus):
+    df_out.to_csv(os.path.join(args.out_dir, f'estimations_tau={tau}.csv'))
 
 if args.evaluate:
 
-    # Output CSV where we will put
-    # the precision as a function of r
-    df_prec_n_rec = pd.DataFrame(columns=['precision', 'recall', 'fscore'])
-    df_prec_n_rec.index.name = 'r'
+    with peter("Evauating metrics"):
 
-    print('\__  Location metrics for all the testing set, r=0, ..., 15')
-    for judge in judges:
-        print(f'r={judge.r} => Precision: {judge.precision:.3f}, '
-              f'Recall: {judge.recall:.3f}, F-score: {judge.fscore:.3f}')
+        # Output CSV where we will put
+        # all our metrics as a function of r and the threshold
+        df_metrics = pd.DataFrame(columns=['r', 'th',
+                                              'precision', 'recall', 'fscore', 'MAHD',
+                                              'MAPE', 'ME', 'MPE', 'MAE',
+                                              'MSE', 'RMSE', 'r', 'R2'])
+        df_metrics.index.name = 'idx'
 
-        # Accumulate precision and recall in the CSV dataframe
-        df = pd.DataFrame(data=[[judge.precision, judge.recall, judge.fscore]],
-                          index=[judge.r],
-                          columns=['precision', 'recall', 'fscore'])
-        df.index.name = 'r'
-        df_prec_n_rec = df_prec_n_rec.append(df)
-    print(f'\__ Average AHD for all the testing set: {judge.mahd:.3f}')
+        for j, judge in enumerate(tqdm(judges)):
+            # Accumulate precision and recall in the CSV dataframe
+            df = pd.DataFrame(data=[[judge.r,
+                                     judge.th,
+                                     judge.precision,
+                                     judge.recall,
+                                     judge.fscore,
+                                     judge.mahd,
+                                     judge.mape,
+                                     judge.me,
+                                     judge.mpe,
+                                     judge.mae,
+                                     judge.mse,
+                                     judge.rmse,
+                                     judge.pearson_corr,
+                                     judge.coeff_of_determination]],
+                              columns=['r', 'th',
+                                       'precision', 'recall', 'fscore', 'MAHD',
+                                       'MAPE', 'ME', 'MPE', 'MAE',
+                                       'MSE', 'RMSE', 'r', 'R2'],
+                              index=[j])
+            df.index.name = 'idx'
+            df_metrics = df_metrics.append(df)
 
-    # Regression metrics
-    # (any judge will do as regression metrics don't depend on r)
-    print(f'\__  MAPE for all the testing set: {judge.mape:.3f} %')
-    print(f'\__  ME for all the testing set: {judge.me:+.3f}')
-    print(f'\__  MPE for all the testing set: {judge.mpe:+.3f} %')
-    print(f'\__  MAE for all the testing set: {judge.mae:.3f}')
-    print(f'\__  MSE for all the testing set: {judge.mse:.3f}')
-    print(f'\__  RMSE for all the testing set: {judge.rmse:.3f}')
+        # Write CSV of metrics to disk
+        df_metrics.to_csv(os.path.join(args.out_dir, 'metrics.csv'))
 
-    # Write CSV to disk
-    df_prec_n_rec.to_csv(os.path.join(
-        args.out_dir, 'precision_and_recall.csv'))
+        # Generate plots
+        figs = make_metric_plots(csv_path=os.path.join(args.out_dir, 'metrics.csv'),
+                                 taus=args.taus,
+                                 radii=args.radii)
+        os.makedirs(os.path.join(args.out_dir, 'metrics_plots'), exist_ok=True)
+        for label, fig in figs.items():
+            # Save to disk
+            fig.savefig(os.path.join(args.out_dir, 'metrics_plots', f'{label}.png'))
 
-print('It took %s seconds to evaluate all the testing set.' %
-      int(time.time() - tic))
+
+elapsed_time = int(time.time() - tic)
+print(f'It took {elapsed_time} seconds to evaluate all the testing set.')
+

@@ -171,6 +171,15 @@ class WeightedHausdorffDistance(nn.Module):
             gt_b = gt[b]
             orig_size_b = orig_sizes[b, :]
             norm_factor = (orig_size_b/self.resized_size).unsqueeze(0)
+            n_gt_pts = gt_b.size()[0]
+
+            # Corner case: no GT points
+            if gt_b.ndimension() == 1 and (gt_b < 0).all().item() == 0:
+                terms_1.append(torch.tensor([0],
+                                            dtype=torch.get_default_dtype()))
+                terms_2.append(torch.tensor([self.max_dist],
+                                            dtype=torch.get_default_dtype()))
+                continue
 
             # Pairwise distances between all possible locations and the GTed locations
             n_gt_pts = gt_b.size()[0]

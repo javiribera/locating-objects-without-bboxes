@@ -131,10 +131,14 @@ if args.resume:
         if os.path.isfile(args.resume):
             checkpoint = torch.load(args.resume)
             start_epoch = checkpoint['epoch']
-            lowest_mahd = checkpoint['mahd']
+            try:
+                lowest_mahd = checkpoint['mahd']
+            except KeyError:
+                lowest_mahd = np.infty
+                print('W: Loaded checkpoint has not been validated. ', end='')
             model.load_state_dict(checkpoint['model'])
             optimizer.load_state_dict(checkpoint['optimizer'])
-            print(f"\n\__ loaded checkpoint '{args.resume}'" 
+            print(f"\n\__ loaded checkpoint '{args.resume}'"
                   f"(now on epoch {checkpoint['epoch']})")
         else:
             print(f"\n\__ E: no checkpoint found at '{args.resume}'")
@@ -163,7 +167,7 @@ while epoch < args.epochs:
         target_locations = [dictt['locations'].to(device)
                             for dictt in dictionaries]
         target_counts = [dictt['count'].to(device)
-                        for dictt in dictionaries]
+                         for dictt in dictionaries]
         target_orig_heights = [dictt['orig_height'].to(device)
                                for dictt in dictionaries]
         target_orig_widths = [dictt['orig_width'].to(device)
@@ -238,11 +242,8 @@ while epoch < args.epochs:
 
         it_num += 1
 
-    # Always save checkpoint at end of epoch if there is no validation set
-    if not args.val_dir or \
-            not valset_loader or \
-            len(valset_loader) == 0 or \
-            args.val_freq == 0:
+    # Save checkpoint
+    if args.save and (epoch + 1) % args.val_freq == 0:
         epoch += 1
         if args.save:
             torch.save({'epoch': epoch,
@@ -252,7 +253,12 @@ while epoch < args.epochs:
                         }, args.save)
         continue
 
-    if (epoch + 1) % args.val_freq != 0:
+    # Don't do validation
+    if not args.val_dir or \
+            not valset_loader or \
+            len(valset_loader) == 0 or \
+            args.val_freq == 0 or \
+            (epoch + 1) % args.val_freq != 0:
         epoch += 1
         continue
 

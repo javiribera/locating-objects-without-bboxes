@@ -102,8 +102,10 @@ def parse_command_args(training_or_testing):
                             default=1,
                             type=int,
                             metavar='F',
-                            help='run validation after F epochs. '
-                                 'If 0, no validation will be done')
+                            help='run validation every F epochs. '
+                                 'If 0, no validation will be done. '
+                                 'If no validation is done, a checkpoint will be saved '
+                                 'every F epochs.')
         parser.add_argument('--visdom-env',
                             default='default_environment',
                             type=str,

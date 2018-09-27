@@ -110,11 +110,13 @@ class AveragedHausdorffLoss(nn.Module):
 class WeightedHausdorffDistance(nn.Module):
     def __init__(self,
                  resized_height, resized_width,
+                 p=-np.inf,
                  return_2_terms=False,
                  device=torch.device('cpu')):
         """
         :param resized_height: Number of rows in the image.
         :param resized_width: Number of columns in the image.
+        :param p: Exponent in the generalized mean. -inf makes it the minimum.
         :param return_2_terms: Whether to return the 2 terms
                                of the WHD instead of their sum.
                                Default: False.
@@ -138,10 +140,12 @@ class WeightedHausdorffDistance(nn.Module):
 
         self.return_2_terms = return_2_terms
 
+        self.p = p
+
     def forward(self, prob_map, gt, orig_sizes):
         """
         Compute the Weighted Hausdorff Distance function
-         between the estimated probability map and ground truth points.
+        between the estimated probability map and ground truth points.
         The output is the WHD averaged through all the batch.
 
         :param prob_map: (B x H x W) Tensor of the probability map of the estimation.
@@ -203,15 +207,15 @@ class WeightedHausdorffDistance(nn.Module):
             p_replicated = p.view(-1, 1).repeat(1, n_gt_pts)
 
             eps = 1e-6
-            alpha = 4
 
             # Weighted Hausdorff Distance
             term_1 = (1 / (n_est_pts + eps)) * \
                 torch.sum(p * torch.min(d_matrix, 1)[0])
-            d_div_p = torch.min((d_matrix + eps) /
-                                (p_replicated**alpha + eps / self.max_dist), 0)[0]
-            d_div_p = torch.clamp(d_div_p, 0, self.max_dist)
-            term_2 = torch.mean(d_div_p, 0)
+            weighted_d_matrix = (1 - p_replicated)*self.max_dist + p_replicated*d_matrix
+            minn = softmin(weighted_d_matrix,
+                           p=self.p,
+                           dim=0, keepdim=False)
+            term_2 = torch.mean(minn)
 
             # terms_1[b] = term_1
             # terms_2[b] = term_2
@@ -223,7 +227,36 @@ class WeightedHausdorffDistance(nn.Module):
 
         if self.return_2_terms:
             res = terms_1.mean(), terms_2.mean()
+            print(res)
         else:
             res = terms_1.mean() + terms_2.mean()
 
         return res
+
+
+def softmin(input, dim, p=-np.inf, keepdim=False):
+    # """
+    # Computes the softmin along some axes.
+    # Softmin is the same as -softmax(-x), i.e,
+    # softmin(x) = -log(sum_i(exp(-x_i)))
+
+    # The smoothness of the operator is controlled with k:
+    # softmin(x) = -log(sum_i(exp(-k*x_i)))/k
+
+    # :param input: Tensor of any dimension.
+    # :param dim: (int or tuple of ints) The dimension or dimensions to reduce.
+    # :param keepdim: (bool) Whether the output tensor has dim retained or not.
+    # :param k: (float>0) How similar softmin is to min (the lower the more smooth).
+    # """
+    # return -torch.log(torch.sum(torch.exp(-k*input), dim, keepdim))/k
+    """
+    Softmin is the generalized mean, which corresponds to the minimum when p = -inf.
+    https://en.wikipedia.org/wiki/Generalized_mean
+    :param input: Tensor of any dimension.
+    :param dim: (int or tuple of ints) The dimension or dimensions to reduce.
+    :param keepdim: (bool) Whether the output tensor has dim retained or not.
+    :param p: (float<0).
+    """
+    assert p < 0
+    return torch.mean((input + 1e-6)**p, dim, keepdim=keepdim)**(1./p)
+

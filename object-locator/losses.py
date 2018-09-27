@@ -31,13 +31,14 @@ def _assert_no_grad(variables):
 
 
 def cdist(x, y):
-    '''
-    Input: x is a Nxd Tensor
-           y is a Mxd Tensor
-    Output: dist is a NxM matrix where dist[i,j] is the norm
-           between x[i,:] and y[j,:]
-    i.e. dist[i,j] = ||x[i,:]-y[j,:]||
-    '''
+    """
+    Compute distance between each pair of the two collections of inputs.
+    :param x: Nxd Tensor
+    :param y: Mxd Tensor
+    :res: NxM matrix where dist[i,j] is the norm between x[i,:] and y[j,:],
+          i.e. dist[i,j] = ||x[i,:]-y[j,:]||
+
+    """
     differences = x.unsqueeze(1) - y.unsqueeze(0)
     distances = torch.sum(differences**2, -1).sqrt()
     return distances
@@ -46,8 +47,8 @@ def cdist(x, y):
 def averaged_hausdorff_distance(set1, set2, max_ahd=np.inf):
     """
     Compute the Averaged Hausdorff Distance function
-     between two unordered sets of points (the function is symmetric).
-     Batches are not supported, so squeeze your inputs first!
+    between two unordered sets of points (the function is symmetric).
+    Batches are not supported, so squeeze your inputs first!
     :param set1: Array/list where each row/element is an N-dimensional point.
     :param set2: Array/list where each row/element is an N-dimensional point.
     :param max_ahd: Maximum AHD possible to return if any set is empty. Default: inf.
@@ -82,8 +83,8 @@ class AveragedHausdorffLoss(nn.Module):
     def forward(self, set1, set2):
         """
         Compute the Averaged Hausdorff Distance function
-         between two unordered sets of points (the function is symmetric).
-         Batches are not supported, so squeeze your inputs first!
+        between two unordered sets of points (the function is symmetric).
+        Batches are not supported, so squeeze your inputs first!
         :param set1: Tensor where each row is an N-dimensional point.
         :param set2: Tensor where each row is an N-dimensional point.
         :return: The Averaged Hausdorff Distance between set1 and set2.
@@ -160,7 +161,7 @@ class WeightedHausdorffDistance(nn.Module):
         :param orig_widths: List of the original width for each image in the batch.
         :return: Single-scalar Tensor with the Weighted Hausdorff Distance.
                  If self.return_2_terms=True, then return a tuple containing
-                 the two terms of the Weighted Hausdorff Distance. 
+                 the two terms of the Weighted Hausdorff Distance.
         """
 
         _assert_no_grad(gt)

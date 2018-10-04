@@ -226,7 +226,6 @@ class WeightedHausdorffDistance(nn.Module):
 
         if self.return_2_terms:
             res = terms_1.mean(), terms_2.mean()
-            print(res)
         else:
             res = terms_1.mean() + terms_2.mean()
 

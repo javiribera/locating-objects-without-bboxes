@@ -129,7 +129,8 @@ if args.optimizer == 'sgd':
                           momentum=0.9)
 elif args.optimizer == 'adam':
     optimizer = optim.Adam(model.parameters(),
-                           lr=args.lr)
+                           lr=args.lr,
+                           amsgrad=True)
 
 start_epoch = 0
 lowest_mahd = np.infty

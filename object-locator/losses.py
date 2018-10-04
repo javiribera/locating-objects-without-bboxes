@@ -207,15 +207,13 @@ class WeightedHausdorffDistance(nn.Module):
             n_est_pts = p.sum()
             p_replicated = p.view(-1, 1).repeat(1, n_gt_pts)
 
-            eps = 1e-6
-
             # Weighted Hausdorff Distance
-            term_1 = (1 / (n_est_pts + eps)) * \
+            term_1 = (1 / (n_est_pts + 1e-6)) * \
                 torch.sum(p * torch.min(d_matrix, 1)[0])
             weighted_d_matrix = (1 - p_replicated)*self.max_dist + p_replicated*d_matrix
-            minn = softmin(weighted_d_matrix,
-                           p=self.p,
-                           dim=0, keepdim=False)
+            minn = generaliz_mean(weighted_d_matrix,
+                                  p=self.p,
+                                  dim=0, keepdim=False)
             term_2 = torch.mean(minn)
 
             # terms_1[b] = term_1
@@ -251,13 +249,14 @@ def generaliz_mean(tensor, dim, p=-9, keepdim=False):
     # """
     # return -torch.log(torch.sum(torch.exp(-k*input), dim, keepdim))/k
     """
-    Softmin is the generalized mean, which corresponds to the minimum when p = -inf.
+    The generalized mean. It corresponds to the minimum when p = -inf.
     https://en.wikipedia.org/wiki/Generalized_mean
-    :param input: Tensor of any dimension.
+    :param tensor: Tensor of any dimension.
     :param dim: (int or tuple of ints) The dimension or dimensions to reduce.
     :param keepdim: (bool) Whether the output tensor has dim retained or not.
     :param p: (float<0).
     """
     assert p < 0
-    return torch.mean((input + 1e-6)**p, dim, keepdim=keepdim)**(1./p)
+    res= torch.mean((tensor + 1e-6)**p, dim, keepdim=keepdim)**(1./p)
+    return res
 

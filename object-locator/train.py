@@ -116,6 +116,7 @@ model.to(device)
 loss_regress = nn.SmoothL1Loss()
 loss_loc = losses.WeightedHausdorffDistance(resized_height=args.height,
                                             resized_width=args.width,
+                                            p=args.p,
                                             return_2_terms=True,
                                             device=device)
 l1_loss = nn.L1Loss(size_average=False)

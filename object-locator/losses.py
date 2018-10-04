@@ -111,7 +111,7 @@ class AveragedHausdorffLoss(nn.Module):
 class WeightedHausdorffDistance(nn.Module):
     def __init__(self,
                  resized_height, resized_width,
-                 p=-np.inf,
+                 p=-9,
                  return_2_terms=False,
                  device=torch.device('cpu')):
         """
@@ -235,7 +235,7 @@ class WeightedHausdorffDistance(nn.Module):
         return res
 
 
-def softmin(input, dim, p=-np.inf, keepdim=False):
+def generaliz_mean(tensor, dim, p=-9, keepdim=False):
     # """
     # Computes the softmin along some axes.
     # Softmin is the same as -softmax(-x), i.e,

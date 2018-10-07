@@ -237,7 +237,7 @@ while epoch < args.epochs:
             log.image(imgs=[orig_img_origsize, est_map_origsize],
                       titles=['(Training) Input',
                               '(Training) U-Net output'],
-                      windows=[1, 2])
+                      window_ids=[1, 2])
 
             # # Read image with GT dots from disk
             # gt_img_numpy = skimage.io.imread(
@@ -375,7 +375,7 @@ while epoch < args.epochs:
             log.image(imgs=[orig_img_origsize, est_map_origsize],
                       titles=['(Validation) Input',
                               '(Validation) U-Net output'],
-                      windows=[5, 6])
+                      window_ids=[5, 6])
 
             # # Read image with GT dots from disk
             # gt_img_numpy = skimage.io.imread(
@@ -401,7 +401,7 @@ while epoch < args.epochs:
                 log.image(imgs=[np.moveaxis(image_with_x, 2, 0)],
                           titles=[
                               '(Validation) Estimated centers @ crossings'],
-                          windows=[8])
+                          window_ids=[8])
 
     avg_term1_val = sum_term1 / len(valset_loader)
     avg_term2_val = sum_term2 / len(valset_loader)

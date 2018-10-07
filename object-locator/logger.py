@@ -94,23 +94,23 @@ class Logger():
                                            xlabel='Epoch'),
                                  win='train_losses')
 
-    def image(self, imgs, titles, windows):
+    def image(self, imgs, titles, window_ids):
         """Send images to Visdom.
         Each image will be shown in a different window/plot.
 
         :param imgs: List of numpy images.
         :param titles: List of titles of each image.
-        :param windows: List of window names.
+        :param window_ids: List of window IDs.
         """
 
         # Watchdog
-        if not(len(imgs) == len(titles) == len(windows)):
+        if not(len(imgs) == len(titles) == len(window_ids)):
             raise ValueError('The number of "imgs", "titles" and '
-                             '"windows" must be equal, got '
+                             '"window_ids" must be equal, got '
                              '%s, %s and %s, respectively'
-                             % (len(imgs), len(titles), len(windows)))
+                             % (len(imgs), len(titles), len(window_ids)))
 
-        for img, title, win in zip(imgs, titles, windows):
+        for img, title, win in zip(imgs, titles, window_ids):
             self.client.image(img,
                               opts=dict(title=title),
                               win=str(win))

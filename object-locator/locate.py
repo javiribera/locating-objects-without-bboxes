@@ -216,7 +216,7 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
     cv2.imwrite(os.path.join(args.out_dir,
                              'estimated_map',
                              dictionaries[0]['filename']),
-                est_map_numpy_origsize)
+                np.uint8(np.round(255*est_map_numpy_origsize)))
 
     # Tensor -> int
     est_count_int = int(round(est_count.item()))

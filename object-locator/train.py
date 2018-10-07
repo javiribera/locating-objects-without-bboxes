@@ -252,25 +252,22 @@ while epoch < args.epochs:
 
         it_num += 1
 
-    # Save checkpoint
-    if args.save and (epoch + 1) % args.val_freq == 0:
-        epoch += 1
-        if args.save:
+    # Never do validation?
+    if not args.val_dir or \
+            not valset_loader or \
+            len(valset_loader) == 0 or \
+            args.val_freq == 0:
+
+        # Time to save checkpoint?
+        if args.save and (epoch + 1) % args.val_freq == 0:
             torch.save({'epoch': epoch,
                         'model': model.state_dict(),
                         'optimizer': optimizer.state_dict(),
                         'n_points': args.n_points,
                         }, args.save)
-        continue
-
-    # Don't do validation
-    if not args.val_dir or \
-            not valset_loader or \
-            len(valset_loader) == 0 or \
-            args.val_freq == 0 or \
-            (epoch + 1) % args.val_freq != 0:
         epoch += 1
         continue
+
 
     # === VALIDATION ===
 

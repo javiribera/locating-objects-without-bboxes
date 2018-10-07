@@ -227,9 +227,11 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
         centroids_wrt_orig = utils.cluster(mask, est_count_int)
 
         # Save thresholded map to disk
-        os.makedirs(os.path.join(args.out_dir, 'estimated_map_thresholded', f'tau={tau}'),
+        os.makedirs(os.path.join(args.out_dir, 'estimated_map_thresholded',
+                                 f'tau={round(tau, 4)}'),
                     exist_ok=True)
-        cv2.imwrite(os.path.join(args.out_dir, 'estimated_map_thresholded', f'tau={tau}',
+        cv2.imwrite(os.path.join(args.out_dir, 'estimated_map_thresholded',
+                                 f'tau={round(tau, 4)}',
                                  dictionaries[0]['filename']),
                     mask)
 
@@ -247,8 +249,10 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                 image_with_x = cv2.circle(image_with_x, (x, y), 3, [255, 0, 0], -1)
             # Save original image with circle to disk
             image_with_x = image_with_x[:, :, ::-1]
-            os.makedirs(os.path.join(args.out_dir, 'painted', f'tau={tau}'), exist_ok=True)
-            cv2.imwrite(os.path.join(args.out_dir, 'painted', f'tau={tau}',
+            os.makedirs(os.path.join(args.out_dir, 'painted',
+                                     f'tau={round(tau, 4)}'), exist_ok=True)
+            cv2.imwrite(os.path.join(args.out_dir, 'painted',
+                                     f'tau={round(tau, 4)}',
                                      dictionaries[0]['filename']),
                         image_with_x)
 
@@ -279,7 +283,8 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
 
 # Write CSVs to disk
 for df_out, tau in zip(df_outs, args.taus):
-    df_out.to_csv(os.path.join(args.out_dir, f'estimations_tau={tau}.csv'))
+    df_out.to_csv(os.path.join(args.out_dir,
+                               f'estimations_tau={round(tau, 4)}.csv'))
 
 if args.evaluate:
 

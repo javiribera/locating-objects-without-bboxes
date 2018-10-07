@@ -83,7 +83,7 @@ class Logger():
                                               ylabel='Loss',
                                               xlabel='Epoch'),
                                     append=True,
-                                    win='0')
+                                    win='train_losses')
         if self.win_train_loss == 'win does not exist':
             self.win_train_loss = \
                 self.client.line(Y=y,
@@ -92,7 +92,7 @@ class Logger():
                                            legend=terms_legends,
                                            ylabel='Loss',
                                            xlabel='Epoch'),
-                                 win='0')
+                                 win='train_losses')
 
     def image(self, imgs, titles, windows):
         """Send images to Visdom.
@@ -161,7 +161,7 @@ class Logger():
                                               ylabel='Loss',
                                               xlabel='Epoch'),
                                     append=True,
-                                    win='4')
+                                    win='val_metrics')
         if self.win_val_loss == 'win does not exist':
             self.win_val_loss = \
                 self.client.line(Y=y,
@@ -170,4 +170,4 @@ class Logger():
                                            legend=terms_legends,
                                            ylabel='Loss',
                                            xlabel='Epoch'),
-                                 win='4')
+                                 win='val_metrics')

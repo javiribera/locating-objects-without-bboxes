@@ -336,5 +336,6 @@ if args.evaluate:
 
 
 elapsed_time = int(time.time() - tic)
-print(f'It took {elapsed_time} seconds to evaluate all the testing set.')
+print(f'It took {elapsed_time} seconds to evaluate all this dataset.')
+
 

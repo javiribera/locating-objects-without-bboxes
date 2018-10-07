@@ -290,15 +290,16 @@ def make_metric_plots(csv_path, taus, radii, title=''):
             precision = precision[idxs]
 
             # Plot precision vs. recall for this r
-            ax.scatter(recall, precision, c=c, s=2, label=f'r={r}')
+            ax.scatter(recall, precision,
+                       c=c, s=2, label=f'r={r}')
 
         # Otsu threshold (tau = -1)
         selection = (df.r.values == r_selected) & (df.th.values == -1)
         if selection.any():
             precision = df.precision.values[selection]
             recall = df.recall.values[selection]
-            ax.scatter(recall, precision, c=c, s=2, marker='x')
-
+            ax.scatter(recall, precision,
+                       c=c, s=3, marker='x', label=f'r={r}, t=-1')
 
     # Invert legend order
     handles, labels = ax.get_legend_handles_labels()
@@ -343,7 +344,8 @@ def make_metric_plots(csv_path, taus, radii, title=''):
         selection = (df.r.values == r_selected) & (df.th.values == -1)
         if selection.any():
             precision = df.precision.values[selection]
-            ax.axhline(y=precision, c=c)
+            ax.axhline(y=precision,
+                       c=c, label=f'r={r}, t=-1')
 
     if len(list_of_precisions) > 0:
         # Plot average precision for all r's
@@ -394,7 +396,8 @@ def make_metric_plots(csv_path, taus, radii, title=''):
         selection = (df.r.values == r_selected) & (df.th.values == -1)
         if selection.any():
             recall = df.recall.values[selection]
-            ax.axhline(y=recall, c=c)
+            ax.axhline(y=recall,
+                       c=c, label=f'r={r}, t=-1')
 
     if len(list_of_recalls) > 0:
         ax.scatter(taus, np.average(np.stack(list_of_recalls), axis=0),
@@ -443,7 +446,8 @@ def make_metric_plots(csv_path, taus, radii, title=''):
         selection = (df.r.values == r_selected) & (df.th.values == -1)
         if selection.any():
             fscore = df.fscore.values[selection]
-            ax.axhline(y=fscore, c=c)
+            ax.axhline(y=fscore,
+                       c=c, label=f'r={r}, t=-1')
 
     if len(list_of_fscores) > 0:
         ax.scatter(taus, np.average(np.stack(list_of_fscores), axis=0),

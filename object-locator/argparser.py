@@ -255,14 +255,15 @@ def parse_command_args(training_or_testing):
         args.paint = not args.no_paint
 
         # String/Int -> List
-        if isinstance(args.taus, list):
+        if isinstance(args.taus, (list, range)):
             pass
         elif isinstance(args.taus, str) and ',' in args.taus:
-            args.taus = [float(tau) for tau in args.taus.split(',')]
+            args.taus = [float(tau)
+                         for tau in args.taus.replace('[', '').replace(']', '').split(',')]
         else:
             args.taus = [int(args.taus)]
 
-        if isinstance(args.radii, list):
+        if isinstance(args.radii, (list, range)):
             pass
         elif isinstance(args.radii, str) and ',' in args.radii:
             args.radii = [int(r) for r in args.radii.split(',')]

@@ -259,7 +259,12 @@ def make_metric_plots(csv_path, taus, radii, title=''):
     # ==== Precision vs Recall ====
     colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
     if len(radii) > len(colors):
-        raise ValueError(f'Too many radii provided, maximum {len(colors)}')
+        print(f'W: {len(radii)} are too many radii to plot, '
+              f'taking {len(colors)} randomly.')
+        radii = list(radii)
+        np.random.shuffle(radii)
+        radii = radii[:len(colors)]
+        radii = sorted(radii)
 
     # Create figure
     fig, ax = plt.subplots()

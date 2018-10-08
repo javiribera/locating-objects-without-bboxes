@@ -109,7 +109,7 @@ def cluster(array, n_clusters, max_mask_pts=np.infty):
         n_components = max(min(n_clusters, x.size), 1)
         centroids = sklearn.mixture.GaussianMixture(n_components=n_components,
                                                     n_init=1,
-                                                    covariance_type='full').\
+                                                    covariance_type='spherical').\
             fit(c).means_.astype(np.int)
 
     return centroids

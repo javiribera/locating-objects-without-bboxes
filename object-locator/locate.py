@@ -224,7 +224,8 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
     # The estimated map must be thresholded to obtain estimated points
     for tau, df_out in zip(args.taus, df_outs):
         mask, _ = utils.threshold(est_map_numpy_origsize, tau)
-        centroids_wrt_orig = utils.cluster(mask, est_count_int)
+        centroids_wrt_orig = utils.cluster(mask, est_count_int,
+                                           max_mask_pts=args.max_mask_pts)
 
         # Save thresholded map to disk
         os.makedirs(os.path.join(args.out_dir, 'estimated_map_thresholded',

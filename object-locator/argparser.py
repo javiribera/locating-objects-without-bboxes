@@ -135,6 +135,12 @@ def parse_command_args(training_or_testing):
                             metavar='OPTIM',
                             choices=['sgd', 'adam'],
                             help='SGD or Adam')
+        parser.add_argument('--max-mask-pts',
+                            type=int,
+                            default=np.infty,
+                            metavar='M',
+                            help='Subsample this number of points from the mask, '
+                                 'so GMM fitting runs faster.')
         parser.add_argument('--paint',
                             default=False,
                             action="store_true",
@@ -225,6 +231,12 @@ def parse_command_args(training_or_testing):
                                    metavar='N',
                                    help='If you know the exact number of points in the image, then set it. '
                                    'Otherwise it will be estimated by adding a L1 cost term.')
+        optional_args.add_argument('--max-mask-pts',
+                                   type=int,
+                                   default=np.infty,
+                                   metavar='M',
+                                   help='Subsample this number of points from the mask, '
+                                        'so GMM fitting runs faster.')
         optional_args.add_argument('--no-paint',
                                    default=False,
                                    action="store_true",

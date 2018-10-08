@@ -75,13 +75,16 @@ def threshold(array, tau):
     return mask, tau
 
 
-def cluster(array, n_clusters):
+def cluster(array, n_clusters, max_mask_pts=np.infty):
     """
     Cluster a 2-D binary array.
     Applies a Gaussian Mixture Model on the positive elements of the array,
     and returns the number of clusters.
     
     :param array: Binary array.
+    :param n_clusters: Number of clusters (Gaussians) to fit,
+    :param max_mask_pts: Randomly subsample "max_pts" points
+                         from the array before fitting.
     :return: Centroids in the input array.
     """
 
@@ -96,6 +99,12 @@ def cluster(array, n_clusters):
     if len(c) == 0:
         centroids = np.array([])
     else:
+        # Subsample our points randomly so it is faster
+        if max_mask_pts != np.infty:
+            n_pts = min(len(c), max_mask_pts)
+            np.random.shuffle(c)
+            c = c[:n_pts]
+
         # If the estimation is horrible, we cannot fit a GMM if n_components > n_samples
         n_components = max(min(n_clusters, x.size), 1)
         centroids = sklearn.mixture.GaussianMixture(n_components=n_components,

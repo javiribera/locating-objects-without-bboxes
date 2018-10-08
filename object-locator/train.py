@@ -347,7 +347,8 @@ while epoch < args.epochs:
                                                           mode='constant')
         mask, _ = utils.threshold(est_map_numpy_origsize, tau=-1)
         # Obtain centroids of the mask
-        centroids_wrt_orig = utils.cluster(mask, est_count_int)
+        centroids_wrt_orig = utils.cluster(mask, est_count_int,
+                                           max_mask_pts=args.max_mask_pts)
 
         # Validation metrics
         target_locations_wrt_orig = normalzr.unnormalize(target_locations_np,

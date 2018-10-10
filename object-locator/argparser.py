@@ -279,7 +279,7 @@ def parse_command_args(training_or_testing):
         if isinstance(args.radii, (list, range)):
             pass
         elif isinstance(args.radii, str) and ',' in args.radii:
-            args.radii = [int(r) for r in args.radii.split(',')]
+            args.radii = [int(r) for r in args.radii.replace('[', '').replace(']', '').split(',')]
         else:
             args.radii = [int(args.radii)]
 

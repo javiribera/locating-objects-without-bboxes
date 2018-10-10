@@ -278,7 +278,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
         # Find closest R
         r_selected = df.r.values[np.argmin(np.abs(df.r.values - r))]
 
-        # Use only a particular r for all thresholds (non-Otsu)
+        # Use only a particular r for all fixed thresholds
         selection = (df.r.values == r_selected) & (df.th.values >= 0)
         if selection.any():
             precision = df.precision.values[selection]
@@ -299,7 +299,15 @@ def make_metric_plots(csv_path, taus, radii, title=''):
             precision = df.precision.values[selection]
             recall = df.recall.values[selection]
             ax.scatter(recall, precision,
-                       c=c, s=3, marker='x', label=f'r={r}, t=-1')
+                       c=c, s=8, marker='+', label=f'r={r}, Otsu')
+
+        # BMM threshold (tau = -2)
+        selection = (df.r.values == r_selected) & (df.th.values == -2)
+        if selection.any():
+            precision = df.precision.values[selection]
+            recall = df.recall.values[selection]
+            ax.scatter(recall, precision,
+                       c=c, s=8, marker='s', label=f'r={r}, BMM')
 
     # Invert legend order
     handles, labels = ax.get_legend_handles_labels()
@@ -330,7 +338,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
         # Find closest R
         r_selected = df.r.values[np.argmin(np.abs(df.r.values - r))]
 
-        # Use only a particular r for all thresholds (non-Otsu)
+        # Use only a particular r for all fixed thresholds
         selection = (df.r.values == r_selected) & (df.th.values >= 0)
         if selection.any():
             precision = df.precision.values[selection]
@@ -345,12 +353,21 @@ def make_metric_plots(csv_path, taus, radii, title=''):
         if selection.any():
             precision = df.precision.values[selection]
             ax.axhline(y=precision,
-                       c=c, label=f'r={r}, t=-1')
+                       linestyle='-',
+                       c=c, label=f'r={r}, Otsu')
+
+        # BMM threshold (tau = -1)
+        selection = (df.r.values == r_selected) & (df.th.values == -2)
+        if selection.any():
+            precision = df.precision.values[selection]
+            ax.axhline(y=precision,
+                       linestyle='--',
+                       c=c, label=f'r={r}, BMM')
 
     if len(list_of_precisions) > 0:
         # Plot average precision for all r's
         ax.scatter(taus, np.average(np.stack(list_of_precisions), axis=0),
-                   c='k', marker='s', s=1, label='avg')
+                   c='k', marker='x', s=3, label='avg along r')
 
     
 
@@ -397,7 +414,17 @@ def make_metric_plots(csv_path, taus, radii, title=''):
         if selection.any():
             recall = df.recall.values[selection]
             ax.axhline(y=recall,
-                       c=c, label=f'r={r}, t=-1')
+                       linestyle='-',
+                       c=c, label=f'r={r}, Otsu')
+
+        # BMM threshold (tau = -2)
+        selection = (df.r.values == r_selected) & (df.th.values == -2)
+        if selection.any():
+            recall = df.recall.values[selection]
+            ax.axhline(y=recall,
+                       linestyle='--',
+                       c=c, label=f'r={r}, BMM')
+
 
     if len(list_of_recalls) > 0:
         ax.scatter(taus, np.average(np.stack(list_of_recalls), axis=0),

@@ -154,6 +154,10 @@ with peter("Loading checkpoint"):
 # Set the module in evaluation mode
 model.eval()
 
+# Accumulative histogram of estimated maps
+bmm_tracker = utils.AccBetaMixtureModel()
+
+
 if testset.there_is_gt:
     # Prepare Judges that will compute P/R as fct of r and th
     judges = []
@@ -220,10 +224,14 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
 
     # Tensor -> int
     est_count_int = int(round(est_count.item()))
-    
+
     # The estimated map must be thresholded to obtain estimated points
     for tau, df_out in zip(args.taus, df_outs):
-        mask, _ = utils.threshold(est_map_numpy_origsize, tau)
+        if tau != -2:
+            mask, _ = utils.threshold(est_map_numpy_origsize, tau)
+        else:
+            mask, _, mix = utils.threshold(est_map_numpy_origsize, tau)
+            bmm_tracker.feed(mix)
         centroids_wrt_orig = utils.cluster(mask, est_count_int,
                                            max_mask_pts=args.max_mask_pts)
 
@@ -334,6 +342,12 @@ if args.evaluate:
         for label, fig in figs.items():
             # Save to disk
             fig.savefig(os.path.join(args.out_dir, 'metrics_plots', f'{label}.png'))
+
+
+# Save plot figures of the statistics of the BMM-based threshold
+if -2 in args.taus:
+    for label, fig in bmm_tracker.plot().items():
+        fig.savefig(os.path.join(args.out_dir, 'metrics_plots', f'{label}.png'))
 
 
 elapsed_time = int(time.time() - tic)

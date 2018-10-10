@@ -250,10 +250,13 @@ def make_metric_plots(csv_path, taus, radii, title=''):
         ax.set_ylabel('%')
         ax.set_xlabel(r'$r$ (in pixels)')
         ax.grid(True)
-        plt.title(title + f' tau={tau_selected:4f}')
+        plt.title(title + f' tau={round(tau_selected, 4)}')
+
+        # Hide grid lines below the plot
+        ax.set_axisbelow(True)
 
         # Add figure to dictionary
-        dic[f'precision_and_recall_vs_r,_tau={tau_selected}'] = fig
+        dic[f'precision_and_recall_vs_r,_tau={round(tau_selected, 4)}'] = fig
         plt.close(fig)
 
     # ==== Precision vs Recall ====
@@ -318,6 +321,9 @@ def make_metric_plots(csv_path, taus, radii, title=''):
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
     ax.legend(handles, labels, bbox_to_anchor=(1, 0.5))
 
+    # Hide grid lines below the plot
+    ax.set_axisbelow(True)
+
     # Add figure to dictionary
     dic['precision_vs_recall'] = fig
     plt.close(fig)
@@ -380,6 +386,9 @@ def make_metric_plots(csv_path, taus, radii, title=''):
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
     ax.legend(handles, labels, bbox_to_anchor=(1, 0.5))
 
+    # Hide grid lines below the plot
+    ax.set_axisbelow(True)
+
     # Add figure to dictionary
     dic['precision_vs_th'] = fig
     plt.close(fig)
@@ -428,7 +437,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
 
     if len(list_of_recalls) > 0:
         ax.scatter(taus, np.average(np.stack(list_of_recalls), axis=0),
-                   c='k', marker='s', s=1, label='avg')
+                   c='k', marker='x', s=3, label='avg along r')
 
     # Invert legend order
     handles, labels = ax.get_legend_handles_labels()
@@ -438,6 +447,9 @@ def make_metric_plots(csv_path, taus, radii, title=''):
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
     ax.legend(handles, labels, bbox_to_anchor=(1, 0.5))
+
+    # Hide grid lines below the plot
+    ax.set_axisbelow(True)
 
     # Add figure to dictionary
     dic['recall_vs_tau'] = fig
@@ -474,11 +486,20 @@ def make_metric_plots(csv_path, taus, radii, title=''):
         if selection.any():
             fscore = df.fscore.values[selection]
             ax.axhline(y=fscore,
-                       c=c, label=f'r={r}, t=-1')
+                       linestyle='-',
+                       c=c, label=f'r={r}, Otsu')
+
+        # BMM threshold (tau = -2)
+        selection = (df.r.values == r_selected) & (df.th.values == -2)
+        if selection.any():
+            fscore = df.fscore.values[selection]
+            ax.axhline(y=fscore,
+                       linestyle='--',
+                       c=c, label=f'r={r}, BMM')
 
     if len(list_of_fscores) > 0:
         ax.scatter(taus, np.average(np.stack(list_of_fscores), axis=0),
-                   c='k', marker='s', s=1, label='avg')
+                   c='k', marker='x', s=3, label='avg along r')
 
     # Invert legend order
     handles, labels = ax.get_legend_handles_labels()
@@ -488,6 +509,9 @@ def make_metric_plots(csv_path, taus, radii, title=''):
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
     ax.legend(handles, labels, bbox_to_anchor=(1, 0.5))
+
+    # Hide grid lines below the plot
+    ax.set_axisbelow(True)
 
     # Add figure to dictionary
     dic['fscore_vs_tau'] = fig

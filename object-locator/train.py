@@ -166,11 +166,12 @@ while epoch < args.epochs:
     iter_train = tqdm(trainset_loader,
                       desc=f'Epoch {epoch} ({len(trainset)} images)')
 
-    for batch_idx, (imgs, dictionaries) in enumerate(iter_train):
-        # === TRAIN ===
+    # === TRAIN ===
 
-        # Set the module in training mode
-        model.train()
+    # Set the module in training mode
+    model.train()
+
+    for batch_idx, (imgs, dictionaries) in enumerate(iter_train):
 
         # Pull info from this batch and move to device
         imgs = imgs.to(device)

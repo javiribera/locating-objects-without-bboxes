@@ -64,7 +64,7 @@ class Logger():
             else:
                 raise ValueError('there is a term with an unsupported type'
                                  f'({type(term)}')
-            curated_term = term.to(self.device)
+            curated_term = curated_term.to(self.device)
             curated_term = curated_term.view(1)
             curated_terms.append(curated_term)
 

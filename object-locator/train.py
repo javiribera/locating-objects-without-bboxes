@@ -216,13 +216,14 @@ while epoch < args.epochs:
             tic_train = time.time()
 
             # Log training losses
-            log.train_losses(terms=[term1, term2, term3, loss / 3],
+            log.train_losses(terms=[term1, term2, term3, loss / 3, loss_avg_this_epoch / 3],
                              iteration_number=epoch +
                              batch_idx/len(trainset_loader),
                              terms_legends=['Term1',
                                             'Term2',
                                             'Term3*%s' % args.lambdaa,
-                                            'Sum/3'])
+                                            'Sum/3',
+                                            'Sum/3 epoch avg'])
 
             # Send input and output images (first one in the batch).
             # Resize to original size

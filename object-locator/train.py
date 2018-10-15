@@ -154,6 +154,8 @@ if args.resume:
             print(f"\n\__ E: no checkpoint found at '{args.resume}'")
             exit(-1)
 
+running_avg = utils.RunningAverage(len(trainset_loader))
+
 # Time at the last evaluation
 tic_train = -np.infty
 tic_val = -np.infty
@@ -206,24 +208,22 @@ while epoch < args.epochs:
         optimizer.step()
 
         # Update progress bar
-        loss_avg_this_epoch = (1/(batch_idx + 1))*(batch_idx * loss_avg_this_epoch +
-                                                   loss.item())
-        iter_train.set_postfix(
-            avg_train_loss_this_epoch=f'{loss_avg_this_epoch:.1f}')
+        running_avg.put(loss.item())
+        iter_train.set_postfix(running_avg=f'{round(running_avg.avg/3, 1)}')
 
         # Log training error
         if time.time() > tic_train + args.log_interval:
             tic_train = time.time()
 
             # Log training losses
-            log.train_losses(terms=[term1, term2, term3, loss / 3, loss_avg_this_epoch / 3],
+            log.train_losses(terms=[term1, term2, term3, loss / 3, running_avg.avg / 3],
                              iteration_number=epoch +
                              batch_idx/len(trainset_loader),
                              terms_legends=['Term1',
                                             'Term2',
                                             'Term3*%s' % args.lambdaa,
                                             'Sum/3',
-                                            'Sum/3 epoch avg'])
+                                            'Sum/3 runn avg'])
 
             # Send input and output images (first one in the batch).
             # Resize to original size

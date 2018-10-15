@@ -226,3 +226,21 @@ def cluster(array, n_clusters, max_mask_pts=np.infty):
     return centroids
 
 
+class RunningAverage():
+
+    def __init__(self, size):
+        self.list = []
+        self.size = size
+
+    def put(self, elem):
+        if len(self.list) >= self.size:
+            self.list.pop(0)
+        self.list.append(elem)
+
+    def pop(self):
+        self.list.pop(0)
+
+    @property
+    def avg(self):
+        return np.average(self.list)
+

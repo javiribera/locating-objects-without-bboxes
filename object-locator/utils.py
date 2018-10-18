@@ -85,7 +85,7 @@ def threshold(array, tau):
         rv1 = scipy.stats.beta(a1, b1)
         rv2 = scipy.stats.beta(a2, b2)
         
-        tau = rv1.mean() + rv2.mean()
+        tau = rv2.mean()
         mask = cv2.inRange(array, tau, 1)
 
         return mask, tau, ((rv1, pi1), (rv2, pi2))
@@ -173,8 +173,8 @@ class AccBetaMixtureModel():
             figs['std_bmm'] = fig
             plt.close(fig)
 
-            # Plot the KDE of the histogram of the threshold
-            thresholds = [np.average([rv.mean() for rv, _ in mix]) for mix in self.mixtures]
+            # Plot the KDE of the histogram of the threshold (the mean of last RV)
+            thresholds = [mix[-1][0].mean() for mix in self.mixtures]
             kde = scipy.stats.gaussian_kde(np.array(thresholds).reshape(1, -1))
             fig, ax = plt.subplots()
             ax.plot(self.x, kde.pdf(self.x))

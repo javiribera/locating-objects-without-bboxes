@@ -279,7 +279,7 @@ def parse_command_args(training_or_testing):
             args.taus = [float(tau)
                          for tau in args.taus.replace('[', '').replace(']', '').split(',')]
         else:
-            args.taus = [int(args.taus)]
+            args.taus = [float(args.taus)]
 
         if isinstance(args.radii, (list, range)):
             pass

@@ -270,6 +270,10 @@ while epoch < args.epochs:
         epoch += 1
         continue
 
+    # Time to do validation?
+    if (epoch + 1) % args.val_freq != 0:
+        epoch += 1
+        continue
 
     # === VALIDATION ===
 

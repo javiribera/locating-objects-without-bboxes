@@ -242,6 +242,11 @@ def parse_command_args(training_or_testing):
                                    default=False,
                                    action="store_true",
                                    help='Don\'t paint a red circle at each estimated location.')
+        optional_args.add_argument('--force', '-f',
+                                   default=False,
+                                   action="store_true",
+                                   help='Overwrite output files if they exist. '
+                                        'In fact, it removes the output directory first')
         optional_args.add_argument('--seed',
                                    type=int,
                                    default=0,

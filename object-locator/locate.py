@@ -169,6 +169,10 @@ if testset.there_is_gt:
 # Empty output CSV (one per threshold)
 df_outs = [pd.DataFrame() for _ in args.taus]
 
+# --force will overwrite output directory
+if args.force:
+    shutil.rmtree(args.out_dir)
+
 for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                                             total=len(testset_loader)):
 

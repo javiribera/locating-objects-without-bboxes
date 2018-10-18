@@ -346,12 +346,12 @@ while epoch < args.epochs:
             avg_val_loss_this_epoch=f'{loss_avg_this_epoch:.1f}-----')
 
         # The estimated map must be thresholed to obtain estimated points
-        # Otsu thresholding
+        # BMM thresholding
         est_map_numpy = est_maps[0, :, :].to(device_cpu).numpy()
         est_map_numpy_origsize = skimage.transform.resize(est_map_numpy,
                                                           output_shape=origsize,
                                                           mode='constant')
-        mask, _ = utils.threshold(est_map_numpy_origsize, tau=-1)
+        mask, _, _ = utils.threshold(est_map_numpy_origsize, tau=-2)
         # Obtain centroids of the mask
         centroids_wrt_orig = utils.cluster(mask, est_count_int,
                                            max_mask_pts=args.max_mask_pts)

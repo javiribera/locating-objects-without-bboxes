@@ -386,11 +386,6 @@ while epoch < args.epochs:
                                                                 map=est_map_origsize).\
                 astype(np.float32)
 
-            # Send input and output images (first one in the batch).
-            log.image(imgs=[orig_img_w_heatmap_origsize],
-                      titles=['(Validation) Input w/ output heatmap'],
-                      window_ids=[5])
-
             # # Read image with GT dots from disk
             # gt_img_numpy = skimage.io.imread(
             #     os.path.join('/home/jprat/projects/phenosorg/data/plant_counts_dots/20160613_F54_validation_256x256_white_bigdots',
@@ -401,20 +396,18 @@ while epoch < args.epochs:
             # viz.image(np.moveaxis(gt_img_numpy, 2, 0),
             #           opts=dict(title='(Validation) Ground Truth'),
             #           win=7)
-            if args.paint:
-                # Send original image with a cross at the estimated centroids to Visdom
-                image_with_x = tensortype(imgs[0, :, :].squeeze().size()).\
-                    copy_(imgs[0, :, :].squeeze())
-                image_with_x = ((image_with_x + 1) / 2.0 * 255.0)
-                image_with_x = image_with_x.to(device_cpu).numpy()
-                image_with_x = np.moveaxis(image_with_x, 0, 2).copy()
-                for y, x in centroids_wrt_orig:
-                    image_with_x = cv2.circle(
-                        image_with_x, (x, y), 3, [255, 0, 0], -1)
-
-                log.image(imgs=[np.moveaxis(image_with_x, 2, 0)],
-                          titles=[
-                              '(Validation) Estimated centers @ crossings'],
+            if not args.paint:
+                # Send input and output heatmap (first one in the batch)
+                log.image(imgs=[orig_img_w_heatmap_origsize],
+                          titles=['(Validation) Image w/ output heatmap'],
+                          window_ids=[5])
+            else:
+                # Send heatmap with a circle at the estimated centroids to Visdom
+                img_with_x = utils.paint_centroids(img=orig_img_w_heatmap_origsize,
+                                                   points=centroids_wrt_orig)
+                log.image(imgs=[img_with_x],
+                          titles=['(Validation) Image w/ output heatmap '
+                                  'and point estimations'],
                           window_ids=[8])
 
     avg_term1_val = sum_term1 / len(valset_loader)

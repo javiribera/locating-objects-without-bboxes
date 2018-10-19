@@ -225,8 +225,7 @@ while epoch < args.epochs:
                                             'Sum/3',
                                             'Sum/3 runn avg'])
 
-            # Send input and output images (first one in the batch).
-            # Resize to original size
+            # Resize images to original size
             orig_shape = target_orig_sizes[0].data.to(device_cpu).numpy().tolist()
             orig_img_origsize = ((skimage.transform.resize(imgs[0].data.squeeze().to(device_cpu).numpy().transpose((1, 2, 0)),
                                                            output_shape=orig_shape,
@@ -236,10 +235,16 @@ while epoch < args.epochs:
                                                         output_shape=orig_shape,
                                                         mode='constant').\
                 astype(np.float32).transpose((2, 0, 1))
-            log.image(imgs=[orig_img_origsize, est_map_origsize],
-                      titles=['(Training) Input',
-                              '(Training) U-Net output'],
-                      window_ids=[1, 2])
+
+            # Overlay output on heatmap
+            orig_img_w_heatmap_origsize = utils.overlay_heatmap(img=orig_img_origsize,
+                                                                map=est_map_origsize).\
+                astype(np.float32)
+
+            # Send input and output images (first one in the batch).
+            log.image(imgs=[orig_img_w_heatmap_origsize],
+                      titles=['(Training) Input w/ output heatmap'],
+                      window_ids=[1])
 
             # # Read image with GT dots from disk
             # gt_img_numpy = skimage.io.imread(
@@ -366,7 +371,6 @@ while epoch < args.epochs:
         if time.time() > tic_val + args.log_interval:
             tic_val = time.time()
 
-            # Send input and output images (first one in the batch).
             # Resize to original size
             orig_img_origsize = ((skimage.transform.resize(imgs[0].to(device_cpu).squeeze().numpy().transpose((1, 2, 0)),
                                                            output_shape=target_orig_size_np.tolist(),
@@ -376,10 +380,16 @@ while epoch < args.epochs:
                                                         output_shape=orig_shape,
                                                         mode='constant').\
                 astype(np.float32).transpose((2, 0, 1))
-            log.image(imgs=[orig_img_origsize, est_map_origsize],
-                      titles=['(Validation) Input',
-                              '(Validation) U-Net output'],
-                      window_ids=[5, 6])
+
+            # Overlay output on heatmap
+            orig_img_w_heatmap_origsize = utils.overlay_heatmap(img=orig_img_origsize,
+                                                                map=est_map_origsize).\
+                astype(np.float32)
+
+            # Send input and output images (first one in the batch).
+            log.image(imgs=[orig_img_w_heatmap_origsize],
+                      titles=['(Validation) Input w/ output heatmap'],
+                      window_ids=[5])
 
             # # Read image with GT dots from disk
             # gt_img_numpy = skimage.io.imread(

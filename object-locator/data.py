@@ -60,6 +60,9 @@ class CSVDataset(data.Dataset):
         listfiles = [f for f in listfiles
                      if any(f.lower().endswith(ext) for ext in IMG_EXTENSIONS)]
 
+        # Shuffle list of files
+        random.shuffle(listfiles)
+
         if len(listfiles) == 0:
             raise ValueError(f"There are no images in '{directory}'")
 
@@ -73,12 +76,15 @@ class CSVDataset(data.Dataset):
             self.listfiles = listfiles
 
             # Make dataset smaller
-            self.listfiles = self.listfiles[0:min(
-                len(self.listfiles), max_dataset_size)]
+            self.listfiles = self.listfiles[0:min(len(self.listfiles),
+                                                  max_dataset_size)]
 
         # CSV does exist (GT is available)
         else:
             self.csv_df = pd.read_csv(os.path.join(directory, csv_filename))
+
+            # Shuffle CSV dataframe
+            self.csv_df = self.csv_df.sample(frac=1).reset_index(drop=True)
 
             # Make dataset smaller
             self.csv_df = self.csv_df[0:min(
@@ -96,7 +102,7 @@ class CSVDataset(data.Dataset):
         The second element is a dictionary where the keys are the columns of the CSV.
         If the CSV did not exist in the dataset directory,
          the dictionary will only contain the filename of the image.
-
+_
         :param idx: Index of the image in the dataset to get.
         """
 
@@ -332,6 +338,9 @@ class XMLDataset(data.Dataset):
         # Ignore files that are not images
         listfiles = [f for f in listfiles
                      if any(f.lower().endswith(ext) for ext in IMG_EXTENSIONS)]
+
+        # Shuffle list of files
+        random.shuffle(listfiles)
 
         if len(listfiles) == 0:
             raise ValueError(f"There are no images in '{directory}'")

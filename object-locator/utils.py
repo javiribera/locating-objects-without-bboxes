@@ -283,7 +283,7 @@ def overlay_heatmap(img, map, colormap=matplotlib.cm.viridis):
     return img_w_heatmap
 
 
-def paint_centroids(img, points, color='red'):
+def paint_circles(img, points, color='red'):
     """
     Paint points as circles on top of an image.
 
@@ -298,8 +298,12 @@ def paint_centroids(img, points, color='red'):
 
     if color == 'red':
         color = [255, 0, 0]
+    elif color == 'white':
+        color = [255, 255, 255]
     else:
         raise NotImplementedError(f'color {color} not implemented')
+
+    points = points.round().astype(np.uint16)
 
     img = np.moveaxis(img, 0, 2).copy()
     for y, x in points:

@@ -156,6 +156,8 @@ if args.resume:
 
 running_avg = utils.RunningAverage(len(trainset_loader))
 
+normalzr = utils.Normalizer(args.height, args.width)
+
 # Time at the last evaluation
 tic_train = -np.infty
 tic_val = -np.infty
@@ -241,9 +243,18 @@ while epoch < args.epochs:
                                                                 map=est_map_origsize).\
                 astype(np.float32)
 
-            # Send input and output images (first one in the batch).
-            log.image(imgs=[orig_img_w_heatmap_origsize],
-                      titles=['(Training) Input w/ output heatmap'],
+            # Send heatmap with circles at the labeled points to Visdom
+            target_locs_np = target_locations[0].\
+                to(device_cpu).numpy().reshape(-1, 2)
+            target_orig_size_np = target_orig_sizes[0].\
+                to(device_cpu).numpy().reshape(2)
+            target_locs_wrt_orig = normalzr.unnormalize(target_locs_np,
+                                                        orig_img_size=target_orig_size_np)
+            img_with_x = utils.paint_circles(img=orig_img_w_heatmap_origsize,
+                                               points=target_locs_wrt_orig,
+                                               color='white')
+            log.image(imgs=[img_with_x],
+                      titles=['(Training) Image w/ output heatmap and labeled points'],
                       window_ids=[1])
 
             # # Read image with GT dots from disk
@@ -403,8 +414,9 @@ while epoch < args.epochs:
                           window_ids=[5])
             else:
                 # Send heatmap with a circle at the estimated centroids to Visdom
-                img_with_x = utils.paint_centroids(img=orig_img_w_heatmap_origsize,
-                                                   points=centroids_wrt_orig)
+                img_with_x = utils.paint_circles(img=orig_img_w_heatmap_origsize,
+                                                   points=centroids_wrt_orig,
+                                                   color='red')
                 log.image(imgs=[img_with_x],
                           titles=['(Validation) Image w/ output heatmap '
                                   'and point estimations'],

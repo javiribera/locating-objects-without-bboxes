@@ -368,7 +368,7 @@ while epoch < args.epochs:
         est_map_numpy_origsize = skimage.transform.resize(est_map_numpy,
                                                           output_shape=origsize,
                                                           mode='constant')
-        mask, _, _ = utils.threshold(est_map_numpy_origsize, tau=-2)
+        mask, _ = utils.threshold(est_map_numpy_origsize, tau=-1)
         # Obtain centroids of the mask
         centroids_wrt_orig = utils.cluster(mask, est_count_int,
                                            max_mask_pts=args.max_mask_pts)

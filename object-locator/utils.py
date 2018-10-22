@@ -283,7 +283,7 @@ def overlay_heatmap(img, map, colormap=matplotlib.cm.viridis):
     return img_w_heatmap
 
 
-def paint_circles(img, points, color='red'):
+def paint_circles(img, points, color='red', crosshair=False):
     """
     Paint points as circles on top of an image.
 
@@ -292,6 +292,9 @@ def paint_circles(img, points, color='red'):
                 First dimension must be color.
     :param centroids: List of centroids in (y, x) format.
     :param color: String of the color used to paint centroids.
+                  Default: 'red'.
+    :param crosshair: Paint crosshair instead of circle.
+                      Default: False.
     :return: Image with painted circles centered on the points.
              First dimension is be color.
     """
@@ -306,8 +309,14 @@ def paint_circles(img, points, color='red'):
     points = points.round().astype(np.uint16)
 
     img = np.moveaxis(img, 0, 2).copy()
-    for y, x in points:
-        img = cv2.circle(img, (x, y), 3, color, -1)
+    if not crosshair:
+        for y, x in points:
+            img = cv2.circle(img, (x, y), 3, color, -1)
+    else:
+        for y, x in points:
+            img = cv2.drawMarker(img,
+                                 (x, y),
+                                 color, cv2.MARKER_TILTED_CROSS, 9, 3, cv2.LINE_AA)
     img = np.moveaxis(img, 2, 0)
 
     return img

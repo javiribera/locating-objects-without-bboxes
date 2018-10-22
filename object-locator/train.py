@@ -414,10 +414,11 @@ while epoch < args.epochs:
                           titles=['(Validation) Image w/ output heatmap'],
                           window_ids=[5])
             else:
-                # Send heatmap with a circle at the estimated centroids to Visdom
+                # Send heatmap with a cross at the estimated centroids to Visdom
                 img_with_x = utils.paint_circles(img=orig_img_w_heatmap_origsize,
-                                                   points=centroids_wrt_orig,
-                                                   color='red')
+                                                 points=centroids_wrt_orig,
+                                                 color='red',
+                                                 crosshair=True )
                 log.image(imgs=[img_with_x],
                           titles=['(Validation) Image w/ output heatmap '
                                   'and point estimations'],

@@ -12,6 +12,7 @@ from collections import OrderedDict
 
 from PIL import Image
 import skimage
+import numpy as np
 import pandas as pd
 import torch
 from torch.utils import data
@@ -31,7 +32,8 @@ class CSVDataset(data.Dataset):
                  directory,
                  transforms=None,
                  max_dataset_size=float('inf'),
-                 ignore_gt=False):
+                 ignore_gt=False,
+                 seed=0):
         """CSVDataset.
         The sample images of this dataset must be all inside one directory.
         Inside the same directory, there must be one CSV file.
@@ -43,6 +45,7 @@ class CSVDataset(data.Dataset):
         :param max_dataset_size: Only use the first N images in the directory.
         :param ignore_gt: Ignore the GT in the XML file,
                           i.e, provide samples without plant locations or counts.
+        :param seed: Random seed.
         """
 
         self.root_dir = directory
@@ -61,6 +64,7 @@ class CSVDataset(data.Dataset):
                      if any(f.lower().endswith(ext) for ext in IMG_EXTENSIONS)]
 
         # Shuffle list of files
+        np.random.seed(seed)
         random.shuffle(listfiles)
 
         if len(listfiles) == 0:
@@ -188,9 +192,10 @@ def csv_collator(samples):
 class RandomHorizontalFlipImageAndLabel(object):
     """ Horizontally flip a numpy array image and the GT with probability p """
 
-    def __init__(self, p):
+    def __init__(self, p, seed=0):
         self.modifies_label = True
         self.p = p
+        np.random.seed(seed)
 
     def __call__(self, img, dictionary):
         transformed_img = img
@@ -208,9 +213,10 @@ class RandomHorizontalFlipImageAndLabel(object):
 class RandomVerticalFlipImageAndLabel(object):
     """ Vertically flip a numpy array image and the GT with probability p """
 
-    def __init__(self, p):
+    def __init__(self, p, seed=0):
         self.modifies_label = True
         self.p = p
+        np.random.seed(seed)
 
     def __call__(self, img, dictionary):
         transformed_img = img
@@ -308,7 +314,8 @@ class XMLDataset(data.Dataset):
                  directory,
                  transforms=None,
                  max_dataset_size=float('inf'),
-                 ignore_gt=False):
+                 ignore_gt=False,
+                 seed=0):
         """XMLDataset.
         The sample images of this dataset must be all inside one directory.
          Inside the same directory, there must be one XML file as described by
@@ -321,6 +328,7 @@ class XMLDataset(data.Dataset):
         :param max_dataset_size: Only use the first N images in the directory.
         :param ignore_gt: Ignore the GT in the XML file,
                           i.e, provide samples without plant locations or counts.
+        :param seed: Random seed.
         """
 
         self.root_dir = directory
@@ -340,6 +348,7 @@ class XMLDataset(data.Dataset):
                      if any(f.lower().endswith(ext) for ext in IMG_EXTENSIONS)]
 
         # Shuffle list of files
+        np.random.seed(seed)
         random.shuffle(listfiles)
 
         if len(listfiles) == 0:

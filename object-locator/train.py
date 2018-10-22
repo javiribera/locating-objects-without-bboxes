@@ -78,7 +78,8 @@ training_transforms += [transforms.Normalize((0.5, 0.5, 0.5),
                                              (0.5, 0.5, 0.5))]
 trainset = CSVDataset(args.train_dir,
                       transforms=transforms.Compose(training_transforms),
-                      max_dataset_size=args.max_trainset_size)
+                      max_dataset_size=args.max_trainset_size,
+                      seed=args.seed)
 trainset_loader = DataLoader(trainset,
                              batch_size=args.batch_size,
                              drop_last=args.drop_last_batch,

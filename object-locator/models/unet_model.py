@@ -33,7 +33,7 @@ class UNet(nn.Module):
         self.up5 = up(1024, 256)
         self.up6 = up(512, 128)
         self.up7 = up(256, 64)
-        self.up8 = up(128, 64)
+        self.up8 = up(128, 64, activ=False)
         self.outc = outconv(64, n_classes)
         self.out_nonlin = nn.Sigmoid()
 

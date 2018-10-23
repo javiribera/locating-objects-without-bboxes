@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 
 class double_conv(nn.Module):
-    def __init__(self, in_ch, out_ch, normaliz=True):
+    def __init__(self, in_ch, out_ch, normaliz=True, activ=True):
         super(double_conv, self).__init__()
 
         ops = []
@@ -15,12 +15,14 @@ class double_conv(nn.Module):
         # ops += [nn.Dropout(p=0.1)]
         if normaliz:
             ops += [nn.BatchNorm2d(out_ch)]
-        ops += [nn.ReLU(inplace=True)]
+        if activ:
+            ops += [nn.ReLU(inplace=True)]
         ops += [nn.Conv2d(out_ch, out_ch, 3, padding=1)]
         # ops += [nn.Dropout(p=0.1)]
         if normaliz:
             ops += [nn.BatchNorm2d(out_ch)]
-        ops += [nn.ReLU(inplace=True)]
+        if activ:
+            ops += [nn.ReLU(inplace=True)]
 
         self.conv = nn.Sequential(*ops)
 
@@ -53,13 +55,14 @@ class down(nn.Module):
 
 
 class up(nn.Module):
-    def __init__(self, in_ch, out_ch):
+    def __init__(self, in_ch, out_ch, normaliz=True, activ=True):
         super(up, self).__init__()
         self.up = nn.Upsample(scale_factor=2,
                               mode='bilinear',
                               align_corners=True)
         # self.up = nn.ConvTranspose2d(in_ch, out_ch, 2, stride=2)
-        self.conv = double_conv(in_ch, out_ch)
+        self.conv = double_conv(in_ch, out_ch,
+                                normaliz=normaliz, activ=activ)
 
     def forward(self, x1, x2):
         x1 = self.up(x1)

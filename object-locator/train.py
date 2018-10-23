@@ -120,8 +120,6 @@ loss_loc = losses.WeightedHausdorffDistance(resized_height=args.height,
                                             p=args.p,
                                             return_2_terms=True,
                                             device=device)
-l1_loss = nn.L1Loss(size_average=False)
-mse_loss = nn.MSELoss(reduce=False)
 
 # Optimization strategy
 if args.optimizer == 'sgd':

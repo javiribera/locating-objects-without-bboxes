@@ -39,8 +39,14 @@ class UNet(nn.Module):
 
         self.known_n_points = known_n_points
         if known_n_points is None:
-            self.regressor = nn.Linear(256*256 + 512, 1)
-            self.regressor_nonlin = nn.Softplus()
+            self.branch_1 = nn.Sequential(nn.Linear(512, 64),
+                                          nn.ReLU(inplace=True),
+                                          nn.Dropout(p=0.5))
+            self.branch_2 = nn.Sequential(nn.Linear(256*256, 64),
+                                          nn.ReLU(inplace=True),
+                                          nn.Dropout(p=0.5))
+            self.regressor = nn.Sequential(nn.Linear(64 + 64, 1),
+                                           nn.ReLU())
 
         # This layer is not connected anywhere
         # It is only here for backward compatibility
@@ -75,11 +81,14 @@ class UNet(nn.Module):
         x = x.squeeze(1)
 
         if self.known_n_points is None:
-            x_flat = x.view(batch_size, -1)
             x9_flat = x9.view(batch_size, -1)
-            regression_features = torch.cat((x_flat, x9_flat), dim=1)
+            x_flat = x.view(batch_size, -1)
+
+            x10_flat = self.branch_1(x9_flat)
+            x_flat = self.branch_2(x_flat)
+
+            regression_features = torch.cat((x_flat, x10_flat), dim=1)
             regression = self.regressor(regression_features)
-            regression = self.regressor_nonlin(regression)
 
             return x, regression
         else:

@@ -63,7 +63,7 @@ def parse_command_args(training_or_testing):
                             help='learning rate (default: 1e-5)')
         parser.add_argument('-p',
                             type=float,
-                            default=-9,
+                            default=-1,
                             metavar='P',
                             help='p in the generalized mean (default: -inf => minimum)')
         parser.add_argument('--no-cuda',

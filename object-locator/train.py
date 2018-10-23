@@ -70,8 +70,8 @@ log = logger.Logger(env_name=args.visdom_env,
 # Data loading code
 training_transforms = []
 if not args.no_data_augm:
-    training_transforms += [RandomHorizontalFlipImageAndLabel(p=0.5)]
-    training_transforms += [RandomVerticalFlipImageAndLabel(p=0.5)]
+    training_transforms += [RandomHorizontalFlipImageAndLabel(p=0.5, seed=args.seed)]
+    training_transforms += [RandomVerticalFlipImageAndLabel(p=0.5, seed=args.seed)]
 training_transforms += [ScaleImageAndLabel(size=(args.height, args.width))]
 training_transforms += [transforms.ToTensor()]
 training_transforms += [transforms.Normalize((0.5, 0.5, 0.5),

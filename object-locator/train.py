@@ -112,9 +112,8 @@ with peter('Building network'):
 model = nn.DataParallel(model)
 model.to(device)
 
-
 # Loss functions
-loss_regress = nn.MSELoss()
+loss_regress = nn.SmoothL1Loss()
 loss_loc = losses.WeightedHausdorffDistance(resized_height=args.height,
                                             resized_width=args.width,
                                             p=args.p,

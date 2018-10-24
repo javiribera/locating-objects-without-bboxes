@@ -113,8 +113,8 @@ model = nn.DataParallel(model)
 model.to(device)
 
 
-# Loss function
-loss_regress = nn.SmoothL1Loss()
+# Loss functions
+loss_regress = nn.MSELoss()
 loss_loc = losses.WeightedHausdorffDistance(resized_height=args.height,
                                             resized_width=args.width,
                                             p=args.p,

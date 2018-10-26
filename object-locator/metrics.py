@@ -319,7 +319,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
     # Put legend outside the plot
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-    ax.legend(handles, labels, bbox_to_anchor=(1, 0.5))
+    ax.legend(handles, labels, loc='upper left', bbox_to_anchor=(1, 1))
 
     # Hide grid lines below the plot
     ax.set_axisbelow(True)
@@ -384,7 +384,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
     # Put legend outside the plot
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-    ax.legend(handles, labels, bbox_to_anchor=(1, 0.5))
+    ax.legend(handles, labels, loc='upper left', bbox_to_anchor=(1, 1))
 
     # Hide grid lines below the plot
     ax.set_axisbelow(True)
@@ -446,7 +446,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
     # Put legend outside the plot
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-    ax.legend(handles, labels, bbox_to_anchor=(1, 0.5))
+    ax.legend(handles, labels, loc='upper left', bbox_to_anchor=(1, 1))
 
     # Hide grid lines below the plot
     ax.set_axisbelow(True)
@@ -508,7 +508,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
     # Put legend outside the plot
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-    ax.legend(handles, labels, bbox_to_anchor=(1, 0.5))
+    ax.legend(handles, labels, loc='upper left', bbox_to_anchor=(1, 1))
 
     # Hide grid lines below the plot
     ax.set_axisbelow(True)

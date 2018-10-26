@@ -41,8 +41,8 @@ args = parser.parse_args()
 
 os.makedirs(args.out, exist_ok=True)
 
-taus = [float(tau) for tau in args.taus.split(',')]
-radii = [int(r) for r in args.radii.split(',')]
+taus = [float(tau) for tau in args.taus.replace('[', '').replace(']', '').split(',')]
+radii = [int(r) for r in args.radii.replace('[', '').replace(']', '').split(',')]
 
 figs = metrics.make_metric_plots(csv_path=args.csv,
                                  taus=taus,

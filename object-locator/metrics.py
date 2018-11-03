@@ -294,7 +294,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
 
             # Plot precision vs. recall for this r
             ax.scatter(recall, precision,
-                       c=c, s=2, label=f'r={r}')
+                       c=c, s=2, label=f'$r={r}$')
 
         # Otsu threshold (tau = -1)
         selection = (df.r.values == r_selected) & (df.th.values == -1)
@@ -302,7 +302,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
             precision = df.precision.values[selection]
             recall = df.recall.values[selection]
             ax.scatter(recall, precision,
-                       c=c, s=8, marker='+', label=f'r={r}, Otsu')
+                       c=c, s=8, marker='+', label=f'$r={r}$, Otsu')
 
         # BMM threshold (tau = -2)
         selection = (df.r.values == r_selected) & (df.th.values == -2)
@@ -310,7 +310,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
             precision = df.precision.values[selection]
             recall = df.recall.values[selection]
             ax.scatter(recall, precision,
-                       c=c, s=8, marker='s', label=f'r={r}, BMM')
+                       c=c, s=8, marker='s', label=f'$r={r}$, BMM')
 
     # Invert legend order
     handles, labels = ax.get_legend_handles_labels()
@@ -319,7 +319,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
     # Put legend outside the plot
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-    ax.legend(handles, labels, bbox_to_anchor=(1, 0.5))
+    ax.legend(handles, labels, loc='upper left', bbox_to_anchor=(1, 1.03))
 
     # Hide grid lines below the plot
     ax.set_axisbelow(True)
@@ -352,7 +352,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
             taus = df.th.values[selection]
 
             # Plot precision vs tau for this r
-            ax.scatter(taus, precision, c=c, s=2, label=f'r={r}')
+            ax.scatter(taus, precision, c=c, s=2, label=f'$r={r}$')
 
         # Otsu threshold (tau = -1)
         selection = (df.r.values == r_selected) & (df.th.values == -1)
@@ -360,7 +360,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
             precision = df.precision.values[selection]
             ax.axhline(y=precision,
                        linestyle='-',
-                       c=c, label=f'r={r}, Otsu')
+                       c=c, label=f'$r={r}$, Otsu')
 
         # BMM threshold (tau = -1)
         selection = (df.r.values == r_selected) & (df.th.values == -2)
@@ -368,12 +368,12 @@ def make_metric_plots(csv_path, taus, radii, title=''):
             precision = df.precision.values[selection]
             ax.axhline(y=precision,
                        linestyle='--',
-                       c=c, label=f'r={r}, BMM')
+                       c=c, label=f'$r={r}$, BMM')
 
     if len(list_of_precisions) > 0:
         # Plot average precision for all r's
         ax.scatter(taus, np.average(np.stack(list_of_precisions), axis=0),
-                   c='k', marker='x', s=3, label='avg along r')
+                   c='k', marker='x', s=7, label='avg along r')
 
     
 
@@ -384,7 +384,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
     # Put legend outside the plot
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-    ax.legend(handles, labels, bbox_to_anchor=(1, 0.5))
+    ax.legend(handles, labels, loc='upper left', bbox_to_anchor=(1, 1.03))
 
     # Hide grid lines below the plot
     ax.set_axisbelow(True)
@@ -416,7 +416,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
             taus = df.th.values[selection]
 
             # Plot precision vs tau for this r
-            ax.scatter(taus, recall, c=c, s=2, label=f'r={r}')
+            ax.scatter(taus, recall, c=c, s=2, label=f'$r={r}$')
 
         # Otsu threshold (tau = -1)
         selection = (df.r.values == r_selected) & (df.th.values == -1)
@@ -424,7 +424,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
             recall = df.recall.values[selection]
             ax.axhline(y=recall,
                        linestyle='-',
-                       c=c, label=f'r={r}, Otsu')
+                       c=c, label=f'$r={r}$, Otsu')
 
         # BMM threshold (tau = -2)
         selection = (df.r.values == r_selected) & (df.th.values == -2)
@@ -432,12 +432,12 @@ def make_metric_plots(csv_path, taus, radii, title=''):
             recall = df.recall.values[selection]
             ax.axhline(y=recall,
                        linestyle='--',
-                       c=c, label=f'r={r}, BMM')
+                       c=c, label=f'$r={r}$, BMM')
 
 
     if len(list_of_recalls) > 0:
         ax.scatter(taus, np.average(np.stack(list_of_recalls), axis=0),
-                   c='k', marker='x', s=3, label='avg along r')
+                   c='k', marker='x', s=7, label='avg along $r$')
 
     # Invert legend order
     handles, labels = ax.get_legend_handles_labels()
@@ -446,7 +446,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
     # Put legend outside the plot
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-    ax.legend(handles, labels, bbox_to_anchor=(1, 0.5))
+    ax.legend(handles, labels, loc='upper left', bbox_to_anchor=(1, 1.03))
 
     # Hide grid lines below the plot
     ax.set_axisbelow(True)
@@ -479,7 +479,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
             taus = df.th.values[selection]
 
             # Plot precision vs tau for this r
-            ax.scatter(taus, fscore, c=c, s=2, label=f'r={r}')
+            ax.scatter(taus, fscore, c=c, s=2, label=f'$r={r}$')
 
         # Otsu threshold (tau = -1)
         selection = (df.r.values == r_selected) & (df.th.values == -1)
@@ -487,7 +487,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
             fscore = df.fscore.values[selection]
             ax.axhline(y=fscore,
                        linestyle='-',
-                       c=c, label=f'r={r}, Otsu')
+                       c=c, label=f'$r={r}$, Otsu')
 
         # BMM threshold (tau = -2)
         selection = (df.r.values == r_selected) & (df.th.values == -2)
@@ -495,11 +495,11 @@ def make_metric_plots(csv_path, taus, radii, title=''):
             fscore = df.fscore.values[selection]
             ax.axhline(y=fscore,
                        linestyle='--',
-                       c=c, label=f'r={r}, BMM')
+                       c=c, label=f'$r={r}$, BMM')
 
     if len(list_of_fscores) > 0:
         ax.scatter(taus, np.average(np.stack(list_of_fscores), axis=0),
-                   c='k', marker='x', s=3, label='avg along r')
+                   c='k', marker='x', s=7, label='avg along r')
 
     # Invert legend order
     handles, labels = ax.get_legend_handles_labels()
@@ -508,7 +508,7 @@ def make_metric_plots(csv_path, taus, radii, title=''):
     # Put legend outside the plot
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-    ax.legend(handles, labels, bbox_to_anchor=(1, 0.5))
+    ax.legend(handles, labels, loc='upper left', bbox_to_anchor=(1, 1.03))
 
     # Hide grid lines below the plot
     ax.set_axisbelow(True)

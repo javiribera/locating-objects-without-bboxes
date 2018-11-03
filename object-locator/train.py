@@ -113,12 +113,11 @@ model = nn.DataParallel(model)
 model.to(device)
 
 # Loss functions
-loss_regress = nn.SmoothL1Loss()
-loss_loc = losses.WeightedHausdorffDistance(resized_height=args.height,
-                                            resized_width=args.width,
-                                            p=args.p,
-                                            return_2_terms=True,
-                                            device=device)
+loss_fctn = losses.WeightedHausdorffLoss(resized_height=args.height,
+                                         resized_width=args.width,
+                                         p=args.p,
+                                         return_3_terms=True,
+                                         device=device)
 
 # Optimization strategy
 if args.optimizer == 'sgd':
@@ -196,12 +195,13 @@ while epoch < args.epochs:
         # One training step
         optimizer.zero_grad()
         est_maps, est_counts = model.forward(imgs)
-        term1, term2 = loss_loc.forward(est_maps,
-                                        target_locations,
-                                        target_orig_sizes)
         est_counts = est_counts.view(-1)
         target_counts = target_counts.view(-1)
-        term3 = loss_regress.forward(est_counts, target_counts)
+        term1, term2, term3 = loss_fctn.forward(est_maps,
+                                                est_counts,
+                                                target_locations,
+                                                target_counts,
+                                                target_orig_sizes)
         term3 *= args.lambdaa
         loss = term1 + term2 + term3
         loss.backward()
@@ -344,10 +344,13 @@ while epoch < args.epochs:
 
         # The 3 terms
         with torch.no_grad():
-            term1, term2 = loss_loc.forward(est_maps,
-                                            target_locations,
-                                            target_orig_sizes)
-            term3 = loss_regress.forward(est_counts, target_counts)
+            est_counts = est_counts.view(-1)
+            target_counts = target_counts.view(-1)
+            term1, term2, term3 = loss_fctn.forward(est_maps,
+                                                    est_counts,
+                                                    target_locations,
+                                                    target_counts,
+                                                    target_orig_sizes)
             term3 *= args.lambdaa
         sum_term1 += term1.item()
         sum_term2 += term2.item()
@@ -374,7 +377,7 @@ while epoch < args.epochs:
         target_locations_wrt_orig = normalzr.unnormalize(target_locations_np,
                                                          orig_img_size=target_orig_size_np)
         judge.feed_points(centroids_wrt_orig, target_locations_wrt_orig,
-                          max_ahd=loss_loc.max_dist)
+                          max_ahd=loss_fctn.max_dist)
         judge.feed_count(est_count_int, target_count_int)
 
         if time.time() > tic_val + args.log_interval:

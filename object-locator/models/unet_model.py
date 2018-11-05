@@ -9,8 +9,11 @@ from .unet_parts import *
 class UNet(nn.Module):
     def __init__(self, n_channels, n_classes,
                  height, width,
-                 known_n_points=None):
+                 known_n_points=None,
+                 device=torch.device('cuda')):
         super(UNet, self).__init__()
+
+        self.device = device
 
         # With this network depth, there is a minimum image size
         if height < 256 or width < 256:
@@ -92,7 +95,9 @@ class UNet(nn.Module):
 
             return x, regression
         else:
-            n_pts = torch.tensor([self.known_n_points]*batch_size)
+            n_pts = torch.tensor([self.known_n_points]*batch_size,
+                                 dtype=torch.get_default_dtype())
+            n_pts = n_pts.to(self.device)
             return x, n_pts
         # summ = torch.sum(x)
         # count = self.lin(summ)

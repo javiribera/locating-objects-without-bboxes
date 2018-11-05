@@ -439,7 +439,8 @@ while epoch < args.epochs:
                           judge.rmse,
                           judge.mape,
                           judge.coeff_of_determination,
-                          judge.pearson_corr,
+                          judge.pearson_corr \
+                              if not np.isnan(judge.pearson_corr) else 1,
                           judge.precision,
                           judge.recall),
                    iteration_number=epoch,

@@ -151,38 +151,37 @@ class AccBetaMixtureModel():
         fig, ax = plt.subplots()
         colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
         for c, (pdf_mean, color) in enumerate(zip(pdf_means, colors)):
-            ax.plot(self.x, pdf_mean, c=color, label=f'Component #{c}')
-        ax.set_title('Mean Probability Density Function\nof the fitted bimodal Beta Mixture Model')
-        ax.set_xlabel('Pixel value')
+            ax.plot(self.x, pdf_mean, c=color, label=f'BMM Component #{c}')
+        ax.set_xlabel('Pixel value / $\\tau$')
         ax.set_ylabel('Probability Density')
-        figs['mean_bmm'] = fig
-        plt.close(fig)
+        plt.legend()
 
         if len(self.mixtures) > 1:
-            # Plot the means of the pdfs
-            fig, ax = plt.subplots()
-            colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
-            max_stdev = 0
-            for c, (pdf_stdev, color) in enumerate(zip(pdf_stdevs, colors)):
-                ax.plot(self.x, pdf_stdev, c=color, label=f'Component #{c}')
-                max_stdev = max(max_stdev, max(pdf_stdev))
-            ax.set_title('Standard Deviation of the\nProbability Density Functions\n'
-                         'of the fitted bimodal Beta Mixture Model')
-            ax.set_xlabel('Pixel value')
-            ax.set_ylabel('Standard Deviation')
-            ax.set_ylim([0, max_stdev])
-            figs['std_bmm'] = fig
-            plt.close(fig)
+            # # Plot the standard deviations of the pdfs
+            # fig, ax = plt.subplots()
+            # colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
+            # max_stdev = 0
+            # for c, (pdf_stdev, color) in enumerate(zip(pdf_stdevs, colors)):
+            #     ax.plot(self.x, pdf_stdev, c=color, label=f'Component #{c}')
+            #     max_stdev = max(max_stdev, max(pdf_stdev))
+            # ax.set_title('Standard Deviation of the\nProbability Density Functions\n'
+            #              'of the fitted bimodal Beta Mixture Model')
+            # ax.set_xlabel('Pixel value')
+            # ax.set_ylabel('Standard Deviation')
+            # ax.set_ylim([0, max_stdev])
+            # figs['std_bmm'] = fig
+            # plt.close(fig)
 
             # Plot the KDE of the histogram of the threshold (the mean of last RV)
             thresholds = [mix[-1][0].mean() for mix in self.mixtures]
             kde = scipy.stats.gaussian_kde(np.array(thresholds).reshape(1, -1))
-            fig, ax = plt.subplots()
-            ax.plot(self.x, kde.pdf(self.x))
-            ax.set_title('KDE of the threshold used by method #3')
-            ax.set_xlabel('Threshold')
+            ax.plot(self.x, kde.pdf(self.x),
+                    '--',
+                    label='KDE of $\\tau$ selected by BMM method')
+            ax.set_xlabel('Pixel value / $\\tau$')
             ax.set_ylabel('Probability Density')
-            figs['kde_bmm_threshold'] = fig
+            plt.legend()
+            figs['bmm_stats'] = fig
             plt.close(fig)
 
         return figs

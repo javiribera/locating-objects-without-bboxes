@@ -254,22 +254,20 @@ def overlay_heatmap(img, map, colormap=matplotlib.cm.viridis):
                 Must be between 0 and 255.
                 First dimension must be color.
     :param map: Scalar image (numpy array)
-                Must be between 0 and 1.
-                First dimension must be of size 1.
+                Must be a 2D array between 0 and 1.
     :param colormap: Colormap to use to convert grayscale values
                      to pseudo-color.
     :return: Heatmap on top of the original image in [0, 255]
     """
     assert img.ndim == 3
-    assert map.ndim == 3
+    assert map.ndim == 2
     assert img.shape[0] == 3
-    assert map.shape[0] == 1
 
     # Convert image to CHW->HWC
     img = img.transpose(1, 2, 0)
     
     # Generate pseudocolor
-    heatmap = colormap(map.squeeze())[:, :, :3]
+    heatmap = colormap(map)[:, :, :3]
 
     # Scale heatmap [0, 1] -> [0, 255]
     heatmap *= 255

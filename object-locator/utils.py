@@ -131,19 +131,19 @@ class AccBetaMixtureModel():
         figs = {}
 
         # Compute the mean of the pdf of each component
-        pdf_means = [(1/len(self.mixtures))*np.clip(rv.pdf(self.x), a_min=0, a_max=50)\
+        pdf_means = [(1/len(self.mixtures))*np.clip(rv.pdf(self.x), a_min=0, a_max=8)\
                      for rv, w in self.mixtures[0]]
         for mix in self.mixtures[1:]:
             for c, (rv, w) in enumerate(mix):
-                pdf_means[c] += (1/len(self.mixtures))*np.clip(rv.pdf(self.x), a_min=0, a_max=50)
+                pdf_means[c] += (1/len(self.mixtures))*np.clip(rv.pdf(self.x), a_min=0, a_max=8)
 
         # Compute the stdev of the pdf of each component
         if len(self.mixtures) > 1:
-            pdfs_sq_err_sum = [(np.clip(rv.pdf(self.x), a_min=0, a_max=50) - pdf_means[c])**2 \
+            pdfs_sq_err_sum = [(np.clip(rv.pdf(self.x), a_min=0, a_max=8) - pdf_means[c])**2 \
                                for c, (rv, w) in enumerate(self.mixtures[0])]
             for mix in self.mixtures[1:]:
                 for c, (rv, w) in enumerate(mix):
-                    pdfs_sq_err_sum[c] += (np.clip(rv.pdf(self.x), a_min=0, a_max=50) - pdf_means[c])**2
+                    pdfs_sq_err_sum[c] += (np.clip(rv.pdf(self.x), a_min=0, a_max=8) - pdf_means[c])**2
             pdf_stdevs = [np.sqrt(pdf_sq_err_sum)/(len(self.mixtures) - 1) \
                           for pdf_sq_err_sum in pdfs_sq_err_sum]
 

@@ -106,7 +106,8 @@ with peter('Building network'):
     model = unet_model.UNet(3, 1,
                             height=args.height,
                             width=args.width,
-                            known_n_points=args.n_points)
+                            known_n_points=args.n_points,
+                            device=device)
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f" with {ballpark(num_params)} trainable parameters. ", end='')
 model = nn.DataParallel(model)
@@ -344,6 +345,8 @@ while epoch < args.epochs:
 
         # The 3 terms
         with torch.no_grad():
+            est_counts = est_counts.view(-1)
+            target_counts = target_counts.view(-1)
             term1, term2 = loss_loc.forward(est_maps,
                                             target_locations,
                                             target_orig_sizes)
@@ -436,7 +439,8 @@ while epoch < args.epochs:
                           judge.rmse,
                           judge.mape,
                           judge.coeff_of_determination,
-                          judge.pearson_corr,
+                          judge.pearson_corr \
+                              if not np.isnan(judge.pearson_corr) else 1,
                           judge.precision,
                           judge.recall),
                    iteration_number=epoch,

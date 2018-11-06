@@ -137,7 +137,8 @@ class Logger():
         curated_terms = []
         for term in terms:
             if isinstance(term, numbers.Number):
-                curated_term = torch.tensor([term])
+                curated_term = torch.tensor([term],
+                                            dtype=torch.get_default_dtype())
             elif isinstance(term, torch.Tensor):
                 curated_term = term
             else:

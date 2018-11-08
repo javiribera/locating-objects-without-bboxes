@@ -212,19 +212,31 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
 
     # Feed forward
     with torch.no_grad():
-        est_map, est_count = model.forward(imgs)
+        est_maps, est_count = model.forward(imgs)
 
-    # Save estimated map to disk
-    est_map_numpy = est_map[0, :, :].to(device_cpu).numpy()
-    est_map_numpy_origsize = \
-        skimage.transform.resize(est_map_numpy,
+    # Convert to original size
+    est_map_np = est_maps[0, :, :].to(device_cpu).numpy()
+    est_map_np_origsize = \
+        skimage.transform.resize(est_map_np,
                                  output_shape=origsize,
                                  mode='constant')
+    orig_img_np = imgs[0].to(device_cpu).squeeze().numpy()
+    orig_img_np_origsize = ((skimage.transform.resize(orig_img_np.transpose((1, 2, 0)),
+                                                   output_shape=origsize,
+                                                   mode='constant') + 1) / 2.0 * 255.0).\
+        astype(np.float32).transpose((2, 0, 1))
+
+    # Overlay output on original image as a heatmap
+    orig_img_w_heatmap_origsize = utils.overlay_heatmap(img=orig_img_np_origsize,
+                                                        map=est_map_np_origsize).\
+        astype(np.float32)
+
+    # Save estimated map to disk
     os.makedirs(os.path.join(args.out_dir, 'estimated_map'), exist_ok=True)
     cv2.imwrite(os.path.join(args.out_dir,
                              'estimated_map',
                              dictionaries[0]['filename']),
-                np.uint8(np.round(255*est_map_numpy_origsize)))
+                orig_img_w_heatmap_origsize.transpose((1, 2, 0))[:, :, ::-1])
 
     # Tensor -> int
     est_count_int = int(round(est_count.item()))
@@ -232,9 +244,9 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
     # The estimated map must be thresholded to obtain estimated points
     for tau, df_out in zip(args.taus, df_outs):
         if tau != -2:
-            mask, _ = utils.threshold(est_map_numpy_origsize, tau)
+            mask, _ = utils.threshold(est_map_np_origsize, tau)
         else:
-            mask, _, mix = utils.threshold(est_map_numpy_origsize, tau)
+            mask, _, mix = utils.threshold(est_map_np_origsize, tau)
             bmm_tracker.feed(mix)
         centroids_wrt_orig = utils.cluster(mask, est_count_int,
                                            max_mask_pts=args.max_mask_pts)
@@ -250,24 +262,18 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
 
         # Paint red dots if user asked for it
         if args.paint:
-            # Paint a circle in the original image at the estimated location
-            image_with_x = np.moveaxis(imgs[0, :, :].to(device_cpu).numpy(),
-                                       0, 2).copy()
-            image_with_x = \
-                skimage.transform.resize(image_with_x,
-                                         output_shape=origsize,
-                                         mode='constant')
-            image_with_x = ((image_with_x + 1) / 2.0 * 255.0)
-            for y, x in centroids_wrt_orig:
-                image_with_x = cv2.circle(image_with_x, (x, y), 3, [255, 0, 0], -1)
-            # Save original image with circle to disk
-            image_with_x = image_with_x[:, :, ::-1]
+            # Paint a cross at the estimated centroids
+            img_with_x = utils.paint_circles(img=orig_img_w_heatmap_origsize,
+                                             points=centroids_wrt_orig,
+                                             color='red',
+                                             crosshair=True)
+            # Save to disk
             os.makedirs(os.path.join(args.out_dir, 'painted',
                                      f'tau={round(tau, 4)}'), exist_ok=True)
             cv2.imwrite(os.path.join(args.out_dir, 'painted',
                                      f'tau={round(tau, 4)}',
                                      dictionaries[0]['filename']),
-                        image_with_x)
+                        img_with_x.transpose((1, 2, 0))[:, :, ::-1])
 
 
         if args.evaluate:

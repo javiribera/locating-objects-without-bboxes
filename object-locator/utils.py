@@ -316,7 +316,7 @@ def paint_circles(img, points, color='red', crosshair=False):
         for y, x in points:
             img = cv2.drawMarker(img,
                                  (x, y),
-                                 color, cv2.MARKER_TILTED_CROSS, 9, 3, cv2.LINE_AA)
+                                 color, cv2.MARKER_TILTED_CROSS, 7, 1, cv2.LINE_AA)
     img = np.moveaxis(img, 2, 0)
 
     return img

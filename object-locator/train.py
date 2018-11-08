@@ -43,6 +43,7 @@ from .data import ScaleImageAndLabel
 from . import logger
 from . import argparser
 from . import utils
+from .models import csrnet
 
 
 # Parse command line arguments
@@ -71,7 +72,7 @@ log = logger.Logger(env_name=args.visdom_env,
 training_transforms = []
 if not args.no_data_augm:
     training_transforms += [RandomHorizontalFlipImageAndLabel(p=0.5, seed=args.seed)]
-    training_transforms += [RandomVerticalFlipImageAndLabel(p=0.5, seed=args.seed)]
+    # training_transforms += [RandomVerticalFlipImageAndLabel(p=0.5, seed=args.seed)]
 training_transforms += [ScaleImageAndLabel(size=(args.height, args.width))]
 training_transforms += [transforms.ToTensor()]
 training_transforms += [transforms.Normalize((0.5, 0.5, 0.5),
@@ -103,11 +104,13 @@ if args.val_dir:
 
 # Model
 with peter('Building network'):
-    model = unet_model.UNet(3, 1,
-                            height=args.height,
-                            width=args.width,
-                            known_n_points=args.n_points,
-                            device=device)
+    model = csrnet.CSRNet()
+    import ipdb; ipdb.set_trace() # BREAKPOINT
+    # model = unet_model.UNet(3, 1,
+    #                         height=args.height,
+    #                         width=args.width,
+    #                         known_n_points=args.n_points,
+    #                         device=device)
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f" with {ballpark(num_params)} trainable parameters. ", end='')
 model = nn.DataParallel(model)

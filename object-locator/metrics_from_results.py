@@ -14,6 +14,7 @@ import ast
 from tqdm import tqdm
 
 from . import metrics
+from . import utils
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser(
@@ -28,6 +29,12 @@ required_args.add_argument('gt',
 required_args.add_argument('metrics',
                     help='Output CSV file with the metrics '
                          '(MAE, AHD, Precision, Recall...)')
+required_args.add_argument('--dataset',
+                           type=str,
+                           required=True,
+                           help='Dataset directory with the images. '
+                                'This is used only to get the image diagonal, '
+                                'as the worst estimate for the AHD.')
 optional_args.add_argument('--radii',
                            type=str,
                            default=range(0, 15 + 1),
@@ -53,10 +60,14 @@ for j, judge in enumerate(tqdm(judges)):
         filename = row_result['filename']
         row_gt = df_gt[df_gt['filename'] == filename].iloc()[0]
 
+        w, h = utils.get_image_size(os.path.join(args.dataset, filename))
+        diagonal = math.sqrt(w**2 + h**2)
+
         judge.feed_count(row_result['count'],
                          row_gt['count'])
         judge.feed_points(ast.literal_eval(row_result['locations']),
-                          ast.literal_eval(row_gt['locations']))
+                          ast.literal_eval(row_gt['locations']),
+                          max_ahd=diagonal)
 
     df = pd.DataFrame(data=[[judge.r,
                              judge.precision,

@@ -7,14 +7,16 @@
 # =====================================================================
 
 import os
-import numpy as np
-import pandas as pd
 import argparse
 import ast
+import math
+
 from tqdm import tqdm
+import numpy as np
+import pandas as pd
 
 from . import metrics
-from . import utils
+from . import get_image_size
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser(
@@ -60,7 +62,7 @@ for j, judge in enumerate(tqdm(judges)):
         filename = row_result['filename']
         row_gt = df_gt[df_gt['filename'] == filename].iloc()[0]
 
-        w, h = utils.get_image_size(os.path.join(args.dataset, filename))
+        w, h = get_image_size.get_image_size(os.path.join(args.dataset, filename))
         diagonal = math.sqrt(w**2 + h**2)
 
         judge.feed_count(row_result['count'],

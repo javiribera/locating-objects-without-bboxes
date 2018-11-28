@@ -320,9 +320,9 @@ class XMLDataset(data.Dataset):
         The sample images of this dataset must be all inside one directory.
          Inside the same directory, there must be one XML file as described by
          https://communityhub.purdue.edu/groups/phenosorg/wiki/APIspecs
-         (minimum xml api version is v.0.2.0)
-         if the xml file is not present, then samples do not contain plant location
-         or plant count information.
+         (minimum XML API version is v.0.4.0).
+         If there is no XML file, metrics will not be computed,
+         and only estimations will be provided.
         :param directory: Directory with all the images and the XML file.
         :param transform: Transform to be applied to each image.
         :param max_dataset_size: Only use the first N images in the directory.
@@ -366,9 +366,13 @@ class XMLDataset(data.Dataset):
             xml_str = fd.read()
 
         # Convert to dictionary
-        # (some elements we expect to have multiple repetitions, so put them in a list)
-        xml_dict = xmltodict.parse(
-            xml_str, force_list=['field', 'panel', 'plot', 'plant'])
+        # (some elements we expect to have multiple repetitions,
+        #  so put them in a list)
+        xml_dict = xmltodict.parse(xml_str,
+                                   force_list=['field',
+                                               'panel',
+                                               'plot',
+                                               'plant'])
 
         # Check API version number
         try:
@@ -377,16 +381,11 @@ class XMLDataset(data.Dataset):
             # An unknown version number means it's the very first one
             # when we did not have api version numbers
             api_version = '0.1.0'
-        major_version, minor_version, addendum_version = \
-            parse('{}.{}.{}', api_version)
+        major_version, minor_version, _ = parse('{}.{}.{}', api_version)
         major_version = int(major_version)
         minor_version = int(minor_version)
-        addendum_version = int(addendum_version)
-        if not((major_version == 0 and
-                minor_version == 2 and
-                addendum_version >= 1) or
-               (major_version, minor_version) == (0, 3)):
-            raise ValueError('An XML with API v0.2.1 or v0.3 is required.')
+        if not(major_version == 0 and minor_version == 4):
+            raise ValueError('An XML with API v0.4 is required.')
 
         # Create the dictionary with the entire dataset
         self.dict = {}
@@ -398,10 +397,12 @@ class XMLDataset(data.Dataset):
                         plot_number = plot['plot_number']
                     else:
                         plot_number = 'unknown'
-                    if 'cigar_grid_location_yx' in plot:
-                        cigar = plot['cigar_grid_location_yx']
+                    if 'subrow_grid_location_yx' in plot:
+                        subrow_grid = \
+                            [int(plot['subrow_grid_location']['y']['#text']),
+                             int(plot['subrow_grid_location']['x']['#text'])]
                     else:
-                        cigar = 'unknown'
+                        subrow_grid = 'unknown'
                     if 'row_number' in plot:
                         row_number = plot['row_number']
                     else:
@@ -420,7 +421,7 @@ class XMLDataset(data.Dataset):
                             orig_width, dtype=torch.get_default_dtype())
                     self.dict[filename] = {'filename': filename,
                                            'plot_number': plot_number,
-                                           'cigar_grid_location_yx': cigar,
+                                           'subrow_grid_location_yx': subrow_grid,
                                            'row_number': row_number,
                                            'range_number': range_number,
                                            'orig_width': orig_width,
@@ -429,7 +430,17 @@ class XMLDataset(data.Dataset):
                         count = int(plot['plant_count'])
                         locations = []
                         for plant in plot['plants']['plant']:
-                            locations.append(eval(plant['location_wrt_plot']))
+                            for y in plant['location']['y']:
+                                if y['@units'] == 'pixels' and \
+                                        y['@wrt'] == 'plot':
+                                    y = float(y['#text'])
+                                    break
+                            for x in plant['location']['x']:
+                                if x['@units'] == 'pixels' and \
+                                        x['@wrt'] == 'plot':
+                                    x = float(x['#text'])
+                                    break
+                            locations.append([y, x])
                         self.dict[filename]['count'] = count
                         self.dict[filename]['locations'] = locations
 

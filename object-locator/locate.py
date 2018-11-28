@@ -312,9 +312,9 @@ if args.evaluate:
         # Output CSV where we will put
         # all our metrics as a function of r and the threshold
         df_metrics = pd.DataFrame(columns=['r', 'th',
-                                              'precision', 'recall', 'fscore', 'MAHD',
-                                              'MAPE', 'ME', 'MPE', 'MAE',
-                                              'MSE', 'RMSE', 'r', 'R2'])
+                                           'precision', 'recall', 'fscore', 'MAHD',
+                                           'MAPE', 'ME', 'MPE', 'MAE',
+                                           'MSE', 'RMSE', 'r', 'R2'])
         df_metrics.index.name = 'idx'
 
         for j, judge in enumerate(tqdm(judges)):

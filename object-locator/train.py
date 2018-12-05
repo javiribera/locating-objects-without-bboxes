@@ -80,6 +80,7 @@ trainset = CSVDataset(args.train_dir,
                       transforms=transforms.Compose(training_transforms),
                       max_dataset_size=args.max_trainset_size,
                       seed=args.seed)
+print(f'# images for training: {len(trainset)}')
 trainset_loader = DataLoader(trainset,
                              batch_size=args.batch_size,
                              drop_last=args.drop_last_batch,
@@ -95,6 +96,7 @@ if args.val_dir:
                                                  (0.5, 0.5, 0.5)),
                         ]),
                         max_dataset_size=args.max_valset_size)
+    print(f'# images for validation: {len(valset)}')
     valset_loader = DataLoader(valset,
                                batch_size=args.eval_batch_size,
                                shuffle=True,

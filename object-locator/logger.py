@@ -9,18 +9,49 @@
 import visdom
 import torch
 import numbers
+from . import utils
 
 from torch.autograd import Variable
 
 class Logger():
     def __init__(self,
-                 env_name='main',
-                 server='http://localhost'):
+                 server=None,
+                 port=8989,
+                 env_name='main'):
+        """
+        Logger that connects to a Visdom server
+        and sends training losses/metrics and images of any kind.
 
-        # Visdom setup
-        self.client = visdom.Visdom(server=server,
-                                    env=env_name,
-                                    port=8989)
+        :param server: Host name of the server (e.g, http://localhost),
+                       without the port number. If None,
+                       this Logger will do nothing at all
+                       (it will not connect to any server,
+                       and the functions here will do nothing).
+        :param port: Port number of the Visdom server.
+        :param env_name: Name of the environment within the Visdom
+                         server where everything you sent to it will go.
+        :param terms_legends: Legend of each term.
+        """
+
+        if server is None:
+            self.train_losses = utils.nothing
+            self.val_losses = utils.nothing
+            self.image = utils.nothing
+            print('W: Not connected to any Visdom server. '
+                  'You will not visualize any training/validation plot '
+                  'or intermediate image')
+        else:
+            # Connect to Visdom
+            self.client = visdom.Visdom(server=server,
+                                        env=env_name,
+                                        port=port)
+            if self.client.check_connection():
+                print(f'Connected to Visdom server '
+                      f'{server}:{port}')
+            else:
+                print(f'E: cannot connect to Visdom server '
+                      f'{server}:{port}')
+                exit(-1)
 
         # Each of the 'windows' in visdom web panel
         self.viz_train_input_win = None
@@ -35,8 +66,10 @@ class Logger():
         # Visdom only supports CPU Tensors
         self.device = torch.device("cpu")
 
+
     def train_losses(self, terms, iteration_number, terms_legends=None):
-        """Plot a new point of the training losses (scalars) to Visdom.
+        """
+        Plot a new point of the training losses (scalars) to Visdom.
         All losses will be plotted in the same figure/window.
 
         :param terms: List of scalar losses.

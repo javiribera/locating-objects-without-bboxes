@@ -317,3 +317,9 @@ def paint_circles(img, points, color='red', crosshair=False):
     img = np.moveaxis(img, 2, 0)
 
     return img
+
+
+def nothing(*args, **kwargs):
+    """ A useless function that does nothing at all. """
+    pass
+

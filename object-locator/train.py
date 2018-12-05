@@ -238,7 +238,7 @@ while epoch < args.epochs:
             est_map_origsize = skimage.transform.resize(est_maps[0].data.unsqueeze(0).to(device_cpu).numpy().transpose((1, 2, 0)),
                                                         output_shape=orig_shape,
                                                         mode='constant').\
-                astype(np.float32).transpose((2, 0, 1))
+                astype(np.float32).transpose((2, 0, 1)).squeeze(0)
 
             # Overlay output on heatmap
             orig_img_w_heatmap_origsize = utils.overlay_heatmap(img=orig_img_origsize,
@@ -394,7 +394,7 @@ while epoch < args.epochs:
             est_map_origsize = skimage.transform.resize(est_maps[0].to(device_cpu).unsqueeze(0).numpy().transpose((1, 2, 0)),
                                                         output_shape=orig_shape,
                                                         mode='constant').\
-                astype(np.float32).transpose((2, 0, 1))
+                astype(np.float32).transpose((2, 0, 1)).squeeze(0)
 
             # Overlay output on heatmap
             orig_img_w_heatmap_origsize = utils.overlay_heatmap(img=orig_img_origsize,

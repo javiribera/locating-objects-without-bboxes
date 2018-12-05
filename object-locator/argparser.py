@@ -135,6 +135,12 @@ def parse_command_args(training_or_testing):
                             metavar='OPTIM',
                             choices=['sgd', 'adam'],
                             help='SGD or Adam')
+        parser.add_argument('--replace-optimizer',
+                            action='store_true',
+                            default=False,
+                            help='Replace optimizer state when resuming from checkpoint. '
+                                 'If True, the optimizer will be replaced as provided in the '
+                                 'arguments of this scripts. If not resuming, it has no effect.')
         parser.add_argument('--max-mask-pts',
                             type=int,
                             default=np.infty,

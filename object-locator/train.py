@@ -146,7 +146,8 @@ if args.resume:
                 lowest_mahd = np.infty
                 print('W: Loaded checkpoint has not been validated. ', end='')
             model.load_state_dict(checkpoint['model'])
-            optimizer.load_state_dict(checkpoint['optimizer'])
+            if not args.replace_optimizer:
+                optimizer.load_state_dict(checkpoint['optimizer'])
             print(f"\n\__ loaded checkpoint '{args.resume}'"
                   f"(now on epoch {checkpoint['epoch']})")
         else:

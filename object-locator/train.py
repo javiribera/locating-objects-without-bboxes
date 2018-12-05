@@ -43,7 +43,6 @@ from .data import ScaleImageAndLabel
 from . import logger
 from . import argparser
 from . import utils
-from .models import csrnet
 
 
 # Parse command line arguments
@@ -104,13 +103,11 @@ if args.val_dir:
 
 # Model
 with peter('Building network'):
-    model = csrnet.CSRNet()
-    import ipdb; ipdb.set_trace() # BREAKPOINT
-    # model = unet_model.UNet(3, 1,
-    #                         height=args.height,
-    #                         width=args.width,
-    #                         known_n_points=args.n_points,
-    #                         device=device)
+    model = unet_model.UNet(3, 1,
+                            height=args.height,
+                            width=args.width,
+                            known_n_points=args.n_points,
+                            device=device)
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f" with {ballpark(num_params)} trainable parameters. ", end='')
 model = nn.DataParallel(model)

@@ -23,7 +23,6 @@ dependencies:
     - tqdm=4.23.1
     - xmltodict=0.11.0
     - pytorch=0.4.0
-    - h5py
     - pip:
         - ballpark==1.4.0
         - visdom==0.1.7

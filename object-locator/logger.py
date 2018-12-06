@@ -43,7 +43,7 @@ class Logger():
         else:
             # Connect to Visdom
             self.client = visdom.Visdom(server=server,
-                                        env=env_name,
+                                        # env=env_name,
                                         port=port)
             if self.client.check_connection():
                 print(f'Connected to Visdom server '
@@ -65,6 +65,10 @@ class Logger():
 
         # Visdom only supports CPU Tensors
         self.device = torch.device("cpu")
+
+        # Indicate the env name at each call to prevent error
+        # workaround https://github.com/facebookresearch/visdom/issues/365
+        self.env_name = env_name
 
 
     def train_losses(self, terms, iteration_number, terms_legends=None):
@@ -116,7 +120,8 @@ class Logger():
                                               ylabel='Loss',
                                               xlabel='Epoch'),
                                     append=True,
-                                    win='train_losses')
+                                    win='train_losses',
+                                    env=self.env_name)
         if self.win_train_loss == 'win does not exist':
             self.win_train_loss = \
                 self.client.line(Y=y,
@@ -125,7 +130,8 @@ class Logger():
                                            legend=terms_legends,
                                            ylabel='Loss',
                                            xlabel='Epoch'),
-                                 win='train_losses')
+                                 win='train_losses',
+                                 env=self.env_name)
 
     def image(self, imgs, titles, window_ids):
         """Send images to Visdom.
@@ -146,7 +152,8 @@ class Logger():
         for img, title, win in zip(imgs, titles, window_ids):
             self.client.image(img,
                               opts=dict(title=title),
-                              win=str(win))
+                              win=str(win),
+                              env=self.env_name)
 
     def val_losses(self, terms, iteration_number, terms_legends=None):
         """Plot a new point of the training losses (scalars) to Visdom.  All losses will be plotted in the same figure/window.
@@ -195,7 +202,8 @@ class Logger():
                                               ylabel='Loss',
                                               xlabel='Epoch'),
                                     append=True,
-                                    win='val_metrics')
+                                    win='val_metrics',
+                                    env=self.env_name)
         if self.win_val_loss == 'win does not exist':
             self.win_val_loss = \
                 self.client.line(Y=y,
@@ -204,4 +212,6 @@ class Logger():
                                            legend=terms_legends,
                                            ylabel='Loss',
                                            xlabel='Epoch'),
-                                 win='val_metrics')
+                                 win='val_metrics',
+                                 env=self.env_name)
+

@@ -9,25 +9,138 @@
 import os
 import random
 from collections import OrderedDict
+import copy
 
 from PIL import Image
 import skimage
 import numpy as np
 import pandas as pd
 import torch
-from torch.utils import data
 from torchvision import datasets
 from torchvision import transforms
 import xmltodict
 from parse import parse
+from ballpark import ballpark
+
 from . import get_image_size
 
 IMG_EXTENSIONS = ['.png', '.jpeg', '.jpg', '.tiff']
 
 torch.set_default_dtype(torch.float32)
 
+def get_train_val_loaders(train_dir,
+                          collate_fn,
+                          height,
+                          width,
+                          no_data_augmentation=False,
+                          max_trainset_size=np.infty,
+                          seed=0,
+                          batch_size=1,
+                          drop_last_batch=False,
+                          shuffle=True,
+                          num_workers=0,
+                          val_dir=None,
+                          max_valset_size=np.infty):
+    """
+    Create a training loader and a validation set.
+    If the validation directory is 'auto',
+    20% of the dataset is used for validation.
 
-class CSVDataset(data.Dataset):
+    :param train_dir: Directory with all the training images and the CSV file.
+    :param train_transforms: Transform to be applied to each training image.
+    :param max_trainset_size: Only use first N images for training.
+    :param collate_fn: Function to assemble samples into batches.
+    :param height: Resize the images to this height.
+    :param width: Resize the images to this width.
+    :param no_data_augmentation: Do not perform data augmentation.
+    :param seed: Random seed.
+    :param batch_size: Number of samples in a batch, for training.
+    :param drop_last_batch: Drop the last incomplete batch during training
+    :param shuffle: Randomly shuffle the dataset before each epoch.
+    :param num_workers: Number of subprocesses dedicated for data loading.
+    :param val_dir: Directory with all the training images and the CSV file.
+    :param max_valset_size: Only use first N images for validation.
+    """
+
+    # Data augmentation for training
+    training_transforms = []
+    if not no_data_augmentation:
+        training_transforms += [RandomHorizontalFlipImageAndLabel(p=0.5, seed=seed)]
+        training_transforms += [RandomVerticalFlipImageAndLabel(p=0.5, seed=seed)]
+    training_transforms += [ScaleImageAndLabel(size=(height, width))]
+    training_transforms += [transforms.ToTensor()]
+    training_transforms += [transforms.Normalize((0.5, 0.5, 0.5),
+                                                 (0.5, 0.5, 0.5))]
+
+    # Data augmentation for validation
+    validation_transforms = transforms.Compose([
+                                ScaleImageAndLabel(size=(height, width)),
+                                transforms.ToTensor(),
+                                transforms.Normalize((0.5, 0.5, 0.5),
+                                                     (0.5, 0.5, 0.5)),
+                            ])
+
+    # Training dataset
+    trainset = CSVDataset(train_dir,
+                          transforms=transforms.Compose(training_transforms),
+                          max_dataset_size=max_trainset_size,
+                          seed=seed)
+
+    # Validation dataset
+    if val_dir is not None:
+        if val_dir == 'auto':
+            # Create a dataset just as in training
+            valset = CSVDataset(train_dir,
+                                transforms=validation_transforms,
+                                max_dataset_size=max_trainset_size)
+
+            # Split 80% for training, 20% for validation
+            n_imgs_for_training = int(round(0.8*len(trainset)))
+            if trainset.there_is_gt:
+                trainset.csv_df = trainset.csv_df[:n_imgs_for_training]
+                valset.csv_df = valset.csv_df[n_imgs_for_training:].reset_index()
+            else:
+                trainset.listfiles = trainset.listfiles[:n_imgs_for_training]
+                valset.listfiles = valset.listfiles[n_imgs_for_training:]
+
+        else:
+            valset = CSVDataset(val_dir,
+                                transforms=validation_transforms,
+                                max_dataset_size=max_valset_size)
+            valset_loader = torch.utils.data.DataLoader(valset,
+                                       batch_size=1,
+                                       shuffle=True,
+                                       num_workers=num_workers,
+                                       collate_fn=csv_collator)
+    else:
+        valset, valset_loader = None, None
+
+    print(f'# images for training: '
+          f'{ballpark(len(trainset))}')
+    if valset is not None:
+        print(f'# images for validation: '
+              f'{ballpark(len(valset))}')
+    else:
+        print('W: no validation set was selected!')
+
+    # Build data loaders from the datasets
+    trainset_loader = torch.utils.data.DataLoader(trainset,
+                                 batch_size=batch_size,
+                                 drop_last=drop_last_batch,
+                                 shuffle=True,
+                                 num_workers=num_workers,
+                                 collate_fn=csv_collator)
+    if valset is not None:
+        valset_loader = torch.utils.data.DataLoader(valset,
+                                   batch_size=1,
+                                   shuffle=True,
+                                   num_workers=num_workers,
+                                   collate_fn=csv_collator)
+
+    return trainset_loader, valset_loader
+
+
+class CSVDataset(torch.utils.data.Dataset):
     def __init__(self,
                  directory,
                  transforms=None,
@@ -106,7 +219,6 @@ class CSVDataset(data.Dataset):
         The second element is a dictionary where the keys are the columns of the CSV.
         If the CSV did not exist in the dataset directory,
          the dictionary will only contain the filename of the image.
-_
         :param idx: Index of the image in the dataset to get.
         """
 
@@ -309,7 +421,7 @@ def _is_pil_image(img):
     return isinstance(img, Image.Image)
 
 
-class XMLDataset(data.Dataset):
+class XMLDataset(torch.utils.data.Dataset):
     def __init__(self,
                  directory,
                  transforms=None,

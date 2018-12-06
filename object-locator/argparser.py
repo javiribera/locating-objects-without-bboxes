@@ -33,9 +33,11 @@ def parse_command_args(training_or_testing):
                             required=True,
                             help='Directory with training images.')
         parser.add_argument('--val-dir',
-                            help='Directory with validation images. '
-                                 'If left blank no validation will be done. '
-                                 'If not provided, will not do validation')
+                            help="Directory with validation images. "
+                                 "If 'auto', 20%% of the training samples "
+                                 "will be removed from training "
+                                 "and used for validation. "
+                                 "If left blank no validation will be done.")
         parser.add_argument('--imgsize',
                             type=str,
                             default='256x256',

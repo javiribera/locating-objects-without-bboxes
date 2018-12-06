@@ -35,14 +35,14 @@ from ballpark import ballpark
 from . import losses
 from .models import unet_model
 from .metrics import Judge
-from .data import CSVDataset
+from . import logger
+from . import argparser
+from . import utils
+from . import data
 from .data import csv_collator
 from .data import RandomHorizontalFlipImageAndLabel
 from .data import RandomVerticalFlipImageAndLabel
 from .data import ScaleImageAndLabel
-from . import logger
-from . import argparser
-from . import utils
 
 
 # Parse command line arguments
@@ -68,41 +68,20 @@ log = logger.Logger(server=args.visdom_server,
                     port=args.visdom_port,
                     env_name=args.visdom_env)
 
-# Data loading code
-training_transforms = []
-if not args.no_data_augm:
-    training_transforms += [RandomHorizontalFlipImageAndLabel(p=0.5, seed=args.seed)]
-    # training_transforms += [RandomVerticalFlipImageAndLabel(p=0.5, seed=args.seed)]
-training_transforms += [ScaleImageAndLabel(size=(args.height, args.width))]
-training_transforms += [transforms.ToTensor()]
-training_transforms += [transforms.Normalize((0.5, 0.5, 0.5),
-                                             (0.5, 0.5, 0.5))]
-trainset = CSVDataset(args.train_dir,
-                      transforms=transforms.Compose(training_transforms),
-                      max_dataset_size=args.max_trainset_size,
-                      seed=args.seed)
-print(f'# images for training: {len(trainset)}')
-trainset_loader = DataLoader(trainset,
-                             batch_size=args.batch_size,
-                             drop_last=args.drop_last_batch,
-                             shuffle=True,
-                             num_workers=args.nThreads,
-                             collate_fn=csv_collator)
-if args.val_dir:
-    valset = CSVDataset(args.val_dir,
-                        transforms=transforms.Compose([
-                            ScaleImageAndLabel(size=(args.height, args.width)),
-                            transforms.ToTensor(),
-                            transforms.Normalize((0.5, 0.5, 0.5),
-                                                 (0.5, 0.5, 0.5)),
-                        ]),
-                        max_dataset_size=args.max_valset_size)
-    print(f'# images for validation: {len(valset)}')
-    valset_loader = DataLoader(valset,
-                               batch_size=args.eval_batch_size,
-                               shuffle=True,
+
+# Create data loaders (return data in batches)
+trainset_loader, valset_loader = \
+    data.get_train_val_loaders(train_dir=args.train_dir,
+                               max_trainset_size=args.max_trainset_size,
+                               collate_fn=csv_collator,
+                               height=args.height,
+                               width=args.width,
+                               seed=args.seed,
+                               batch_size=args.batch_size,
+                               drop_last_batch=args.drop_last_batch,
                                num_workers=args.nThreads,
-                               collate_fn=csv_collator)
+                               val_dir=args.val_dir,
+                               max_valset_size=args.max_valset_size)
 
 # Model
 with peter('Building network'):
@@ -171,7 +150,7 @@ while epoch < args.epochs:
 
     loss_avg_this_epoch = 0
     iter_train = tqdm(trainset_loader,
-                      desc=f'Epoch {epoch} ({len(trainset)} images)')
+                      desc=f'Epoch {epoch} ({len(trainset_loader.dataset)} images)')
 
     # === TRAIN ===
 
@@ -305,7 +284,7 @@ while epoch < args.epochs:
     sum_term3 = 0
     sum_loss = 0
     iter_val = tqdm(valset_loader,
-                    desc=f'Validating Epoch {epoch} ({len(valset)} images)')
+                    desc=f'Validating Epoch {epoch} ({len(valset_loader.dataset)} images)')
     for batch_idx, (imgs, dictionaries) in enumerate(iter_val):
 
         # Pull info from this batch and move to device
@@ -325,8 +304,8 @@ while epoch < args.epochs:
             target_orig_widths = torch.stack(target_orig_widths)
             target_orig_sizes = torch.stack((target_orig_heights,
                                              target_orig_widths)).transpose(0, 1)
-        origsize = (dictionaries[0]['orig_height'].item(),
-                    dictionaries[0]['orig_width'].item())
+        orig_shape = (dictionaries[0]['orig_height'].item(),
+                      dictionaries[0]['orig_width'].item())
 
         # Tensor -> float & numpy
         target_count_int = int(round(target_counts.item()))
@@ -370,7 +349,7 @@ while epoch < args.epochs:
         # BMM thresholding
         est_map_numpy = est_maps[0, :, :].to(device_cpu).numpy()
         est_map_numpy_origsize = skimage.transform.resize(est_map_numpy,
-                                                          output_shape=origsize,
+                                                          output_shape=orig_shape,
                                                           mode='constant')
         mask, _ = utils.threshold(est_map_numpy_origsize, tau=-1)
         # Obtain centroids of the mask

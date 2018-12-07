@@ -1,6 +1,6 @@
 # Copyright &copyright 2018 The Board of Trustees of Purdue University.
 # All rights reserved.
-# 
+#
 # This source code is not to be distributed or modified
 # without the written permission of Edward J. Delp at Purdue University
 # Contact information: ace@ecn.purdue.edu
@@ -29,7 +29,7 @@ class Logger():
                        and the functions here will do nothing).
         :param port: Port number of the Visdom server.
         :param env_name: Name of the environment within the Visdom
-                         server where everything you sent to it will go.
+        server where everything you sent to it will go.
         :param terms_legends: Legend of each term.
         """
 
@@ -43,7 +43,7 @@ class Logger():
         else:
             # Connect to Visdom
             self.client = visdom.Visdom(server=server,
-                                        # env=env_name,
+                                        env=env_name,
                                         port=port)
             if self.client.check_connection():
                 print(f'Connected to Visdom server '
@@ -65,10 +65,6 @@ class Logger():
 
         # Visdom only supports CPU Tensors
         self.device = torch.device("cpu")
-
-        # Indicate the env name at each call to prevent error
-        # workaround https://github.com/facebookresearch/visdom/issues/365
-        self.env_name = env_name
 
 
     def train_losses(self, terms, iteration_number, terms_legends=None):
@@ -113,15 +109,14 @@ class Logger():
 
         # Send training loss to Visdom
         self.win_train_loss = \
-            self.client.updateTrace(Y=y,
-                                    X=x,
-                                    opts=dict(title='Training',
-                                              legend=terms_legends,
-                                              ylabel='Loss',
-                                              xlabel='Epoch'),
-                                    append=True,
-                                    win='train_losses',
-                                    env=self.env_name)
+            self.client.line(Y=y,
+                             X=x,
+                             opts=dict(title='Training',
+                                       legend=terms_legends,
+                                       ylabel='Loss',
+                                       xlabel='Epoch'),
+                             update='append',
+                             win='train_losses')
         if self.win_train_loss == 'win does not exist':
             self.win_train_loss = \
                 self.client.line(Y=y,
@@ -130,8 +125,7 @@ class Logger():
                                            legend=terms_legends,
                                            ylabel='Loss',
                                            xlabel='Epoch'),
-                                 win='train_losses',
-                                 env=self.env_name)
+                                 win='train_losses')
 
     def image(self, imgs, titles, window_ids):
         """Send images to Visdom.
@@ -152,11 +146,11 @@ class Logger():
         for img, title, win in zip(imgs, titles, window_ids):
             self.client.image(img,
                               opts=dict(title=title),
-                              win=str(win),
-                              env=self.env_name)
+                              win=str(win))
 
     def val_losses(self, terms, iteration_number, terms_legends=None):
-        """Plot a new point of the training losses (scalars) to Visdom.  All losses will be plotted in the same figure/window.
+        """
+        Plot a new point of the training losses (scalars) to Visdom.  All losses will be plotted in the same figure/window.
 
         :param terms: List of scalar losses.
                       Each element will be a different plot in the y axis.
@@ -195,15 +189,14 @@ class Logger():
 
         # Send validation loss to Visdom
         self.win_val_loss = \
-            self.client.updateTrace(Y=y,
-                                    X=x,
-                                    opts=dict(title='Validation',
-                                              legend=terms_legends,
-                                              ylabel='Loss',
-                                              xlabel='Epoch'),
-                                    append=True,
-                                    win='val_metrics',
-                                    env=self.env_name)
+            self.client.line(Y=y,
+                             X=x,
+                             opts=dict(title='Validation',
+                                       legend=terms_legends,
+                                       ylabel='Loss',
+                                       xlabel='Epoch'),
+                             update='append',
+                             win='val_metrics')
         if self.win_val_loss == 'win does not exist':
             self.win_val_loss = \
                 self.client.line(Y=y,
@@ -212,6 +205,5 @@ class Logger():
                                            legend=terms_legends,
                                            ylabel='Loss',
                                            xlabel='Epoch'),
-                                 win='val_metrics',
-                                 env=self.env_name)
+                                 win='val_metrics')
 

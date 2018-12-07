@@ -81,7 +81,7 @@ def get_train_val_loaders(train_dir,
                             ])
 
     # Training dataset
-    trainset = CSVDataset(train_dir,
+    trainset = XMLDataset(train_dir,
                           transforms=transforms.Compose(training_transforms),
                           max_dataset_size=max_trainset_size,
                           seed=seed)
@@ -90,21 +90,29 @@ def get_train_val_loaders(train_dir,
     if val_dir is not None:
         if val_dir == 'auto':
             # Create a dataset just as in training
-            valset = CSVDataset(train_dir,
+            valset = XMLDataset(train_dir,
                                 transforms=validation_transforms,
                                 max_dataset_size=max_trainset_size)
 
             # Split 80% for training, 20% for validation
             n_imgs_for_training = int(round(0.8*len(trainset)))
-            if trainset.there_is_gt:
-                trainset.csv_df = trainset.csv_df[:n_imgs_for_training]
-                valset.csv_df = valset.csv_df[n_imgs_for_training:].reset_index()
-            else:
-                trainset.listfiles = trainset.listfiles[:n_imgs_for_training]
-                valset.listfiles = valset.listfiles[n_imgs_for_training:]
+            if isinstance(trainset, CSVDataset):
+                if trainset.there_is_gt:
+                    trainset.csv_df = \
+                        trainset.csv_df[:n_imgs_for_training]
+                    valset.csv_df = \
+                        valset.csv_df[n_imgs_for_training:].reset_index()
+                else:
+                    trainset.listfiles = \
+                        trainset.listfiles[:n_imgs_for_training]
+                    valset.listfiles = \
+                        valset.listfiles[n_imgs_for_training:]
+            else: # isinstance(trainset, XMLDataset):
+                trainset.dict_list = trainset.dict_list[:n_imgs_for_training]
+                valset.dict_list = valset.dict_list[n_imgs_for_training:]
 
         else:
-            valset = CSVDataset(val_dir,
+            valset = XMLDataset(val_dir,
                                 transforms=validation_transforms,
                                 max_dataset_size=max_valset_size)
             valset_loader = torch.utils.data.DataLoader(valset,
@@ -449,11 +457,14 @@ class XMLDataset(torch.utils.data.Dataset):
         # Get list of files in the dataset directory,
         # and the filename of the XML
         listfiles = os.listdir(directory)
-        xml_filename = None
-        for filename in listfiles:
-            if filename.endswith('.xml'):
-                xml_filename = filename
-                break
+        xml_filenames = [f for f in listfiles if f.endswith('.xml')]
+        if len(xml_filenames) == 1:
+            xml_filename = xml_filenames[0]
+        elif len(xml_filenames) == 0:
+            xml_filename = None
+        else:
+            print(f"E: there is more than one XML file in '{directory}'")
+            exit(-1)
 
         # Ignore files that are not images
         listfiles = [f for f in listfiles
@@ -500,10 +511,17 @@ class XMLDataset(torch.utils.data.Dataset):
             raise ValueError('An XML with API v0.4 is required.')
 
         # Create the dictionary with the entire dataset
-        self.dict = {}
+        dictt = {}
         for field in xml_dict['fields']['field']:
             for panel in field['panels']['panel']:
                 for plot in panel['plots']['plot']:
+
+                    if self.there_is_gt and \
+                            not('plant_count' in plot and \
+                                'plants' in plot):
+                        # There is GT for some plots but not this one
+                        continue
+
                     filename = plot['orthophoto_chop_filename']
                     if 'plot_number' in plot:
                         plot_number = plot['plot_number']
@@ -531,7 +549,7 @@ class XMLDataset(torch.utils.data.Dataset):
                             orig_height, dtype=torch.get_default_dtype())
                         orig_width = torch.tensor(
                             orig_width, dtype=torch.get_default_dtype())
-                    self.dict[filename] = {'filename': filename,
+                    dictt[filename] = {'filename': filename,
                                            'plot_number': plot_number,
                                            'subrow_grid_location_yx': subrow_grid,
                                            'row_number': row_number,
@@ -553,22 +571,22 @@ class XMLDataset(torch.utils.data.Dataset):
                                     x = float(x['#text'])
                                     break
                             locations.append([y, x])
-                        self.dict[filename]['count'] = count
-                        self.dict[filename]['locations'] = locations
+                        dictt[filename]['count'] = count
+                        dictt[filename]['locations'] = locations
 
             # Use an Ordered Dictionary to allow random access
-            self.dict = OrderedDict(self.dict.items())
-            self.dict_list = list(self.dict.items())
+            dictt = OrderedDict(dictt.items())
+            self.dict_list = list(dictt.items())
 
             # Make dataset smaller
-            new_dataset_length = min(len(self.dict), max_dataset_size)
-            self.dict = {key: elem_dict
+            new_dataset_length = min(len(dictt), max_dataset_size)
+            dictt = {key: elem_dict
                          for key, elem_dict in
                          self.dict_list[:new_dataset_length]}
-            self.dict_list = list(self.dict.items())
+            self.dict_list = list(dictt.items())
 
     def __len__(self):
-        return len(self.dict)
+        return len(self.dict_list)
 
     def __getitem__(self, idx):
         """Get one element of the dataset.

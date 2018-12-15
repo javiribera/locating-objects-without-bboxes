@@ -354,7 +354,7 @@ class CustomFormatter(argparse.RawDescriptionHelpFormatter):
             if action.default is not argparse.SUPPRESS:
                 defaulting_nargs = [argparse.OPTIONAL, argparse.ZERO_OR_MORE]
                 if action.option_strings or action.nargs in defaulting_nargs:
-                    if action.default is not None:
+                    if action.default is not None and action.default != '':
                         help += ' (default: ' + str(action.default) + ')'
         help += '\n\n'
 

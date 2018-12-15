@@ -136,11 +136,10 @@ class WeightedHausdorffDistance(nn.Module):
         self.all_img_locations = torch.from_numpy(cartesian([np.arange(resized_height),
                                                              np.arange(resized_width)]))
         # Convert to appropiate type
-        self.all_img_locations = torch.tensor(self.all_img_locations,
-                                              dtype=torch.get_default_dtype()).to(device)
+        self.all_img_locations = self.all_img_locations.to(device=device,
+                                                           dtype=torch.get_default_dtype())
 
         self.return_2_terms = return_2_terms
-
         self.p = p
 
     def forward(self, prob_map, gt, orig_sizes):

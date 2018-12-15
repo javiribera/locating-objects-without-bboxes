@@ -22,7 +22,7 @@ dependencies:
     - setuptools=39.1.0
     - tqdm=4.23.1
     - xmltodict=0.11.0
-    - pytorch=0.4.0
+    - pytorch=1.0.0
     - pip:
         - ballpark==1.4.0
         - visdom==0.1.8.5

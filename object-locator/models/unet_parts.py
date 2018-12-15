@@ -1,6 +1,8 @@
 # sub-parts of the U-Net model
 
 import math
+import warnings
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -65,7 +67,9 @@ class up(nn.Module):
                                 normaliz=normaliz, activ=activ)
 
     def forward(self, x1, x2):
-        x1 = self.up(x1)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")  # Upsample is deprecated
+            x1 = self.up(x1)
         diffY = x2.size()[2] - x1.size()[2]
         diffX = x2.size()[3] - x1.size()[3]
         x1 = F.pad(x1, (diffX // 2, int(math.ceil(diffX / 2)),

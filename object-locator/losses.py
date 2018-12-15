@@ -155,9 +155,12 @@ class WeightedHausdorffDistance(nn.Module):
                    Must be of size B as in prob_map.
                    Each element in the list must be a 2D Tensor,
                    where each row is the (y, x), i.e, (row, col) of a GT point.
-        :param orig_sizes: Bx2 Tensor containing the size of the original images.
-                           B is batch size. The size must be in (height, width) format.
-        :param orig_widths: List of the original width for each image in the batch.
+        :param orig_sizes: Bx2 Tensor containing the size
+                           of the original images.
+                           B is batch size.
+                           The size must be in (height, width) format.
+        :param orig_widths: List of the original widths for each image
+                            in the batch.
         :return: Single-scalar Tensor with the Weighted Hausdorff Distance.
                  If self.return_2_terms=True, then return a tuple containing
                  the two terms of the Weighted Hausdorff Distance.

@@ -374,6 +374,7 @@ def strictly_positive_int(val):
 
 def strictly_positive(val):
     """Convert to a strictly positive float."""
+    val = float(val) 
     if not val > 0:
         raise argparse.ArgumentTypeError("Should be strictly positive.")
-    return float(val) 
+    return val

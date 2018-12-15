@@ -28,7 +28,7 @@ def parse_command_args(training_or_testing):
 
         # Training settings
         parser = argparse.ArgumentParser(
-            description='BoundingBox-less Location with PyTorch',
+            description='BoundingBox-less Location with PyTorch.',
             formatter_class=CustomFormatter)
         optional_args = parser._action_groups.pop()
         required_args = parser.add_argument_group('MANDATORY arguments')
@@ -40,134 +40,164 @@ def parse_command_args(training_or_testing):
                                    "If 'auto', 20%% of the training samples "
                                    "will be removed from training "
                                    "and used for validation. "
-                                   "If left blank no validation will be done.")
+                                   "If left blank, no validation "
+                                   "will be done.")
         optional_args.add_argument('--imgsize',
                                    type=str,
                                    default='256x256',
                                    metavar='HxW',
-                                   help='Size of the input images (height x width).')
+                                   help="Size of the input images "
+                                        "(height x width).")
         optional_args.add_argument('--batch-size',
                                    type=int,
                                    default=1,
                                    metavar='N',
-                                   help='input batch size for training')
+                                   help="Input batch size for training")
         optional_args.add_argument('--epochs',
                                    type=int,
                                    default=np.inf,
                                    metavar='N',
-                                   help='number of epochs to train')
+                                   help="Number of epochs to train")
         optional_args.add_argument('--nThreads', '-j',
                                    default=4,
                                    type=int,
                                    metavar='N',
-                                   help='Number of data loading threads')
+                                   help="Number of data loading threads")
         optional_args.add_argument('--lr',
                                    type=float,
                                    default=4e-5,
                                    metavar='LR',
-                                   help='learning rate (default: 1e-5)')
+                                   help="Learning rate (step size).")
         optional_args.add_argument('-p',
                                    type=float,
                                    default=-1,
                                    metavar='P',
-                                   help='p in the generalized mean (default: -inf => minimum)')
+                                   help="alpha in the generalized mean "
+                                        "(-inf => minimum)")
         optional_args.add_argument('--no-cuda',
                                    action='store_true',
                                    default=False,
-                                   help='disables CUDA training')
+                                   help="Disables CUDA training")
         optional_args.add_argument('--no-data-augm',
                                    action='store_true',
                                    default=False,
-                                   help='Disables Data Augmentation (random vert+horiz flip)')
+                                   help="Disables data augmentation "
+                                        "(random vert+horiz flip)")
         optional_args.add_argument('--drop-last-batch',
                                    action='store_true',
                                    default=False,
-                                   help='drop the last incomplete batch during training. '
-                                   'If the dataset size is not divisible by '
-                                   'the batch size, then the last batch will be smaller.')
+                                   help="Drop the last batch during training, "
+                                        "which may be incomplete. "
+                                        "If the dataset size is not "
+                                        "divisible by the batch size, "
+                                        "then the last batch will be smaller.")
         optional_args.add_argument('--seed',
                                    type=int,
                                    default=1,
                                    metavar='S',
-                                   help='random seed (default: 1)')
+                                   help="Random seed.")
         optional_args.add_argument('--resume',
                                    default='',
                                    type=str,
                                    metavar='PATH',
-                                   help='path to latest checkpoint (default: none)')
+                                   help="Path to latest checkpoint.")
         optional_args.add_argument('--save',
                                    default='',
                                    type=str,
                                    metavar='PATH',
-                                   help='where to save the model after each epoch')
+                                   help="Where to save the model "
+                                        "after each epoch.")
         optional_args.add_argument('--log-interval',
                                    type=float,
                                    default=3,
                                    metavar='N',
-                                   help='time to wait between logs of training status '
-                                   '(in seconds)')
+                                   help="Time to wait between every "
+                                        " time the losses are printed "
+                                        "(in seconds).")
         optional_args.add_argument('--max-trainset-size',
                                    type=int,
                                    default=np.inf,
                                    metavar='N',
-                                   help='only use the first N images of the training dataset')
+                                   help="Only use the first N "
+                                        "images of the training dataset.")
         optional_args.add_argument('--max-valset-size',
                                    type=int,
                                    default=np.inf,
                                    metavar='N',
-                                   help='only use the first N images of the validation dataset')
+                                   help="Only use the first N images "
+                                        "of the validation dataset.")
         optional_args.add_argument('--val-freq',
                                    default=1,
                                    type=int,
                                    metavar='F',
-                                   help='run validation every F epochs. '
-                                   'If 0, no validation will be done. '
-                                   'If no validation is done, a checkpoint will be saved '
-                                   'every F epochs.')
+                                   help="Run validation every F epochs. "
+                                        "If 0, no validation will be done. "
+                                        "If no validation is done, "
+                                        "a checkpoint will be saved "
+                                        "every F epochs.")
         optional_args.add_argument('--visdom-env',
                                    default='default_environment',
                                    type=str,
                                    metavar='NAME',
-                                   help='name of the environment in Visdom')
+                                   help="Name of the environment in Visdom.")
         optional_args.add_argument('--visdom-server',
                                    default=None,
                                    metavar='SRV',
-                                   help='Hostname of the Visdom server')
+                                   help="Hostname of the Visdom server. "
+                                        "If not provided, nothing will "
+                                        "be sent to Visdom.")
         optional_args.add_argument('--visdom-port',
                                    default=8989,
                                    metavar='PRT',
-                                   help='Port of the Visdom server')
+                                   help="Port of the Visdom server.")
         optional_args.add_argument('--optimizer', '--optim',
                                    default='sgd',
                                    type=str.lower,
                                    metavar='OPTIM',
                                    choices=['sgd', 'adam'],
-                                   help='SGD or Adam')
+                                   help="SGD or Adam.")
         optional_args.add_argument('--replace-optimizer',
                                    action='store_true',
                                    default=False,
-                                   help='Replace optimizer state when resuming from checkpoint. '
-                                   'If True, the optimizer will be replaced as provided in the '
-                                   'arguments of this scripts. If not resuming, it has no effect.')
+                                   help="Replace optimizer state "
+                                        "when resuming from checkpoint. "
+                                        "If True, the optimizer "
+                                        "will be replaced using the "
+                                        "arguments of this scripts. "
+                                        "If not resuming, it has no effect.")
         optional_args.add_argument('--max-mask-pts',
                                    type=int,
                                    default=np.infty,
                                    metavar='M',
-                                   help='Subsample this number of points from the mask, '
-                                   'so GMM fitting runs faster.')
+                                   help="Subsample this number of points "
+                                        "from the mask, so that GMM fitting "
+                                        "runs faster.")
         optional_args.add_argument('--paint',
                                    default=False,
                                    action="store_true",
-                                   help='paint red circles at estimated locations in validation. '
-                                   'It takes an enormous amount of time!')
-        optional_args.add_argument('--radius', type=int, default=5, metavar='R',
-                                   help='Detections at dist <= R to a GT pt are True Positives.')
-        optional_args.add_argument('--n-points', type=int, default=None, metavar='N',
-                                   help='If you know the number of points (e.g, just one pupil), set it.'
-                                   'Otherwise it will be estimated by adding a L1 cost term.')
-        optional_args.add_argument('--lambdaa', type=float, default=1, metavar='L',
-                                   help='Weight that will multiply the regression term '
-                                   'in the loss function.')
+                                   help="Paint red circles at the "
+                                        "estimated locations in validation. "
+                                        "This maskes it run much slower!")
+        optional_args.add_argument('--radius',
+                                   type=int,
+                                   default=5,
+                                   metavar='R',
+                                   help="Detections at dist <= R to a GT point"
+                                        "are considered True Positives.")
+        optional_args.add_argument('--n-points',
+                                   type=int,
+                                   default=None,
+                                   metavar='N',
+                                   help="If you know the number of points "
+                                        "(e.g, just one pupil), then set it. "
+                                        "Otherwise it will be estimated.")
+        optional_args.add_argument('--lambdaa',
+                                   type=float,
+                                   default=1,
+                                   metavar='L',
+                                   help="Weight that will increase the "
+                                        "importance of estimating the "
+                                        "right number of points.")
         parser._action_groups.append(optional_args)
         args = parser.parse_args()
 

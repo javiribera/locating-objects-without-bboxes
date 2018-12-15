@@ -1,6 +1,6 @@
 # Copyright &copyright 2018 The Board of Trustees of Purdue University.
 # All rights reserved.
-# 
+#
 # This source code is not to be distributed or modified
 # without the written permission of Edward J. Delp at Purdue University
 # Contact information: ace@ecn.purdue.edu
@@ -19,8 +19,9 @@ def parse_command_args(training_or_testing):
     Parse the arguments passed by the user from the command line.
     Also performs some sanity checks.
 
-    :param training_or_testing: 'training' or 'testing' parameters.
-    Returns: args object containing the arguments as properties (args.argument_name) 
+    :param training_or_testing: 'training' or 'testing'.
+    Returns: args object containing the arguments
+             as properties (args.argument_name)
     """
 
     if training_or_testing == 'training':
@@ -28,144 +29,146 @@ def parse_command_args(training_or_testing):
         # Training settings
         parser = argparse.ArgumentParser(
             description='BoundingBox-less Location with PyTorch',
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-        parser.add_argument('--train-dir',
-                            required=True,
-                            help='Directory with training images.')
-        parser.add_argument('--val-dir',
-                            help="Directory with validation images. "
-                                 "If 'auto', 20%% of the training samples "
-                                 "will be removed from training "
-                                 "and used for validation. "
-                                 "If left blank no validation will be done.")
-        parser.add_argument('--imgsize',
-                            type=str,
-                            default='256x256',
-                            metavar='HxW',
-                            help='Size of the input images (height x width).')
-        parser.add_argument('--batch-size',
-                            type=int,
-                            default=1,
-                            metavar='N',
-                            help='input batch size for training')
-        parser.add_argument('--epochs',
-                            type=int,
-                            default=np.inf,
-                            metavar='N',
-                            help='number of epochs to train')
-        parser.add_argument('--nThreads', '-j',
-                            default=4,
-                            type=int,
-                            metavar='N',
-                            help='Number of data loading threads')
-        parser.add_argument('--lr',
-                            type=float,
-                            default=4e-5,
-                            metavar='LR',
-                            help='learning rate (default: 1e-5)')
-        parser.add_argument('-p',
-                            type=float,
-                            default=-1,
-                            metavar='P',
-                            help='p in the generalized mean (default: -inf => minimum)')
-        parser.add_argument('--no-cuda',
-                            action='store_true',
-                            default=False,
-                            help='disables CUDA training')
-        parser.add_argument('--no-data-augm',
-                            action='store_true',
-                            default=False,
-                            help='Disables Data Augmentation (random vert+horiz flip)')
-        parser.add_argument('--drop-last-batch',
-                            action='store_true',
-                            default=False,
-                            help='drop the last incomplete batch during training. '
-                                 'If the dataset size is not divisible by '
-                                 'the batch size, then the last batch will be smaller.')
-        parser.add_argument('--seed',
-                            type=int,
-                            default=1,
-                            metavar='S',
-                            help='random seed (default: 1)')
-        parser.add_argument('--resume',
-                            default='',
-                            type=str,
-                            metavar='PATH',
-                            help='path to latest checkpoint (default: none)')
-        parser.add_argument('--save',
-                            default='',
-                            type=str,
-                            metavar='PATH',
-                            help='where to save the model after each epoch')
-        parser.add_argument('--log-interval',
-                            type=float,
-                            default=3,
-                            metavar='N',
-                            help='time to wait between logs of training status '
-                                 '(in seconds)')
-        parser.add_argument('--max-trainset-size',
-                            type=int,
-                            default=np.inf,
-                            metavar='N',
-                            help='only use the first N images of the training dataset')
-        parser.add_argument('--max-valset-size',
-                            type=int,
-                            default=np.inf,
-                            metavar='N',
-                            help='only use the first N images of the validation dataset')
-        parser.add_argument('--val-freq',
-                            default=1,
-                            type=int,
-                            metavar='F',
-                            help='run validation every F epochs. '
-                                 'If 0, no validation will be done. '
-                                 'If no validation is done, a checkpoint will be saved '
-                                 'every F epochs.')
-        parser.add_argument('--visdom-env',
-                            default='default_environment',
-                            type=str,
-                            metavar='NAME',
-                            help='name of the environment in Visdom')
-        parser.add_argument('--visdom-server',
-                            default=None,
-                            metavar='SRV',
-                            help='Hostname of the Visdom server')
-        parser.add_argument('--visdom-port',
-                            default=8989,
-                            metavar='PRT',
-                            help='Port of the Visdom server')
-        parser.add_argument('--optimizer', '--optim',
-                            default='sgd',
-                            type=str.lower,
-                            metavar='OPTIM',
-                            choices=['sgd', 'adam'],
-                            help='SGD or Adam')
-        parser.add_argument('--replace-optimizer',
-                            action='store_true',
-                            default=False,
-                            help='Replace optimizer state when resuming from checkpoint. '
-                                 'If True, the optimizer will be replaced as provided in the '
-                                 'arguments of this scripts. If not resuming, it has no effect.')
-        parser.add_argument('--max-mask-pts',
-                            type=int,
-                            default=np.infty,
-                            metavar='M',
-                            help='Subsample this number of points from the mask, '
-                                 'so GMM fitting runs faster.')
-        parser.add_argument('--paint',
-                            default=False,
-                            action="store_true",
-                            help='paint red circles at estimated locations in validation. '
-                                 'It takes an enormous amount of time!')
-        parser.add_argument('--radius', type=int, default=5, metavar='R',
-                            help='Detections at dist <= R to a GT pt are True Positives.')
-        parser.add_argument('--n-points', type=int, default=None, metavar='N',
-                            help='If you know the number of points (e.g, just one pupil), set it.'
-                                 'Otherwise it will be estimated by adding a L1 cost term.')
-        parser.add_argument('--lambdaa', type=float, default=1, metavar='L',
-                            help='Weight that will multiply the regression term '
-                                 'in the loss function.')
-
+            formatter_class=CustomFormatter)
+        optional_args = parser._action_groups.pop()
+        required_args = parser.add_argument_group('MANDATORY arguments')
+        required_args.add_argument('--train-dir',
+                                   required=True,
+                                   help='Directory with training images.')
+        optional_args.add_argument('--val-dir',
+                                   help="Directory with validation images. "
+                                   "If 'auto', 20%% of the training samples "
+                                   "will be removed from training "
+                                   "and used for validation. "
+                                   "If left blank no validation will be done.")
+        optional_args.add_argument('--imgsize',
+                                   type=str,
+                                   default='256x256',
+                                   metavar='HxW',
+                                   help='Size of the input images (height x width).')
+        optional_args.add_argument('--batch-size',
+                                   type=int,
+                                   default=1,
+                                   metavar='N',
+                                   help='input batch size for training')
+        optional_args.add_argument('--epochs',
+                                   type=int,
+                                   default=np.inf,
+                                   metavar='N',
+                                   help='number of epochs to train')
+        optional_args.add_argument('--nThreads', '-j',
+                                   default=4,
+                                   type=int,
+                                   metavar='N',
+                                   help='Number of data loading threads')
+        optional_args.add_argument('--lr',
+                                   type=float,
+                                   default=4e-5,
+                                   metavar='LR',
+                                   help='learning rate (default: 1e-5)')
+        optional_args.add_argument('-p',
+                                   type=float,
+                                   default=-1,
+                                   metavar='P',
+                                   help='p in the generalized mean (default: -inf => minimum)')
+        optional_args.add_argument('--no-cuda',
+                                   action='store_true',
+                                   default=False,
+                                   help='disables CUDA training')
+        optional_args.add_argument('--no-data-augm',
+                                   action='store_true',
+                                   default=False,
+                                   help='Disables Data Augmentation (random vert+horiz flip)')
+        optional_args.add_argument('--drop-last-batch',
+                                   action='store_true',
+                                   default=False,
+                                   help='drop the last incomplete batch during training. '
+                                   'If the dataset size is not divisible by '
+                                   'the batch size, then the last batch will be smaller.')
+        optional_args.add_argument('--seed',
+                                   type=int,
+                                   default=1,
+                                   metavar='S',
+                                   help='random seed (default: 1)')
+        optional_args.add_argument('--resume',
+                                   default='',
+                                   type=str,
+                                   metavar='PATH',
+                                   help='path to latest checkpoint (default: none)')
+        optional_args.add_argument('--save',
+                                   default='',
+                                   type=str,
+                                   metavar='PATH',
+                                   help='where to save the model after each epoch')
+        optional_args.add_argument('--log-interval',
+                                   type=float,
+                                   default=3,
+                                   metavar='N',
+                                   help='time to wait between logs of training status '
+                                   '(in seconds)')
+        optional_args.add_argument('--max-trainset-size',
+                                   type=int,
+                                   default=np.inf,
+                                   metavar='N',
+                                   help='only use the first N images of the training dataset')
+        optional_args.add_argument('--max-valset-size',
+                                   type=int,
+                                   default=np.inf,
+                                   metavar='N',
+                                   help='only use the first N images of the validation dataset')
+        optional_args.add_argument('--val-freq',
+                                   default=1,
+                                   type=int,
+                                   metavar='F',
+                                   help='run validation every F epochs. '
+                                   'If 0, no validation will be done. '
+                                   'If no validation is done, a checkpoint will be saved '
+                                   'every F epochs.')
+        optional_args.add_argument('--visdom-env',
+                                   default='default_environment',
+                                   type=str,
+                                   metavar='NAME',
+                                   help='name of the environment in Visdom')
+        optional_args.add_argument('--visdom-server',
+                                   default=None,
+                                   metavar='SRV',
+                                   help='Hostname of the Visdom server')
+        optional_args.add_argument('--visdom-port',
+                                   default=8989,
+                                   metavar='PRT',
+                                   help='Port of the Visdom server')
+        optional_args.add_argument('--optimizer', '--optim',
+                                   default='sgd',
+                                   type=str.lower,
+                                   metavar='OPTIM',
+                                   choices=['sgd', 'adam'],
+                                   help='SGD or Adam')
+        optional_args.add_argument('--replace-optimizer',
+                                   action='store_true',
+                                   default=False,
+                                   help='Replace optimizer state when resuming from checkpoint. '
+                                   'If True, the optimizer will be replaced as provided in the '
+                                   'arguments of this scripts. If not resuming, it has no effect.')
+        optional_args.add_argument('--max-mask-pts',
+                                   type=int,
+                                   default=np.infty,
+                                   metavar='M',
+                                   help='Subsample this number of points from the mask, '
+                                   'so GMM fitting runs faster.')
+        optional_args.add_argument('--paint',
+                                   default=False,
+                                   action="store_true",
+                                   help='paint red circles at estimated locations in validation. '
+                                   'It takes an enormous amount of time!')
+        optional_args.add_argument('--radius', type=int, default=5, metavar='R',
+                                   help='Detections at dist <= R to a GT pt are True Positives.')
+        optional_args.add_argument('--n-points', type=int, default=None, metavar='N',
+                                   help='If you know the number of points (e.g, just one pupil), set it.'
+                                   'Otherwise it will be estimated by adding a L1 cost term.')
+        optional_args.add_argument('--lambdaa', type=float, default=1, metavar='L',
+                                   help='Weight that will multiply the regression term '
+                                   'in the loss function.')
+        parser._action_groups.append(optional_args)
         args = parser.parse_args()
 
         # Force batchsize == 1 for validation
@@ -228,15 +231,15 @@ def parse_command_args(training_or_testing):
                                    default=range(0, 15 + 1),
                                    metavar='Rs',
                                    help='Detections at dist <= R to a GT pt are True Positives.'
-                                        'If not selected, R=0, ..., 15 will be tested.')
+                                   'If not selected, R=0, ..., 15 will be tested.')
         optional_args.add_argument('--taus',
                                    type=str,
                                    default=np.linspace(0, 1, 25).tolist() + [-1, -2],
                                    metavar='Ts',
                                    help='Detection threshold. '
-                                        'If not selected, 25 thresholds in [0, 1] will be tested. '
-                                        'tau=-1 means dynamic Otsu thresholding. '
-                                        'tau=-2 means Beta Mixture Model-based thresholding')
+                                   'If not selected, 25 thresholds in [0, 1] will be tested. '
+                                   'tau=-1 means dynamic Otsu thresholding. '
+                                   'tau=-2 means Beta Mixture Model-based thresholding')
         optional_args.add_argument('--n-points',
                                    type=int,
                                    default=None,
@@ -248,7 +251,7 @@ def parse_command_args(training_or_testing):
                                    default=np.infty,
                                    metavar='M',
                                    help='Subsample this number of points from the mask, '
-                                        'so GMM fitting runs faster.')
+                                   'so GMM fitting runs faster.')
         optional_args.add_argument('--no-paint',
                                    default=False,
                                    action="store_true",
@@ -257,7 +260,7 @@ def parse_command_args(training_or_testing):
                                    default=False,
                                    action="store_true",
                                    help='Overwrite output files if they exist. '
-                                        'In fact, it removes the output directory first')
+                                   'In fact, it removes the output directory first')
         optional_args.add_argument('--seed',
                                    type=int,
                                    default=0,
@@ -313,3 +316,17 @@ def parse_command_args(training_or_testing):
         exit(-1)
 
     return args
+
+class CustomFormatter(argparse.RawDescriptionHelpFormatter):
+    def _get_help_string(self, action):
+        help = action.help
+        if '%(default)' not in action.help:
+            if action.default is not argparse.SUPPRESS:
+                defaulting_nargs = [argparse.OPTIONAL, argparse.ZERO_OR_MORE]
+                if action.option_strings or action.nargs in defaulting_nargs:
+                    if action.default is not None:
+                        help += ' (default: ' + str(action.default) + ')'
+        help += '\n\n'
+
+        return help
+

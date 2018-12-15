@@ -49,22 +49,24 @@ def parse_command_args(training_or_testing):
                                    help="Size of the input images "
                                         "(height x width).")
         optional_args.add_argument('--batch-size',
-                                   type=int,
+                                   type=strictly_positive_int,
                                    default=1,
                                    metavar='N',
-                                   help="Input batch size for training")
+                                   help="Input batch size for training.")
         optional_args.add_argument('--epochs',
-                                   type=int,
+                                   type=strictly_positive_int,
                                    default=np.inf,
                                    metavar='N',
-                                   help="Number of epochs to train")
+                                   help="Number of epochs to train.")
         optional_args.add_argument('--nThreads', '-j',
                                    default=4,
-                                   type=int,
+                                   type=strictly_positive_int,
                                    metavar='N',
-                                   help="Number of data loading threads")
+                                   help="Number of threads to create "
+					"for data loading. "
+					"Must be a striclty positive int")
         optional_args.add_argument('--lr',
-                                   type=float,
+                                   type=strictly_positive,
                                    default=4e-5,
                                    metavar='LR',
                                    help="Learning rate (step size).")
@@ -108,20 +110,20 @@ def parse_command_args(training_or_testing):
                                    help="Where to save the model "
                                         "after each epoch.")
         optional_args.add_argument('--log-interval',
-                                   type=float,
+                                   type=strictly_positive,
                                    default=3,
                                    metavar='N',
                                    help="Time to wait between every "
                                         " time the losses are printed "
                                         "(in seconds).")
         optional_args.add_argument('--max-trainset-size',
-                                   type=int,
+                                   type=strictly_positive_int,
                                    default=np.inf,
                                    metavar='N',
                                    help="Only use the first N "
                                         "images of the training dataset.")
         optional_args.add_argument('--max-valset-size',
-                                   type=int,
+                                   type=strictly_positive_int,
                                    default=np.inf,
                                    metavar='N',
                                    help="Only use the first N images "
@@ -166,7 +168,7 @@ def parse_command_args(training_or_testing):
                                         "arguments of this scripts. "
                                         "If not resuming, it has no effect.")
         optional_args.add_argument('--max-mask-pts',
-                                   type=int,
+                                   type=strictly_positive_int,
                                    default=np.infty,
                                    metavar='M',
                                    help="Subsample this number of points "
@@ -179,20 +181,20 @@ def parse_command_args(training_or_testing):
                                         "estimated locations in validation. "
                                         "This maskes it run much slower!")
         optional_args.add_argument('--radius',
-                                   type=int,
+                                   type=strictly_positive,
                                    default=5,
                                    metavar='R',
                                    help="Detections at dist <= R to a GT point"
                                         "are considered True Positives.")
         optional_args.add_argument('--n-points',
-                                   type=int,
+                                   type=strictly_positive_int,
                                    default=None,
                                    metavar='N',
                                    help="If you know the number of points "
                                         "(e.g, just one pupil), then set it. "
                                         "Otherwise it will be estimated.")
         optional_args.add_argument('--lambdaa',
-                                   type=float,
+                                   type=strictly_positive,
                                    default=1,
                                    metavar='L',
                                    help="Weight that will increase the "
@@ -347,6 +349,7 @@ def parse_command_args(training_or_testing):
 
     return args
 
+
 class CustomFormatter(argparse.RawDescriptionHelpFormatter):
     def _get_help_string(self, action):
         help = action.help
@@ -360,3 +363,17 @@ class CustomFormatter(argparse.RawDescriptionHelpFormatter):
 
         return help
 
+
+def strictly_positive_int(val):
+    """Convert to a strictly positive integer."""
+    val = float(val)
+    if not val > 0:
+        raise argparse.ArgumentTypeError("Should be strictly positive.")
+    return int(val) 
+
+
+def strictly_positive(val):
+    """Convert to a strictly positive float."""
+    if not val > 0:
+        raise argparse.ArgumentTypeError("Should be strictly positive.")
+    return float(val) 

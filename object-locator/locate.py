@@ -37,7 +37,7 @@ import skimage.transform
 from peterpy import peter
 from ballpark import ballpark
 
-from .data import CSVDataset
+from .data import XMLDataset
 from .data import csv_collator
 from .data import ScaleImageAndLabel
 from . import losses
@@ -64,7 +64,7 @@ if args.cuda:
 
 # Data loading code
 try:
-    testset = CSVDataset(args.dataset,
+    testset = XMLDataset(args.dataset,
                          transforms=transforms.Compose([
                              ScaleImageAndLabel(size=(args.height, args.width)),
                              transforms.ToTensor(),

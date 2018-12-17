@@ -290,7 +290,7 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
 
         # Save a new line in the CSV corresonding to the resuls of this img
         res_dict = dictionaries[0]
-        res_dict['count'] = est_count
+        res_dict['count'] = est_count_int
         res_dict['locations'] = str(centroids_wrt_orig.tolist())
         for key, val in res_dict.copy().items():
             if 'height' in key or 'width' in key:

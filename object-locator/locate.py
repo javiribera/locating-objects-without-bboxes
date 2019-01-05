@@ -202,9 +202,10 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                 dictionaries[0]['orig_width'].item())
 
     # Tensor -> float & numpy
-    target_count = target_count.item()
-    target_locations = \
-        target_locations[0].to(device_cpu).numpy().reshape(-1, 2)
+    if testset.there_is_gt:
+        target_count = target_count.item()
+        target_locations = \
+            target_locations[0].to(device_cpu).numpy().reshape(-1, 2)
     target_orig_size = \
         target_orig_sizes[0].to(device_cpu).numpy().reshape(2)
 

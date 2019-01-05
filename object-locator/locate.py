@@ -306,6 +306,8 @@ for df_out, tau in zip(df_outs, args.taus):
     df_out.to_csv(os.path.join(args.out_dir,
                                f'estimations_tau={round(tau, 4)}.csv'))
 
+os.makedirs(os.path.join(args.out_dir, 'metrics_plots'), exist_ok=True)
+
 if args.evaluate:
 
     with peter("Evauating metrics"):
@@ -349,7 +351,6 @@ if args.evaluate:
         figs = make_metric_plots(csv_path=os.path.join(args.out_dir, 'metrics.csv'),
                                  taus=args.taus,
                                  radii=args.radii)
-        os.makedirs(os.path.join(args.out_dir, 'metrics_plots'), exist_ok=True)
         for label, fig in figs.items():
             # Save to disk
             fig.savefig(os.path.join(args.out_dir, 'metrics_plots', f'{label}.png'))

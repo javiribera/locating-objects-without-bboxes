@@ -527,12 +527,14 @@ class XMLDataset(torch.utils.data.Dataset):
                         plot_number = plot['plot_number']
                     else:
                         plot_number = 'unknown'
-                    if 'subrow_grid_location_yx' in plot:
-                        subrow_grid = \
-                            [int(plot['subrow_grid_location']['y']['#text']),
-                             int(plot['subrow_grid_location']['x']['#text'])]
+                    if 'subrow_grid_location' in plot:
+                        subrow_grid_x = \
+                            int(plot['subrow_grid_location']['x']['#text'])
+                        subrow_grid_y = \
+                            int(plot['subrow_grid_location']['y']['#text'])
                     else:
-                        subrow_grid = 'unknown'
+                        subrow_grid_x = 'unknown'
+                        subrow_grid_y = 'unknown'
                     if 'row_number' in plot:
                         row_number = plot['row_number']
                     else:
@@ -551,7 +553,8 @@ class XMLDataset(torch.utils.data.Dataset):
                             orig_width, dtype=torch.get_default_dtype())
                     dictt[filename] = {'filename': filename,
                                            'plot_number': plot_number,
-                                           'subrow_grid_location_yx': subrow_grid,
+                                           'subrow_grid_location_x': subrow_grid_x,
+                                           'subrow_grid_location_y': subrow_grid_y,
                                            'row_number': row_number,
                                            'range_number': range_number,
                                            'orig_width': orig_width,

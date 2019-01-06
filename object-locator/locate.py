@@ -243,7 +243,7 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
     est_count_int = int(round(est_count.item()))
 
     # The estimated map must be thresholded to obtain estimated points
-    for tau, df_out in zip(args.taus, df_outs):
+    for t, tau in enumerate(args.taus):
         if tau != -2:
             mask, _ = utils.threshold(est_map_np_origsize, tau)
         else:
@@ -296,10 +296,9 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
         for key, val in res_dict.copy().items():
             if 'height' in key or 'width' in key:
                 del res_dict[key]
-        df = pd.DataFrame(data=res_dict,
-                          index=[res_dict['filename']])
-        df.index.name = 'filename'
-        df_out = df_out.append(df)
+        df = pd.DataFrame(data={idx: [val] for idx, val in res_dict.items()})
+        df = df.set_index('filename')
+        df_outs[t] = df_outs[t].append(df)
 
 # Write CSVs to disk
 for df_out, tau in zip(df_outs, args.taus):

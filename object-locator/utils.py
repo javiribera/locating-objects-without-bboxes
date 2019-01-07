@@ -174,7 +174,8 @@ class AccBetaMixtureModel():
 
             # Plot the KDE of the histogram of the threshold (the mean of last RV)
             thresholds = [mix[-1][0].mean() for mix in self.mixtures]
-            kde = scipy.stats.gaussian_kde(np.array(thresholds).reshape(1, -1))
+            thresholds = np.array(thresholds)[np.bitwise_not(np.isnan(thresholds))] 
+            kde = scipy.stats.gaussian_kde(thresholds.reshape(1, -1))
             ax.plot(self.x, kde.pdf(self.x),
                     '--',
                     label='KDE of $\\tau$ selected by BMM method')

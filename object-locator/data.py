@@ -127,7 +127,8 @@ def get_train_val_loaders(train_dir,
             # Create a dataset just as in training
             valset = build_dataset(directory=train_dir,
                                    transforms=validation_transforms,
-                                   max_dataset_size=max_trainset_size)
+                                   max_dataset_size=max_trainset_size,
+                                   seed=seed)
 
             # Split 80% for training, 20% for validation
             n_imgs_for_training = int(round(0.8*len(trainset)))
@@ -149,7 +150,8 @@ def get_train_val_loaders(train_dir,
         else:
             valset = build_dataset(val_dir,
                                    transforms=validation_transforms,
-                                   max_dataset_size=max_valset_size)
+                                   max_dataset_size=max_valset_size,
+                                   seed=seed)
             valset_loader = torch.utils.data.DataLoader(valset,
                                        batch_size=1,
                                        shuffle=True,

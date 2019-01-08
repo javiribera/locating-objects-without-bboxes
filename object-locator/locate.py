@@ -270,14 +270,34 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
         # Paint red dots if user asked for it
         if args.paint:
             # Paint a cross at the estimated centroids
-            img_with_x = utils.paint_circles(img=orig_img_w_heatmap_origsize,
+            img_with_x_n_map = utils.paint_circles(img=orig_img_w_heatmap_origsize,
+                                                   points=centroids_wrt_orig,
+                                                   color='red',
+                                                   crosshair=True)
+            # Save to disk
+            os.makedirs(os.path.join(args.out_dir,
+                                     'intermediate',
+                                     'painted_on_estimated_map',
+                                     f'tau={round(tau, 4)}'), exist_ok=True)
+            cv2.imwrite(os.path.join(args.out_dir,
+                                     'intermediate',
+                                     'painted_on_estimated_map',
+                                     f'tau={round(tau, 4)}',
+                                     dictionaries[0]['filename']),
+                        img_with_x_n_map.transpose((1, 2, 0))[:, :, ::-1])
+            # Paint a cross at the estimated centroids
+            img_with_x = utils.paint_circles(img=orig_img_np_origsize,
                                              points=centroids_wrt_orig,
                                              color='red',
                                              crosshair=True)
             # Save to disk
-            os.makedirs(os.path.join(args.out_dir, 'intermediate', 'painted',
+            os.makedirs(os.path.join(args.out_dir,
+                                     'intermediate',
+                                     'painted_on_original',
                                      f'tau={round(tau, 4)}'), exist_ok=True)
-            cv2.imwrite(os.path.join(args.out_dir, 'intermediate', 'painted',
+            cv2.imwrite(os.path.join(args.out_dir,
+                                     'intermediate',
+                                     'painted_on_original',
                                      f'tau={round(tau, 4)}',
                                      dictionaries[0]['filename']),
                         img_with_x.transpose((1, 2, 0))[:, :, ::-1])

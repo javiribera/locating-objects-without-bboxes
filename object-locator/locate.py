@@ -233,8 +233,10 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
         astype(np.float32)
 
     # Save estimated map to disk
-    os.makedirs(os.path.join(args.out_dir, 'estimated_map'), exist_ok=True)
+    os.makedirs(os.path.join(args.out_dir, 'intermediate', 'estimated_map'),
+                exist_ok=True)
     cv2.imwrite(os.path.join(args.out_dir,
+                             'intermediate',
                              'estimated_map',
                              dictionaries[0]['filename']),
                 orig_img_w_heatmap_origsize.transpose((1, 2, 0))[:, :, ::-1])
@@ -253,10 +255,14 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                                            max_mask_pts=args.max_mask_pts)
 
         # Save thresholded map to disk
-        os.makedirs(os.path.join(args.out_dir, 'estimated_map_thresholded',
+        os.makedirs(os.path.join(args.out_dir,
+                                 'intermediate',
+                                 'estimated_map_thresholded',
                                  f'tau={round(tau, 4)}'),
                     exist_ok=True)
-        cv2.imwrite(os.path.join(args.out_dir, 'estimated_map_thresholded',
+        cv2.imwrite(os.path.join(args.out_dir,
+                                 'intermediate',
+                                 'estimated_map_thresholded',
                                  f'tau={round(tau, 4)}',
                                  dictionaries[0]['filename']),
                     mask)
@@ -269,9 +275,9 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                                              color='red',
                                              crosshair=True)
             # Save to disk
-            os.makedirs(os.path.join(args.out_dir, 'painted',
+            os.makedirs(os.path.join(args.out_dir, 'intermediate', 'painted',
                                      f'tau={round(tau, 4)}'), exist_ok=True)
-            cv2.imwrite(os.path.join(args.out_dir, 'painted',
+            cv2.imwrite(os.path.join(args.out_dir, 'intermediate', 'painted',
                                      f'tau={round(tau, 4)}',
                                      dictionaries[0]['filename']),
                         img_with_x.transpose((1, 2, 0))[:, :, ::-1])
@@ -301,11 +307,14 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
         df_outs[t] = df_outs[t].append(df)
 
 # Write CSVs to disk
+os.makedirs(os.path.join(args.out_dir, 'estimations'), exist_ok=True)
 for df_out, tau in zip(df_outs, args.taus):
     df_out.to_csv(os.path.join(args.out_dir,
+                               'estimations',
                                f'estimations_tau={round(tau, 4)}.csv'))
 
-os.makedirs(os.path.join(args.out_dir, 'metrics_plots'), exist_ok=True)
+os.makedirs(os.path.join(args.out_dir, 'intermediate', 'metrics_plots'),
+            exist_ok=True)
 
 if args.evaluate:
 
@@ -352,13 +361,19 @@ if args.evaluate:
                                  radii=args.radii)
         for label, fig in figs.items():
             # Save to disk
-            fig.savefig(os.path.join(args.out_dir, 'metrics_plots', f'{label}.png'))
+            fig.savefig(os.path.join(args.out_dir,
+                                     'intermediate',
+                                     'metrics_plots',
+                                     f'{label}.png'))
 
 
 # Save plot figures of the statistics of the BMM-based threshold
 if -2 in args.taus:
     for label, fig in bmm_tracker.plot().items():
-        fig.savefig(os.path.join(args.out_dir, 'metrics_plots', f'{label}.png'))
+        fig.savefig(os.path.join(args.out_dir,
+                                 'intermediate',
+                                 'metrics_plots',
+                                 f'{label}.png'))
 
 
 elapsed_time = int(time.time() - tic)

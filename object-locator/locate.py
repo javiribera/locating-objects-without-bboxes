@@ -37,9 +37,9 @@ import skimage.transform
 from peterpy import peter
 from ballpark import ballpark
 
-from .data import XMLDataset
 from .data import csv_collator
 from .data import ScaleImageAndLabel
+from .data import build_dataset
 from . import losses
 from . import argparser
 from .models import unet_model
@@ -64,15 +64,16 @@ if args.cuda:
 
 # Data loading code
 try:
-    testset = XMLDataset(args.dataset,
-                         transforms=transforms.Compose([
-                             ScaleImageAndLabel(size=(args.height, args.width)),
-                             transforms.ToTensor(),
-                             transforms.Normalize((0.5, 0.5, 0.5),
-                                                  (0.5, 0.5, 0.5)),
-                         ]),
-                         ignore_gt=not args.evaluate,
-                         max_dataset_size=args.max_testset_size)
+    testset = build_dataset(args.dataset,
+                            transforms=transforms.Compose([
+                                ScaleImageAndLabel(size=(args.height,
+                                                         args.width)),
+                                transforms.ToTensor(),
+                                transforms.Normalize((0.5, 0.5, 0.5),
+                                                     (0.5, 0.5, 0.5)),
+                            ]),
+                            ignore_gt=not args.evaluate,
+                            max_dataset_size=args.max_testset_size)
 except ValueError as e:
     print(f'E: {e}')
     exit(-1)

@@ -18,7 +18,7 @@ from ballpark import ballpark
 
 from . import get_image_size
 
-IMG_EXTENSIONS = ['.png', '.jpeg', '.jpg', '.tiff']
+IMG_EXTENSIONS = ['.png', '.jpeg', '.jpg', '.tiff', '.tif']
 
 torch.set_default_dtype(torch.float32)
 

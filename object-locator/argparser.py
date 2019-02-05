@@ -34,9 +34,12 @@ def parse_command_args(training_or_testing):
         required_args = parser.add_argument_group('MANDATORY arguments')
         required_args.add_argument('--train-dir',
                                    required=True,
-                                   help='Directory with training images.')
+                                   help='Directory with training images. '
+                                        'Must contain image files (any format), and '
+                                        'CSV or XML file containing a groundtruth file '
+                                        'following the API v0.4')
         optional_args.add_argument('--val-dir',
-                                   help="Directory with validation images. "
+                                   help="Directory with validation images and GT. "
                                    "If 'auto', 20%% of the training samples "
                                    "will be removed from training "
                                    "and used for validation. "
@@ -235,7 +238,10 @@ def parse_command_args(training_or_testing):
         required_args = parser.add_argument_group('MANDATORY arguments')
         required_args.add_argument('--dataset',
                                    required=True,
-                                   help='Directory with test images.\n')
+                                   help='Directory with test images. '
+                                        'Must contain image files (any format), and '
+                                        'CSV or XML file containing a groundtruth file '
+                                        'following the API v0.4')
         required_args.add_argument('--out-dir',
                                    type=str,
                                    required=True,

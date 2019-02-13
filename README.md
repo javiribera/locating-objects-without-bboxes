@@ -18,7 +18,7 @@
 <ol>
 <li>Download and install Anaconda as described in <a href="https://docs.anaconda.com/anaconda/install/">https://docs.anaconda.com/anaconda/install</a></li>
 <li>Clone this repository
-<li>(Optional) Check out a stable version (such as `git checkout 1.5.0`) shown in CHANGELOG.html
+<li>(Optional) Check out a stable version (such as `git checkout 1.5.0`) shown in CHANGELOG
 <li>Open the terminal in Linux/MacOS. In Windows, open the Anaconda Prompt.</li>
 <li>"cd" into the decompressed directory or the cloned repo</li>
 <li>Download the trained models from <a href="https://lorenz.ecn.purdue.edu/~jprat/plant_locator/checkpoints">here</a> (or provided by us) and put them in 

@@ -48,6 +48,7 @@ python -m object-locator.train -h
 </pre>
 
 Example:
+
 <pre>
 python -m object-locator.locate \
        --dataset DIRECTORY \
@@ -56,7 +57,9 @@ python -m object-locator.locate \
        --evaluate \
        --no-gpu \
        --radius 5
+</pre>
 
+<pre>
 python -m object-locator.train \
        --train-dir TRAINING_DIRECTORY \
        --batch-size 32 \

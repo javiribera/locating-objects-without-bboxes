@@ -1,0 +1,31 @@
+name: object-locator
+channels:
+    - pytorch
+    - conda-forge
+    - defaults
+dependencies:
+    - imageio=2.3.0
+    - ipdb=0.11
+    - ipython=6.3.1
+    - ipython_genutils=0.2.0
+    - matplotlib=2.2.2
+    - numpy=1.14.3
+    - opencv=3.4.1
+    - pandas=0.22.0
+    - parse=1.8.2
+    - pip=9.0.3
+    - python=3.6.5
+    - python-dateutil=2.7.2
+    - scikit-image=0.13.1
+    - scikit-learn=0.19.1
+    - scipy=1.0.1
+    - setuptools=39.1.0
+    - tqdm=4.23.1
+    - xmltodict=0.11.0
+    - pytorch=1.0.0
+    - pip:
+        - ballpark==1.4.0
+        - visdom==0.1.8.5
+        - peterpy
+        - torchvision==0.2.1
+

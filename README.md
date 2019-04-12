@@ -81,3 +81,10 @@ conda env remove --name object-locator
 </pre>
 
 
+## Code Versioning
+The code used in the paper corresponds to the tag `used-for-cvpr2019-submission`.
+If you want to reproduce the results, checkout that tag with `git checkout used-for-cvpr2019-submission`.
+The master branch is the latest version available, with convenient bug fixes and better documentation.
+If you want to develop or retrain your models, we recommend the master branch.
+Versions numbers follow [semantic versioning](https://semver.org) and the changelog is in [CHANGELOG.md](CHANGELOG.md).
+

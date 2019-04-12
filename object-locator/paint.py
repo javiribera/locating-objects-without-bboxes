@@ -1,10 +1,19 @@
-# Copyright &copyright 2018 The Board of Trustees of Purdue University.
-# All rights reserved.
-# 
-# This source code is not to be distributed or modified
-# without the written permission of Edward J. Delp at Purdue University
-# Contact information: ace@ecn.purdue.edu
-# =====================================================================
+__copyright__ = \
+"""
+Copyright &copyright © (c) 2019 The Board of Trustees of Purdue University and the Purdue Research Foundation.
+All rights reserved.
+
+This software is covered by US patents and copyright.
+This source code is to be used for academic research purposes only, and no commercial use is allowed.
+
+For any questions, please contact Edward J. Delp (ace@ecn.purdue.edu) at Purdue University.
+
+Last Modified: 03/03/2019 
+"""
+__license__ = "CC BY-NC-SA 4.0"
+__authors__ = "Javier Ribera, David Guera, Yuhao Chen, Edward J. Delp"
+__version__ = "1.5.1"
+
 
 from __future__ import print_function
 
@@ -79,3 +88,15 @@ for img, dictionary in tqdm(dataset_loader):
     cv2.imwrite(os.path.join(args.out_dir, dictionary['filename']),
                 img_with_x)
 
+
+"""
+Copyright &copyright © (c) 2019 The Board of Trustees of Purdue University and the Purdue Research Foundation.
+All rights reserved.
+
+This software is covered by US patents and copyright.
+This source code is to be used for academic research purposes only, and no commercial use is allowed.
+
+For any questions, please contact Edward J. Delp (ace@ecn.purdue.edu) at Purdue University.
+
+Last Modified: 03/03/2019 
+"""

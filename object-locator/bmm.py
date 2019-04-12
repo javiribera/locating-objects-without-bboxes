@@ -1,11 +1,3 @@
-import numpy as np
-
-from itertools import count
-from argparse import ArgumentParser
-
-import numpy as np
-from scipy.stats import beta
-
 """
 Code from paper
 "A hybrid parameter estimation algorithm for beta mixtures
@@ -13,6 +5,14 @@ and applications to methylation state classification"
 https://doi.org/10.1186/s13015-017-0112-1
 https://bitbucket.org/genomeinformatics/betamix
 """
+
+import numpy as np
+
+from itertools import count
+from argparse import ArgumentParser
+
+import numpy as np
+from scipy.stats import beta
 
 
 def _get_values(x, left, right):

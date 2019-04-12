@@ -9,7 +9,7 @@ setup(
     url='https://engineering.purdue.edu/~sorghum',
 
     # Author details
-    author='Javier Ribera, Yuhao Chen, and Edward Delp',
+    author='Javier Ribera, David Guera, Yuhao Chen, and Edward J. Delp',
     author_email='ace@ecn.purdue.edu',
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[

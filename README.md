@@ -24,13 +24,16 @@ PyTorch code for https://arxiv.org/pdf/1806.07564.pdf
 
 ## Installation
 Use conda to recreate the environment provided with the code:
-
 <pre>
 conda env create -f environment.yml
 </pre>
 
-and install the tool:
+Activate the environment:
+<pre>
+conda activate object-locator
+</pre>
 
+Install the tool:
 <pre>
 pip install .
 </pre>

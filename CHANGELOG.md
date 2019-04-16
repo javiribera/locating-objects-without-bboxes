@@ -1,5 +1,6 @@
 
 #### [master]
+ * [dca0c98](../../commit/dca0c98) - __(Javier Ribera)__ fix: import future must go before copyright
  * [e71f9d6](../../commit/e71f9d6) - __(Javier Ribera)__ remove old unet_256x256_sorghum.ckpt checkpoint from git repo
  * [e86144e](../../commit/e86144e) - __(Javier Ribera)__ README: explain code versioning
  * [beeec39](../../commit/beeec39) - __(Javier Ribera)__ fix README.md

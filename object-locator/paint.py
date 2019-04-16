@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 __copyright__ = \
 """
 Copyright &copyright © (c) 2019 The Board of Trustees of Purdue University and the Purdue Research Foundation.
@@ -14,8 +16,6 @@ __license__ = "CC BY-NC-SA 4.0"
 __authors__ = "Javier Ribera, David Guera, Yuhao Chen, Edward J. Delp"
 __version__ = "1.5.1"
 
-
-from __future__ import print_function
 
 import os
 import sys

@@ -73,8 +73,16 @@ python -m object-locator.train \
        --save saved_model.ckpt
 </pre>
 
+## Pre-trained models
+Models are trained separately for each of the four datasets, as described in the paper:
+1. [Mall dataset](https://lorenz.ecn.purdue.edu/~cvpr2019/pretrained_models/mall,lambdaa=1,BS=32,Adam,LR1e-4.ckpt)
+2. [Pupil dataset](https://lorenz.ecn.purdue.edu/~cvpr2019/pretrained_models/pupil,lambdaa=1,BS=64,SGD,LR1e-3,p=-1,ultrasmallNet.ckpt)
+3. [Plant dataset](https://lorenz.ecn.purdue.edu/~cvpr2019/pretrained_models/plants_20160613_F54,BS=32,Adam,LR1e-5,p=-1.ckpt)
+4. [ShanghaiTechB dataset](https://lorenz.ecn.purdue.edu/~cvpr2019/pretrained_models/shanghai,lambdaa=1,p=-1,BS=32,Adam,LR=1e-4.ckpt)
+
+The [COPYRIGHT](COPYRIGHT.txt) of the pre-trained models is the same as in this repository.
+
 ## Uninstall
-  
 <pre>
 conda deactivate object-locator
 conda env remove --name object-locator

@@ -1,8 +1,8 @@
 # Locating Objects Without Bounding Boxes
 PyTorch code for https://arxiv.org/pdf/1806.07564.pdf
 
-![Object localization](https://i.postimg.cc/bNcFr9Pf/collage3x3.png)
-![Loss convergence](https://i.postimg.cc/xC32tbYF/convergence-cropped.gif)
+<img src="https://i.postimg.cc/bNcFr9Pf/collage3x3.png" width="500em"/>
+<img src="https://i.postimg.cc/xC32tbYF/convergence-cropped.gif" width="500em"/>
   
 
 ## Citing this work

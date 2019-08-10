@@ -59,10 +59,15 @@ class UNet(nn.Module):
 
         self.known_n_points = known_n_points
         if known_n_points is None:
-            self.branch_1 = nn.Sequential(nn.Linear(512, 64),
+            height_mid_features = height//(2**8)
+            width_mid_features = width//(2**8)
+            self.branch_1 = nn.Sequential(nn.Linear(height_mid_features*\
+                                                    width_mid_features*\
+                                                    512,
+                                                    64),
                                           nn.ReLU(inplace=True),
                                           nn.Dropout(p=0.5))
-            self.branch_2 = nn.Sequential(nn.Linear(256*256, 64),
+            self.branch_2 = nn.Sequential(nn.Linear(height*width, 64),
                                           nn.ReLU(inplace=True),
                                           nn.Dropout(p=0.5))
             self.regressor = nn.Sequential(nn.Linear(64 + 64, 1),

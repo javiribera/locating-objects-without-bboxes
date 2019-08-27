@@ -1,5 +1,5 @@
 # Locating Objects Without Bounding Boxes
-PyTorch code for https://arxiv.org/pdf/1806.07564.pdf
+PyTorch code for "Locating Objects Without Bounding Boxes" , CVPR 2019 - Oral, Best Paper Finalist (Top 1 %) [[Paper]](http://openaccess.thecvf.com/content_CVPR_2019/html/Ribera_Locating_Objects_Without_Bounding_Boxes_CVPR_2019_paper.html) [[Youtube]](https://youtu.be/8qkrPSjONhA?t=2620)
 
 <img src="https://i.postimg.cc/bNcFr9Pf/collage3x3.png" width="500em"/>
 <img src="https://i.postimg.cc/xC32tbYF/convergence-cropped.gif" width="500em"/>

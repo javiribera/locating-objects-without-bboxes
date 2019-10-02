@@ -8,11 +8,11 @@ This source code is to be used for academic research purposes only, and no comme
 
 For any questions, please contact Edward J. Delp (ace@ecn.purdue.edu) at Purdue University.
 
-Last Modified: 03/03/2019 
+Last Modified: 10/02/2019 
 """
 __license__ = "CC BY-NC-SA 4.0"
 __authors__ = "Javier Ribera, David Guera, Yuhao Chen, Edward J. Delp"
-__version__ = "1.5.1"
+__version__ = "1.6.0"
 
 
 import os
@@ -484,5 +484,5 @@ This source code is to be used for academic research purposes only, and no comme
 
 For any questions, please contact Edward J. Delp (ace@ecn.purdue.edu) at Purdue University.
 
-Last Modified: 03/03/2019 
+Last Modified: 10/02/2019 
 """

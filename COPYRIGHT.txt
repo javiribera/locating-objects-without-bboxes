@@ -6,7 +6,7 @@ This source code is to be used for academic research purposes only, and no comme
 
 For any questions, please contact Edward J. Delp (ace@ecn.purdue.edu) at Purdue University.
 
-Last Modified: 03/03/2019 
+Last Modified: 10/02/2019 
 
 
 Attribution-NonCommercial-ShareAlike 4.0 International

@@ -1,5 +1,15 @@
 
-#### [master]
+#### 1.6.0
+ * [39b684f](../../commit/39b684f) - __(Javi Ribera)__ update README mentioning --ultrasmallnet
+ * [cb3f966](../../commit/cb3f966) - __(Javi Ribera)__ update version number and last modified dates
+ * [7432e0b](../../commit/7432e0b) - __(Javier Ribera)__ +option to make UNet smaller for pupil dataset
+ * [02cb134](../../commit/02cb134) - __(Javi Ribera)__ Update README (add link to CVPR Oral on Youtube)
+ * [f860f7c](../../commit/f860f7c) - __(Javier Ribera)__ fix: input to the CNN could only be 256x256
+ * [8316f72](../../commit/8316f72) - __(Javi Ribera)__ update README: reduce image width
+ * [8ff89fd](../../commit/8ff89fd) - __(Javi Ribera)__ +convergence gif in README
+ * [5e0ed00](../../commit/5e0ed00) - __(Javi Ribera)__ Add link to pre-trained models to README.txt
+ * [e6837b3](../../commit/e6837b3) - __(Javi Ribera)__ update CHANGELOG
+ * [dca0c98](../../commit/dca0c98) - __(Javi Ribera)__ fix: import future must go before copyright
  * [dca0c98](../../commit/dca0c98) - __(Javier Ribera)__ fix: import future must go before copyright
  * [e71f9d6](../../commit/e71f9d6) - __(Javier Ribera)__ remove old unet_256x256_sorghum.ckpt checkpoint from git repo
  * [e86144e](../../commit/e86144e) - __(Javier Ribera)__ README: explain code versioning

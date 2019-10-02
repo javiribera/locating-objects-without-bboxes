@@ -83,6 +83,8 @@ Models are trained separately for each of the four datasets, as described in the
 
 The [COPYRIGHT](COPYRIGHT.txt) of the pre-trained models is the same as in this repository.
 
+As described in the paper, the pre-trained model for the pupil dataset excludes the five central layers. Thus if you want to use this model you will have to use the option `--ultrasmallnet`.
+
 ## Uninstall
 <pre>
 conda deactivate object-locator

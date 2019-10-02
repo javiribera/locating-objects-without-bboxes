@@ -121,19 +121,23 @@ with peter("Loading checkpoint"):
                 model = unet_model.UNet(3, 1,
                                         known_n_points=None,
                                         height=args.height,
-                                        width=args.width)
+                                        width=args.width,
+                                        ultrasmall=args.ultrasmallnet)
+
             else:
                 # The checkpoint tells us the # of points to estimate
                 model = unet_model.UNet(3, 1,
                                         known_n_points=checkpoint['n_points'],
                                         height=args.height,
-                                        width=args.width)
+                                        width=args.width,
+                                        ultrasmall=args.ultrasmallnet)
         else:
             # The user tells us the # of points to estimate
             model = unet_model.UNet(3, 1,
                                     known_n_points=args.n_points,
                                     height=args.height,
-                                    width=args.width)
+                                    width=args.width,
+                                    ultrasmall=args.ultrasmallnet)
 
         # Parallelize
         if args.cuda:

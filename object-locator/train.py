@@ -98,7 +98,8 @@ with peter('Building network'):
                             height=args.height,
                             width=args.width,
                             known_n_points=args.n_points,
-                            device=device)
+                            device=device,
+                            ultrasmall=args.ultrasmallnet)
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f" with {ballpark(num_params)} trainable parameters. ", end='')
 model = nn.DataParallel(model)

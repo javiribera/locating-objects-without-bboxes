@@ -204,6 +204,15 @@ def parse_command_args(training_or_testing):
                                    help="If you know the number of points "
                                         "(e.g, just one pupil), then set it. "
                                         "Otherwise it will be estimated.")
+        optional_args.add_argument('--ultrasmallnet',
+                                   default=False,
+                                   action="store_true",
+                                   help="If True, the 5 central layers are removed,"
+                                         "resulting in a much smaller UNet. "
+                                         "This is used for example for the pupil dataset."
+                                         "Make sure to enable this if your are restoring "
+                                         "a checkpoint that was trained using this option enabled.")
+
         optional_args.add_argument('--lambdaa',
                                    type=strictly_positive,
                                    default=1,
@@ -322,6 +331,14 @@ def parse_command_args(training_or_testing):
                                    type=int,
                                    metavar='N',
                                    help='Number of data loading threads.')
+        optional_args.add_argument('--ultrasmallnet',
+                                   default=False,
+                                   action="store_true",
+                                   help="If True, the 5 central layers are removed,"
+                                         "resulting in a much smaller UNet. "
+                                         "This is used for example for the pupil dataset."
+                                         "Make sure to enable this if your are restoring "
+                                         "a checkpoint that was trained using this option enabled.")
         parser._action_groups.append(optional_args)
         args = parser.parse_args()
 

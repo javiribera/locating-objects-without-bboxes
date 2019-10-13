@@ -266,7 +266,6 @@ def parse_command_args(training_or_testing):
         optional_args.add_argument('--model',
                                    type=str,
                                    metavar='PATH',
-                                   default='unet_256x256_sorghum',
                                    help='Checkpoint with the CNN model.\n')
         optional_args.add_argument('--evaluate',
                                    action='store_true',

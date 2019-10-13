@@ -103,11 +103,6 @@ criterion_training = losses.WeightedHausdorffDistance(resized_height=args.height
 # Restore saved checkpoint (model weights)
 with peter("Loading checkpoint"):
 
-    # Pretrained models that come with this package
-    if args.model == 'unet_256x256_sorghum':
-        args.model = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                  'checkpoints',
-                                  'unet_256x256_sorghum.ckpt')
     if os.path.isfile(args.model):
         if args.cuda:
             checkpoint = torch.load(args.model)

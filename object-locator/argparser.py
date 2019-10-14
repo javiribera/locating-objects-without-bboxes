@@ -259,7 +259,7 @@ def parse_command_args(training_or_testing):
                                         'Must contain image files (any format), and '
                                         'CSV or XML file containing a groundtruth file '
                                         'following the API v0.4')
-        required_args.add_argument('--out-dir',
+        required_args.add_argument('--out',
                                    type=str,
                                    required=True,
                                    help='Directory where results will be stored (images+CSV).')

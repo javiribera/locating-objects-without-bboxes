@@ -180,7 +180,7 @@ df_outs = [pd.DataFrame() for _ in args.taus]
 
 # --force will overwrite output directory
 if args.force:
-    shutil.rmtree(args.out_dir)
+    shutil.rmtree(args.out)
 
 for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                                             total=len(testset_loader)):
@@ -242,9 +242,9 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
         astype(np.float32)
 
     # Save estimated map to disk
-    os.makedirs(os.path.join(args.out_dir, 'intermediate', 'estimated_map'),
+    os.makedirs(os.path.join(args.out, 'intermediate', 'estimated_map'),
                 exist_ok=True)
-    cv2.imwrite(os.path.join(args.out_dir,
+    cv2.imwrite(os.path.join(args.out,
                              'intermediate',
                              'estimated_map',
                              dictionaries[0]['filename']),
@@ -264,12 +264,12 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                                            max_mask_pts=args.max_mask_pts)
 
         # Save thresholded map to disk
-        os.makedirs(os.path.join(args.out_dir,
+        os.makedirs(os.path.join(args.out,
                                  'intermediate',
                                  'estimated_map_thresholded',
                                  f'tau={round(tau, 4)}'),
                     exist_ok=True)
-        cv2.imwrite(os.path.join(args.out_dir,
+        cv2.imwrite(os.path.join(args.out,
                                  'intermediate',
                                  'estimated_map_thresholded',
                                  f'tau={round(tau, 4)}',
@@ -284,11 +284,11 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                                                    color='red',
                                                    crosshair=True)
             # Save to disk
-            os.makedirs(os.path.join(args.out_dir,
+            os.makedirs(os.path.join(args.out,
                                      'intermediate',
                                      'painted_on_estimated_map',
                                      f'tau={round(tau, 4)}'), exist_ok=True)
-            cv2.imwrite(os.path.join(args.out_dir,
+            cv2.imwrite(os.path.join(args.out,
                                      'intermediate',
                                      'painted_on_estimated_map',
                                      f'tau={round(tau, 4)}',
@@ -300,11 +300,11 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
                                              color='red',
                                              crosshair=True)
             # Save to disk
-            os.makedirs(os.path.join(args.out_dir,
+            os.makedirs(os.path.join(args.out,
                                      'intermediate',
                                      'painted_on_original',
                                      f'tau={round(tau, 4)}'), exist_ok=True)
-            cv2.imwrite(os.path.join(args.out_dir,
+            cv2.imwrite(os.path.join(args.out,
                                      'intermediate',
                                      'painted_on_original',
                                      f'tau={round(tau, 4)}',
@@ -336,13 +336,13 @@ for batch_idx, (imgs, dictionaries) in tqdm(enumerate(testset_loader),
         df_outs[t] = df_outs[t].append(df)
 
 # Write CSVs to disk
-os.makedirs(os.path.join(args.out_dir, 'estimations'), exist_ok=True)
+os.makedirs(os.path.join(args.out, 'estimations'), exist_ok=True)
 for df_out, tau in zip(df_outs, args.taus):
-    df_out.to_csv(os.path.join(args.out_dir,
+    df_out.to_csv(os.path.join(args.out,
                                'estimations',
                                f'estimations_tau={round(tau, 4)}.csv'))
 
-os.makedirs(os.path.join(args.out_dir, 'intermediate', 'metrics_plots'),
+os.makedirs(os.path.join(args.out, 'intermediate', 'metrics_plots'),
             exist_ok=True)
 
 if args.evaluate:
@@ -382,15 +382,15 @@ if args.evaluate:
             df_metrics = df_metrics.append(df)
 
         # Write CSV of metrics to disk
-        df_metrics.to_csv(os.path.join(args.out_dir, 'metrics.csv'))
+        df_metrics.to_csv(os.path.join(args.out, 'metrics.csv'))
 
         # Generate plots
-        figs = make_metric_plots(csv_path=os.path.join(args.out_dir, 'metrics.csv'),
+        figs = make_metric_plots(csv_path=os.path.join(args.out, 'metrics.csv'),
                                  taus=args.taus,
                                  radii=args.radii)
         for label, fig in figs.items():
             # Save to disk
-            fig.savefig(os.path.join(args.out_dir,
+            fig.savefig(os.path.join(args.out,
                                      'intermediate',
                                      'metrics_plots',
                                      f'{label}.png'))
@@ -399,7 +399,7 @@ if args.evaluate:
 # Save plot figures of the statistics of the BMM-based threshold
 if -2 in args.taus:
     for label, fig in bmm_tracker.plot().items():
-        fig.savefig(os.path.join(args.out_dir,
+        fig.savefig(os.path.join(args.out,
                                  'intermediate',
                                  'metrics_plots',
                                  f'{label}.png'))

@@ -61,7 +61,7 @@ dataset_loader = data.DataLoader(testset,
                                  num_workers=args.nThreads,
                                  collate_fn=csv_collator)
 
-os.makedirs(os.path.join(args.out_dir), exist_ok=True)
+os.makedirs(os.path.join(args.out), exist_ok=True)
 
 for img, dictionary in tqdm(dataset_loader):
 
@@ -85,7 +85,7 @@ for img, dictionary in tqdm(dataset_loader):
     img_with_x = np.moveaxis(img_with_x, 0, 2)
     img_with_x = img_with_x[:, :, ::-1]
 
-    cv2.imwrite(os.path.join(args.out_dir, dictionary['filename']),
+    cv2.imwrite(os.path.join(args.out, dictionary['filename']),
                 img_with_x)
 
 

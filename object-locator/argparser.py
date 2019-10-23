@@ -44,8 +44,8 @@ def parse_command_args(training_or_testing):
                                    required=True,
                                    help='Directory with training images. '
                                         'Must contain image files (any format), and '
-                                        'CSV or XML file containing a groundtruth file '
-                                        'following the API v0.4')
+                                        'a CSV or XML file containing groundtruth, '
+                                        'as described in the README.')
         optional_args.add_argument('--val-dir',
                                    help="Directory with validation images and GT. "
                                    "If 'auto', 20%% of the training samples "
@@ -257,8 +257,8 @@ def parse_command_args(training_or_testing):
                                    required=True,
                                    help='Directory with test images. '
                                         'Must contain image files (any format), and '
-                                        'CSV or XML file containing a groundtruth file '
-                                        'following the API v0.4')
+                                        '(optionally) a CSV or XML file containing '
+                                        'groundtruth, as described in the README.')
         required_args.add_argument('--out',
                                    type=str,
                                    required=True,

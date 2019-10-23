@@ -74,6 +74,25 @@ python -m object-locator.train \
        --save saved_model.ckpt
 </pre>
 
+## Dataset format
+The options `--dataset` and `--train-dir` should point to a directory.
+This directory must contain your dataset, meaning:
+1. One file per image  to analyze (png, jpg, jpeg, tiff or tif).
+2. One ground truth file called `gt.csv` with the following format:
+```
+filename,count,locations
+img1.png,3,"[(28, 52), (58, 53), (135, 50)]"
+img2.png,2,"[(92, 47), (33, 82)]"
+```
+Each row of the CSV must describe the ground truth of an image: the count (number) and location of all objects in that image.
+The locations are in (y, x) format, being the origin the most top left pixel, y being the pixel row number, and x being the pixel column number.
+
+Optionally, if you are working on precision agriculture or plant phenotyping you can use an XML file instead of a CSV.
+The required XML specifications can be found in
+[https://communityhub.purdue.edu/groups/phenosorg/wiki/APIspecs](https://communityhub.purdue.edu/groups/phenosorg/wiki/APIspecs)
+(accessible only to Purdue users) and in [this](https://hammer.figshare.com/articles/Image-based_Plant_Phenotyping_Using_Machine_Learning/7774313) thesis, but this is only useful in agronomy/phenotyping applications.
+The XML file is parsed by the file `data_plant_stuff.py`.
+
 ## Pre-trained models
 Models are trained separately for each of the four datasets, as described in the paper:
 1. [Mall dataset](https://lorenz.ecn.purdue.edu/~cvpr2019/pretrained_models/mall,lambdaa=1,BS=32,Adam,LR1e-4.ckpt)

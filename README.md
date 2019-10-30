@@ -67,7 +67,8 @@ python -m object-locator.locate \
 python -m object-locator.train \
        --train-dir TRAINING_DIRECTORY \
        --batch-size 32 \
-       --env-name sorghum \
+       --visdom-env mytrainingsession \
+       --visdom-server localhost \
        --lr 1e-3 \
        --val-dir TRAINING_DIRECTORY \
        --optim Adam \
@@ -87,7 +88,7 @@ img2.png,2,"[(92, 47), (33, 82)]"
 Each row of the CSV must describe the ground truth of an image: the count (number) and location of all objects in that image.
 The locations are in (y, x) format, being the origin the most top left pixel, y being the pixel row number, and x being the pixel column number.
 
-Optionally, if you are working on precision agriculture or plant phenotyping you can use an XML file instead of a CSV.
+Optionally, if you are working on precision agriculture or plant phenotyping you can use an XML file `gt.xml` instead of a CSV.
 The required XML specifications can be found in
 [https://communityhub.purdue.edu/groups/phenosorg/wiki/APIspecs](https://communityhub.purdue.edu/groups/phenosorg/wiki/APIspecs)
 (accessible only to Purdue users) and in [this](https://hammer.figshare.com/articles/Image-based_Plant_Phenotyping_Using_Machine_Learning/7774313) thesis, but this is only useful in agronomy/phenotyping applications.

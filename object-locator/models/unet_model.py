@@ -8,7 +8,7 @@ This source code is to be used for academic research purposes only, and no comme
 
 For any questions, please contact Edward J. Delp (ace@ecn.purdue.edu) at Purdue University.
 
-Last Modified: 10/02/2019 
+Last Modified: 11/11/2019 
 """
 __license__ = "CC BY-NC-SA 4.0"
 __authors__ = "Javier Ribera, David Guera, Yuhao Chen, Edward J. Delp"
@@ -134,11 +134,11 @@ class UNet(nn.Module):
         x = x.squeeze(1)
 
         if self.known_n_points is None:
-            last_layer = x4 if self.ultrasmall else x9
-            last_layer_flat = last_layer.view(batch_size, -1)
+            middle_layer = x4 if self.ultrasmall else x9
+            middle_layer_flat = middle_layer.view(batch_size, -1)
             x_flat = x.view(batch_size, -1)
 
-            lateral_flat = self.branch_1(last_layer_flat)
+            lateral_flat = self.branch_1(middle_layer_flat)
             x_flat = self.branch_2(x_flat)
 
             regression_features = torch.cat((x_flat, lateral_flat), dim=1)
@@ -170,5 +170,5 @@ This source code is to be used for academic research purposes only, and no comme
 
 For any questions, please contact Edward J. Delp (ace@ecn.purdue.edu) at Purdue University.
 
-Last Modified: 10/02/2019 
+Last Modified: 11/11/2019 
 """

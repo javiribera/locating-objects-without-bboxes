@@ -77,7 +77,7 @@ python -m object-locator.train \
        --save saved_model.ckpt
 </pre>
 
-## Dataset format
+## <a name="datasetformat">Dataset format</a>
 The options `--dataset` and `--train-dir` should point to a directory.
 This directory must contain your dataset, meaning:
 1. One file per image  to analyze (png, jpg, jpeg, tiff or tif).
@@ -120,4 +120,13 @@ If you want to reproduce the results, checkout that tag with `git checkout used-
 The master branch is the latest version available, with convenient bug fixes and better documentation.
 If you want to develop or retrain your models, we recommend the master branch.
 Versions numbers follow [semantic versioning](https://semver.org) and the changelog is in [CHANGELOG.md](CHANGELOG.md).
+
+
+## Creating an issue
+If you're experiencing a problem or a bug, creating a GitHub issue is encouraged, but please include the following:
+1. The commit version of this repository that you ran (`git show | head -n 1`)
+2. The dataset you used (including images and the CSV with groundtruth with the [appropriate format](#datasetformat))
+3. CPU and GPU model(s) you are using
+4. The full standard output of the training log if you are training, and the testing log if you are evaluating (you can upload it to https://pastebin.com)
+5. The operating system you are using
 

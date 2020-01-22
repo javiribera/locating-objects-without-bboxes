@@ -129,4 +129,4 @@ If you're experiencing a problem or a bug, creating a GitHub issue is encouraged
 3. CPU and GPU model(s) you are using
 4. The full standard output of the training log if you are training, and the testing log if you are evaluating (you can upload it to https://pastebin.com)
 5. The operating system you are using
-
+6. The command you run to train and evaluate

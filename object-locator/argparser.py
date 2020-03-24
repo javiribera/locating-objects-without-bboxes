@@ -288,12 +288,13 @@ def parse_command_args(training_or_testing):
                                    'If not selected, R=0, ..., 15 will be tested.')
         optional_args.add_argument('--taus',
                                    type=str,
-                                   default=np.linspace(0, 1, 25).tolist() + [-1, -2],
+ %                                  # default=np.linspace(0, 1, 25).tolist() + [-1, -2],
+                                   default=-2,
                                    metavar='Ts',
-                                   help='Detection threshold. '
-                                   'If not selected, 25 thresholds in [0, 1] will be tested. '
+                                   help='Detection threshold between 0 and 1. '
+                                   # 'If not selected, 25 thresholds in [0, 1] will be tested. '
                                    'tau=-1 means dynamic Otsu thresholding. '
-                                   'tau=-2 means Beta Mixture Model-based thresholding')
+                                   'tau=-2 means Beta Mixture Model-based thresholding.')
         optional_args.add_argument('--n-points',
                                    type=int,
                                    default=None,

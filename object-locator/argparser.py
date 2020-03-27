@@ -288,7 +288,7 @@ def parse_command_args(training_or_testing):
                                    'If not selected, R=0, ..., 15 will be tested.')
         optional_args.add_argument('--taus',
                                    type=str,
- %                                  # default=np.linspace(0, 1, 25).tolist() + [-1, -2],
+                                   # default=np.linspace(0, 1, 25).tolist() + [-1, -2],
                                    default=-2,
                                    metavar='Ts',
                                    help='Detection threshold between 0 and 1. '

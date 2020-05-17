@@ -50,7 +50,8 @@ def build_dataset(directory,
     :param seed: Random seed.
     :return: An XMLDataset or CSVDataset instance.
     """
-    if any(fn.endswith('.csv') for fn in os.listdir(directory)):
+    if any(fn.endswith('.csv') for fn in os.listdir(directory)) \
+            or ignore_gt:
         dset = CSVDataset(directory=directory,
                           transforms=transforms,
                           max_dataset_size=max_dataset_size,
@@ -285,17 +286,18 @@ class CSVDataset(torch.utils.data.Dataset):
 
         img = Image.open(img_abspath)
 
-        # str -> lists
-        dictionary['locations'] = eval(dictionary['locations'])
-        dictionary['locations'] = [
-            list(loc) for loc in dictionary['locations']]
+        if self.there_is_gt:
+            # str -> lists
+            dictionary['locations'] = eval(dictionary['locations'])
+            dictionary['locations'] = [
+                list(loc) for loc in dictionary['locations']]
 
-        # list --> Tensors
-        with torch.no_grad():
-            dictionary['locations'] = torch.tensor(
-                dictionary['locations'], dtype=torch.get_default_dtype())
-            dictionary['count'] = torch.tensor(
-                [dictionary['count']], dtype=torch.get_default_dtype())
+            # list --> Tensors
+            with torch.no_grad():
+                dictionary['locations'] = torch.tensor(
+                    dictionary['locations'], dtype=torch.get_default_dtype())
+                dictionary['count'] = torch.tensor(
+                    [dictionary['count']], dtype=torch.get_default_dtype())
 
         # Record original size
         orig_width, orig_height = get_image_size.get_image_size(img_abspath)
@@ -320,10 +322,11 @@ class CSVDataset(torch.utils.data.Dataset):
                     img_transformed = transform(img_transformed)
 
         # Prevents crash when making a batch out of an empty tensor
-        if dictionary['count'][0] == 0:
-            with torch.no_grad():
-                dictionary['locations'] = torch.tensor([-1, -1],
-                                                       dtype=torch.get_default_dtype())
+        if self.there_is_gt:
+            if dictionary['count'][0] == 0:
+                with torch.no_grad():
+                    dictionary['locations'] = torch.tensor([-1, -1],
+                                                           dtype=torch.get_default_dtype())
 
         return (img_transformed, transformed_dictionary)
 

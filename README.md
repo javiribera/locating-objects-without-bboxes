@@ -38,6 +38,7 @@ Install the tool:
 <pre>
 pip install .
 </pre>
+(do not forget the period)
 
 ## Usage
 If you are only interested in the code of the Weighted Hausdorff Distance (which is the loss used in the paper and the main contribution), you can just get the [losses.py](object-locator/losses.py) file. If you want to use the entire object location tool:
